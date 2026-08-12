@@ -24,18 +24,29 @@ export default function StaffSidebar({ role = 'Internal', bookingCount = 0 }) {
     router.push('/login');
   };
 
+  const packageLinks = packageNavItems.map((pkg) => ({
+    href: `${basePath}/observations/${pkg.slug}`,
+    label: pkg.title,
+    icon: pkg.icon,
+  }));
+
+  const packageNav = {
+    label: 'Package',
+    icon: '+',
+    children: packageLinks,
+  };
+
   const NAV_ITEMS = [
     { href: basePath, label: 'Dashboard', icon: '*', exact: true },
-    {
-      label: 'Package',
-      icon: '+',
-      children: packageNavItems.map((pkg) => ({
-        href: `${basePath}/observations/${pkg.slug}`,
-        label: pkg.title,
-        icon: pkg.icon,
-      })),
-    },
-    { href: `${basePath}/bookings`, label: role === 'External' ? 'Resort Bookings' : 'All Bookings', icon: '=' },
+    ...(role === 'External' ? [
+      { href: `${basePath}/form-booking`, label: 'Form Booking', icon: '+' },
+    ] : []),
+    ...(role === 'External' ? [
+      { href: `${basePath}/package`, label: 'Package', icon: '+', activePaths: [`${basePath}/observations`] },
+    ] : [packageNav]),
+    ...(role === 'Internal' ? [
+      { href: `${basePath}/bookings`, label: 'All Bookings', icon: '=' },
+    ] : []),
     ...(role === 'External' ? [
       { href: `${basePath}/payout`, label: 'Payout', icon: '$', badge: payoutAvailableUsd > 0 ? `$${Math.floor(payoutAvailableUsd)}` : '' },
     ] : []),
@@ -112,7 +123,7 @@ export default function StaffSidebar({ role = 'Internal', bookingCount = 0 }) {
       alive = false;
       window.removeEventListener('focus', loadPackages);
     };
-  }, []);
+  }, [role]);
 
   const toggleGroup = (label) => {
     setOpenGroups((prev) => {
@@ -125,6 +136,7 @@ export default function StaffSidebar({ role = 'Internal', bookingCount = 0 }) {
 
   const isActive = (item) => {
     if (item.exact) return pathname === item.href;
+    if (item.activePaths?.some((path) => pathname.startsWith(path))) return true;
     return pathname.startsWith(item.href);
   };
 

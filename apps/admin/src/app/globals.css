@@ -749,6 +749,45 @@ textarea.input { min-height: 100px; resize: vertical; }
 .detail-stat-label { font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-dim); }
 .detail-stat-value { font-family: var(--font-heading); font-weight: 700; font-size: 20px; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; margin-top: 6px; }
 
+.admin-family-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.admin-family-detail-card {
+  min-width: 0;
+  padding: 12px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+}
+
+.admin-family-detail-card h4 {
+  margin-bottom: 8px;
+  color: var(--text-primary);
+  font-family: var(--font-heading);
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.admin-family-detail-card p {
+  min-height: 48px;
+  margin: 0 0 10px;
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1.55;
+  white-space: pre-wrap;
+}
+
+.admin-family-detail-card strong {
+  display: block;
+  color: var(--violet);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
 /* === External Dashboard Compact View === */
 .external-compact-layout {
   --sidebar-width: 220px;
@@ -935,4 +974,3 @@ textarea.input { min-height: 100px; resize: vertical; }
 .empty-state { text-align: center; padding: 60px 20px; color: var(--text-muted); }
 .empty-state h3 { font-family: var(--font-heading); font-size: 14px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-secondary); margin-bottom: 8px; }
 .empty-state p { font-size: 13px; max-width: 360px; margin: 0 auto; }
-

@@ -82,6 +82,15 @@ function statusLabel(status) {
   return labels[status] || status;
 }
 
+function familyLine(notes, label) {
+  return String(notes || '').split('\n').find((line) => line.startsWith(`${label}:`)) || '';
+}
+
+function packageLine(notes, label) {
+  const line = familyLine(notes, label);
+  return line ? line.replace(`${label}:`, '').trim() : '-';
+}
+
 function titleCase(value) {
   return String(value || '')
     .split('_')
@@ -129,6 +138,13 @@ function mapApiBooking(row) {
     rating: row.rating ? Number(row.rating) : null,
     comment: row.comment || '',
     notes: row.notes || '',
+    addOns: Array.isArray(row.add_ons) ? row.add_ons : [],
+    packageNotes: row.package_notes || '',
+    guestPhone: row.guest_phone || '',
+    guestEmail: row.guest_email || '',
+    guardianName: row.guardian_name || '',
+    guardianPhone: row.guardian_phone || '',
+    dietaryRestrictions: row.dietary_restrictions || '',
     baseTotalUsd: Number(row.base_total_usd || 0),
     invoiceTotalUsd: Number(row.invoice_total_usd || 0),
     operationShareUsd: Number(row.operation_share_50_usd || 0),
@@ -340,6 +356,12 @@ function KpiMini({ label, value }) {
 function BookingDetail({ booking, onClose, onEdit, onDelete }) {
   const finance = getFinance(booking);
   const feedbackUrl = `/feedback/${booking.feedbackToken}`;
+  const fatherData = familyLine(booking.packageNotes, 'Ayah') || 'Ayah: -';
+  const motherData = familyLine(booking.packageNotes, 'Ibu') || 'Ibu: -';
+  const childData = familyLine(booking.packageNotes, 'Anak') || 'Anak: -';
+  const packageFather = packageLine(booking.packageNotes, 'Package ayah');
+  const packageMother = packageLine(booking.packageNotes, 'Package ibu');
+  const packageChild = packageLine(booking.packageNotes, 'Package anak');
 
   return (
     <div className="modal-backdrop">
@@ -362,14 +384,14 @@ function BookingDetail({ booking, onClose, onEdit, onDelete }) {
 
           <div className="detail-grid" style={{ border: '1px solid var(--border)', marginBottom: 18 }}>
             {[
-              ['Guest', booking.clientName],
+              ['Kepala Keluarga', booking.clientName],
               ['Room', booking.roomNumber],
               ['Nationality', booking.nationality],
               ['Pax', `${booking.adultCount} adult / ${booking.childCount} child`],
               ['Event Date', booking.date],
               ['Time', `${booking.timeStart} - ${booking.timeEnd}`],
               ['Location', booking.location],
-              ['Staff Owner', `${booking.staffId} - ${booking.staffName}`],
+              ['Staff Owner', `${booking.staffRole} - ${booking.staffName}`],
             ].map(([label, value]) => (
               <div key={label} className="detail-stat">
                 <div className="detail-stat-label">{label}</div>
@@ -383,6 +405,24 @@ function BookingDetail({ booking, onClose, onEdit, onDelete }) {
             <KpiMini label="Invoice" value={formatUsd(finance.invoiceTotalUsd)} />
             <KpiMini label="Resort 50%" value={formatUsd(finance.operationShareUsd)} />
             <KpiMini label="Staff 5%" value={formatUsd(finance.staffCommissionUsd)} />
+          </div>
+
+          <div style={{ padding: 14, background: 'var(--bg-elevated)', border: '1px solid var(--border)', marginBottom: 18 }}>
+            <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--text-dim)', marginBottom: 8 }}>
+              Family Intake Data
+            </div>
+            <div className="admin-family-detail-grid">
+              <FamilyDetailCard title="Data Ayah" value={fatherData.replace(/^Ayah:\s*/, '')} packageValue={packageFather} />
+              <FamilyDetailCard title="Data Ibu" value={motherData.replace(/^Ibu:\s*/, '')} packageValue={packageMother} />
+              <FamilyDetailCard title="Data Anak" value={childData.replace(/^Anak:\s*/, '')} packageValue={packageChild} />
+              <FamilyDetailCard title="Kontak & Consent" value={`Phone: ${booking.guestPhone || '-'}\nEmail: ${booking.guestEmail || '-'}\nGuardian WA: ${booking.guardianPhone || '-'}\nAllergy/Dietary: ${booking.dietaryRestrictions || '-'}`} packageValue={booking.addOns.length ? booking.addOns.join(', ') : '-'} />
+            </div>
+            <div style={{ marginTop: 12 }}>
+              <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-dim)', marginBottom: 6 }}>Catatan Lengkap</div>
+              <pre style={{ margin: 0, whiteSpace: 'pre-wrap', fontFamily: 'var(--font-body)', fontSize: 12, color: 'var(--text-secondary)' }}>
+                {booking.packageNotes || booking.notes || 'Tidak ada catatan family intake.'}
+              </pre>
+            </div>
           </div>
 
           <div style={{ padding: 14, background: 'var(--bg-elevated)', border: '1px solid var(--border)' }}>
@@ -401,6 +441,16 @@ function BookingDetail({ booking, onClose, onEdit, onDelete }) {
           <button className="btn btn-primary btn-sm" onClick={() => { onClose(); onEdit(booking); }}>Edit</button>
         </div>
       </div>
+    </div>
+  );
+}
+
+function FamilyDetailCard({ title, value, packageValue }) {
+  return (
+    <div className="admin-family-detail-card">
+      <h4>{title}</h4>
+      <p>{value || '-'}</p>
+      <strong>Package: {packageValue || '-'}</strong>
     </div>
   );
 }
@@ -548,32 +598,28 @@ export default function BookingsPage() {
                 <th>Booking</th>
                 <th>Guest</th>
                 <th>Package</th>
-                <th>Event</th>
                 <th>Pax</th>
                 <th>Staff Owner</th>
                 <th style={{ textAlign: 'right' }}>Base</th>
                 <th>Status</th>
-                <th>Signed</th>
                 <th style={{ textAlign: 'center' }}>Aksi</th>
               </tr>
             </thead>
             <tbody>
               {loading && (
-                <tr><td colSpan={10} style={{ textAlign: 'center', padding: 40, color: 'var(--text-muted)' }}>Memuat booking...</td></tr>
+                <tr><td colSpan={8} style={{ textAlign: 'center', padding: 40, color: 'var(--text-muted)' }}>Memuat booking...</td></tr>
               )}
               {!loading && paginated.map((b) => {
                 const finance = getFinance(b);
                 return (
                   <tr key={b.id}>
                     <td className="name-cell" onClick={() => setViewingBooking(b)}>{b.bookingCode}</td>
-                    <td>{b.clientName}<br /><span style={{ fontSize: 11, color: 'var(--text-dim)' }}>Room {b.roomNumber} - {b.nationality}</span></td>
+                    <td>{b.clientName}</td>
                     <td><span className={`tag ${getTypeClass(b.packageType)}`}>{b.packageName}</span></td>
-                    <td style={{ fontSize: 12 }}>{b.date}<br />{b.timeStart}-{b.timeEnd}</td>
                     <td>{b.adultCount} adult / {b.childCount} child</td>
-                    <td>{b.staffId}<br /><span style={{ fontSize: 11, color: 'var(--text-dim)' }}>{b.staffName}</span></td>
+                    <td><span className="tag tag-info">{b.staffRole}</span><br /><span style={{ fontSize: 11, color: 'var(--text-dim)' }}>{b.staffName}</span></td>
                     <td style={{ textAlign: 'right', fontWeight: 800 }}>{formatUsd(finance.baseTotalUsd)}</td>
                     <td><span className={`tag ${getStatusClass(b.status)}`}>{b.status}</span></td>
-                    <td><span className={`tag ${b.signedByGuest ? 'tag-completed' : 'tag-pending'}`}>{b.signedByGuest ? 'Yes' : 'No'}</span></td>
                     <td style={{ textAlign: 'center' }}>
                       <div style={{ display: 'flex', gap: 4, justifyContent: 'center', flexWrap: 'wrap' }}>
                         {b.rawStatus === 'pending_review' && (
@@ -591,7 +637,7 @@ export default function BookingsPage() {
                 );
               })}
               {!loading && paginated.length === 0 && (
-                <tr><td colSpan={10} style={{ textAlign: 'center', padding: 40, color: 'var(--text-muted)' }}>Tidak ada data ditemukan</td></tr>
+                <tr><td colSpan={8} style={{ textAlign: 'center', padding: 40, color: 'var(--text-muted)' }}>Tidak ada data ditemukan</td></tr>
               )}
             </tbody>
           </table>
