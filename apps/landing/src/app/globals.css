@@ -1,0 +1,914 @@
+/* ============================================
+   EPHEMERIS — DESIGN SYSTEM
+   Theme: Swiss Industrial Brutalist
+   Light dashboard + Dark landing
+   ============================================ */
+
+/* === CSS Custom Properties === */
+:root {
+  /* Colors — Matte Paper Palette */
+  --bg-primary: #f2f1ed;
+  --bg-secondary: #ffffff;
+  --bg-card: #ffffff;
+  --bg-card-hover: #faf9f6;
+  --bg-elevated: #eeece6;
+  --bg-modal: rgba(10, 10, 10, 0.55);
+
+  /* Accent — Aviation Red */
+  --accent: #e51c1c;
+  --accent-hover: #c81616;
+  --accent-muted: rgba(229, 28, 28, 0.10);
+  --accent-glow: rgba(229, 28, 28, 0.10);
+  --accent-dark: #b91414;
+
+  /* Secondary accents */
+  --cyan: #0891b2;
+  --cyan-muted: rgba(8, 145, 178, 0.08);
+  --emerald: #059669;
+  --emerald-muted: rgba(5, 150, 105, 0.08);
+  --amber: #d97706;
+  --amber-muted: rgba(217, 119, 6, 0.10);
+  --violet: #7c3aed;
+  --violet-muted: rgba(124, 58, 237, 0.08);
+
+  /* Text */
+  --text-primary: #111111;
+  --text-secondary: #4b4b4b;
+  --text-muted: #6b6b6b;
+  --text-dim: #9a9a97;
+
+  /* Borders */
+  --border: rgba(0, 0, 0, 0.13);
+  --border-subtle: rgba(0, 0, 0, 0.08);
+  --border-accent: rgba(229, 28, 28, 0.35);
+
+  /* Shadows */
+  --shadow-sm: none;
+  --shadow-md: none;
+  --shadow-lg: 0 12px 28px rgba(0, 0, 0, 0.18);
+
+  /* Typography */
+  --font-body: var(--font-inter, 'Inter', -apple-system, BlinkMacSystemFont, sans-serif);
+  --font-heading: var(--font-space-grotesk, 'Space Grotesk', 'Inter', sans-serif);
+  --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+
+  /* Spacing */
+  --sidebar-width: 260px;
+  --header-height: 76px;
+
+  /* Radius — brutalist: sharp */
+  --radius-sm: 0px;
+  --radius-md: 0px;
+  --radius-lg: 0px;
+  --radius-xl: 0px;
+
+  /* Transitions */
+  --ease: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* === Global Reset === */
+*,
+*::before,
+*::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  font-size: 16px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: var(--font-body);
+  color: var(--text-primary);
+  background: var(--bg-primary);
+  line-height: 1.6;
+  overflow-x: hidden;
+}
+
+a {
+  text-decoration: none;
+  color: inherit;
+}
+
+button {
+  font-family: var(--font-body);
+  cursor: pointer;
+}
+
+/* === Scrollbar === */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--text-dim); }
+::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+
+/* =============================================
+   STARGAZING CUSTOMER LANDING
+   ============================================= */
+
+.stargazing-page {
+  --stargazing-ink: #080808;
+  --stargazing-muted: #3f4648;
+  --stargazing-line: var(--accent);
+  --stargazing-paper: var(--bg-primary);
+  --stargazing-panel: #ffffff;
+  min-height: 100dvh;
+  background:
+    linear-gradient(rgba(0, 0, 0, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 0, 0, 0.035) 1px, transparent 1px),
+    var(--stargazing-paper);
+  background-size: 48px 48px;
+  color: var(--stargazing-ink);
+}
+
+.stargazing-nav {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  height: 76px;
+  padding: 0 clamp(20px, 4vw, 48px);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  background: rgba(242, 241, 237, 0.96);
+  border-bottom: 1px solid var(--border);
+}
+
+.stargazing-brand {
+  display: grid;
+  gap: 0;
+  line-height: 1;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.stargazing-brand span {
+  font-family: var(--font-heading);
+  font-size: 22px;
+  font-weight: 900;
+  letter-spacing: -0.02em;
+}
+
+.stargazing-brand small {
+  margin-top: 6px;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.16em;
+}
+
+.stargazing-nav-links {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--stargazing-ink);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.stargazing-nav-links a {
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  transition: border-color 0.12s var(--ease), background 0.12s var(--ease), color 0.12s var(--ease);
+}
+
+.stargazing-nav-links a:hover {
+  color: var(--accent);
+  border-color: var(--border-accent);
+  background: var(--accent-muted);
+}
+
+.stargazing-hero {
+  min-height: calc(92dvh - 76px);
+  padding: clamp(22px, 4vw, 48px);
+  display: grid;
+  grid-template-columns: minmax(320px, 0.82fr) minmax(0, 1.18fr);
+  gap: clamp(20px, 3vw, 36px);
+  align-items: stretch;
+}
+
+.stargazing-hero-copy {
+  padding: clamp(24px, 4vw, 52px);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  background: var(--stargazing-panel);
+  border: 1px solid var(--border);
+}
+
+.stargazing-kicker {
+  width: fit-content;
+  margin-bottom: 18px;
+  padding: 7px 10px;
+  background: var(--accent-muted);
+  border: 1px solid var(--border-accent);
+  color: var(--accent);
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.stargazing-hero h1,
+.stargazing-section h2,
+.masterclass-section h2 {
+  color: var(--stargazing-ink);
+  font-family: var(--font-heading);
+  font-weight: 900;
+  letter-spacing: 0;
+  line-height: 0.98;
+  text-transform: uppercase;
+}
+
+.stargazing-hero h1 {
+  margin-bottom: 22px;
+  font-size: clamp(42px, 6vw, 88px);
+  line-height: 0.94;
+}
+
+.stargazing-hero-copy > p,
+.stargazing-section-head p,
+.masterclass-section p {
+  max-width: 58ch;
+  color: var(--stargazing-muted);
+  font-size: 17px;
+  font-weight: 650;
+  line-height: 1.55;
+}
+
+.stargazing-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin-top: 30px;
+}
+
+.stargazing-button {
+  width: fit-content;
+  min-height: 50px;
+  padding: 0 22px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--accent);
+  border: 1px solid var(--accent);
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  transition: transform 0.12s var(--ease), background 0.12s var(--ease);
+}
+
+.stargazing-button:hover {
+  background: var(--accent-hover);
+  transform: translateY(-1px);
+}
+
+.stargazing-button.secondary {
+  background: var(--bg-elevated);
+  border-color: var(--border);
+  color: var(--stargazing-ink);
+}
+
+.stargazing-hero-image,
+.experience-image,
+.experience-feature-image {
+  position: relative;
+  overflow: hidden;
+  background: #d9eef0;
+}
+
+.stargazing-hero-image img,
+.experience-image img,
+.experience-feature-image img {
+  object-fit: cover;
+}
+
+.stargazing-hero-image {
+  min-height: 560px;
+  border: 1px solid var(--border);
+}
+
+.stargazing-hero-image::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, transparent 45%, rgba(0, 0, 0, 0.42));
+  pointer-events: none;
+}
+
+.hero-price-card {
+  position: absolute;
+  right: 24px;
+  bottom: 24px;
+  z-index: 2;
+  width: min(300px, calc(100% - 48px));
+  padding: 18px;
+  background: var(--stargazing-panel);
+  border: 1px solid var(--border);
+  box-shadow: 0 18px 42px rgba(0, 0, 0, 0.24);
+}
+
+.hero-price-card span,
+.hero-price-card small {
+  display: block;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.hero-price-card strong {
+  display: block;
+  margin: 8px 0 4px;
+  font-family: var(--font-heading);
+  font-size: 38px;
+  line-height: 1;
+}
+
+.stargazing-hero-details {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0;
+  margin: 0;
+  background: var(--border);
+  border: 1px solid var(--border);
+}
+
+.stargazing-hero-details span {
+  padding: 16px;
+  background: var(--stargazing-panel);
+  border-right: 1px solid var(--border);
+  color: var(--stargazing-ink);
+  font-size: 13px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.stargazing-hero-details span:last-child {
+  border-right: none;
+}
+
+.stargazing-proof {
+  margin: 0 clamp(22px, 4vw, 48px) clamp(36px, 5vw, 64px);
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0;
+  background: var(--border);
+  border: 1px solid var(--border);
+}
+
+.stargazing-proof div {
+  padding: 24px;
+  background: var(--stargazing-panel);
+  border-right: 1px solid var(--border);
+}
+
+.stargazing-proof div:last-child {
+  border-right: none;
+}
+
+.stargazing-proof strong,
+.stargazing-proof span {
+  display: block;
+}
+
+.stargazing-proof strong {
+  font-family: var(--font-heading);
+  font-size: clamp(24px, 3vw, 38px);
+  line-height: 1;
+}
+
+.stargazing-proof span {
+  margin-top: 8px;
+  color: var(--stargazing-muted);
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.stargazing-section,
+.masterclass-section,
+.stargazing-note {
+  padding: clamp(64px, 8vw, 108px) clamp(22px, 4vw, 48px);
+}
+
+.stargazing-section-head {
+  max-width: 900px;
+  margin-bottom: 42px;
+}
+
+.stargazing-section h2,
+.masterclass-section h2 {
+  margin-bottom: 18px;
+  font-size: clamp(34px, 5vw, 70px);
+}
+
+.experience-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 24px;
+}
+
+.experience-card {
+  width: 100%;
+  display: block;
+  background: var(--stargazing-panel);
+  border: 1px solid var(--border);
+  color: inherit;
+  font-family: var(--font-body);
+  text-align: left;
+  transition: transform 0.12s var(--ease), border-color 0.12s var(--ease), background 0.12s var(--ease);
+}
+
+.experience-card:hover {
+  border-color: rgba(0, 0, 0, 0.28);
+  background: var(--bg-card-hover);
+  transform: translateY(-3px);
+}
+
+.experience-card:hover .experience-image img {
+  transform: scale(1.03);
+}
+
+.experience-card:focus-visible,
+.experience-back:focus-visible,
+.experience-picker button:focus-visible {
+  outline: 3px solid rgba(229, 28, 28, 0.35);
+  outline-offset: 6px;
+}
+
+.experience-image {
+  display: block;
+  aspect-ratio: 1.35 / 1;
+  border-bottom: 1px solid var(--border);
+}
+
+.experience-image img {
+  transition: transform 0.35s var(--ease);
+}
+
+.experience-copy {
+  display: block;
+  padding: 20px;
+}
+
+.flyer-rule {
+  width: 100%;
+  max-width: 420px;
+  height: 6px;
+  margin-bottom: 16px;
+  background: var(--accent);
+  border: none;
+}
+
+.experience-title {
+  display: block;
+  margin-bottom: 10px;
+  color: var(--stargazing-ink);
+  font-family: var(--font-heading);
+  font-size: 26px;
+  font-weight: 900;
+  letter-spacing: 0;
+  line-height: 1.08;
+  text-transform: uppercase;
+}
+
+.experience-copy span {
+  display: block;
+  margin-bottom: 8px;
+  color: var(--stargazing-muted);
+  font-size: 13px;
+  font-weight: 650;
+  line-height: 1.65;
+}
+
+.experience-copy .experience-schedule,
+.experience-copy strong {
+  color: var(--stargazing-ink);
+  font-weight: 900;
+}
+
+.experience-copy strong {
+  display: block;
+  margin-top: 14px;
+  font-size: 14px;
+}
+
+.experience-toggle {
+  width: fit-content;
+  margin-top: 20px;
+  padding: 8px 10px;
+  display: inline-flex;
+  background: var(--accent-muted);
+  border: 1px solid var(--border-accent);
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.experience-stage {
+  animation: fadeInUp 0.28s var(--ease) both;
+}
+
+.experience-back,
+.experience-picker button {
+  padding: 10px 14px;
+  background: var(--stargazing-panel);
+  border: 1px solid var(--border);
+  color: var(--stargazing-ink);
+  font-family: var(--font-body);
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.experience-back {
+  margin-bottom: 28px;
+}
+
+.experience-back:hover,
+.experience-picker button:hover,
+.experience-picker button.active {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.experience-feature {
+  min-height: auto;
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(360px, 0.85fr);
+  gap: 30px;
+}
+
+.experience-feature-image,
+.experience-feature-copy {
+  background: var(--stargazing-panel);
+  border: 1px solid var(--border);
+}
+
+.experience-feature-image {
+  min-height: 520px;
+}
+
+.experience-feature-copy {
+  padding: clamp(24px, 4vw, 48px);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.experience-feature-copy h3 {
+  margin-bottom: 22px;
+  color: var(--stargazing-ink);
+  font-family: var(--font-heading);
+  font-size: clamp(42px, 5vw, 76px);
+  font-weight: 900;
+  letter-spacing: 0;
+  line-height: 0.98;
+  text-transform: uppercase;
+}
+
+.experience-feature-copy > p {
+  color: var(--stargazing-muted);
+  font-size: 17px;
+  line-height: 1.75;
+}
+
+.experience-facts {
+  margin: 34px 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1px;
+  background: var(--border);
+  border: 1px solid var(--border);
+}
+
+.experience-facts div {
+  padding: 18px;
+  background: var(--bg-elevated);
+}
+
+.experience-facts span {
+  display: block;
+  margin-bottom: 8px;
+  color: var(--stargazing-muted);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.experience-facts strong {
+  color: var(--stargazing-ink);
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.experience-smallprint {
+  margin-bottom: 26px;
+  font-size: 13px !important;
+}
+
+.experience-picker {
+  margin-top: 34px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.experience-picker button {
+  min-height: 42px;
+}
+
+.masterclass-section {
+  display: grid;
+  grid-template-columns: minmax(0, 0.8fr) minmax(420px, 1fr);
+  gap: clamp(36px, 6vw, 84px);
+  background: var(--bg-elevated);
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+}
+
+.masterclass-list {
+  border: 1px solid var(--border);
+}
+
+.masterclass-row {
+  padding: 20px;
+  display: grid;
+  grid-template-columns: 1.1fr 0.55fr 1fr;
+  gap: 18px;
+  background: var(--stargazing-panel);
+  border-bottom: 1px solid var(--border);
+  color: var(--stargazing-muted);
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.masterclass-row:last-child {
+  border-bottom: none;
+}
+
+.masterclass-row span:first-child,
+.masterclass-row strong {
+  color: var(--stargazing-ink);
+}
+
+.stargazing-note {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 28px;
+  background: var(--stargazing-ink);
+  color: #ffffff;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.stargazing-note p {
+  max-width: 720px;
+  color: #ffffff;
+  font-family: var(--font-heading);
+  font-size: clamp(24px, 4vw, 44px);
+  font-weight: 900;
+  line-height: 1.05;
+  text-transform: uppercase;
+}
+
+.stargazing-footer {
+  padding: 28px clamp(20px, 4vw, 48px);
+  display: flex;
+  justify-content: space-between;
+  gap: 18px;
+  background: var(--stargazing-ink);
+  border-top: none;
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.stargazing-footer a:hover {
+  color: var(--accent);
+}
+
+.wa-widget {
+  position: fixed;
+  right: clamp(16px, 4vw, 32px);
+  bottom: clamp(16px, 4vw, 32px);
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 14px;
+}
+
+.wa-fab {
+  width: 58px;
+  height: 58px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #25d366;
+  border: 1px solid var(--border);
+  border-radius: 0;
+  box-shadow: var(--shadow-lg);
+  color: #ffffff;
+  cursor: pointer;
+  transition: transform 0.2s var(--ease), box-shadow 0.2s var(--ease);
+}
+
+.wa-fab:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 14px 36px rgba(36, 50, 56, 0.34);
+}
+
+.wa-panel {
+  width: min(320px, 84vw);
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  background: var(--stargazing-paper);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-lg);
+}
+
+.wa-panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: var(--stargazing-ink);
+  font-family: var(--font-heading);
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.wa-panel-head button {
+  background: none;
+  border: none;
+  color: var(--stargazing-muted);
+  font-size: 20px;
+  line-height: 1;
+}
+
+.wa-panel-copy {
+  color: var(--stargazing-muted);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.wa-panel-textarea {
+  width: 100%;
+  padding: 10px;
+  resize: none;
+  border: 1px solid var(--border);
+  color: var(--stargazing-ink);
+  font-family: var(--font-body);
+  font-size: 13px;
+  outline: none;
+}
+
+.wa-panel-textarea:focus {
+  border-color: var(--stargazing-line);
+}
+
+.wa-panel-button {
+  min-height: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #25d366;
+  border: 1px solid var(--border);
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.wa-panel-button-disabled {
+  background: rgba(36, 50, 56, 0.25);
+  cursor: not-allowed;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (max-width: 1000px) {
+  .stargazing-hero,
+  .masterclass-section,
+  .experience-feature {
+    grid-template-columns: 1fr;
+    min-height: auto;
+  }
+
+  .stargazing-hero-image,
+  .experience-feature-image {
+    min-height: 48dvh;
+  }
+
+  .stargazing-hero-details,
+  .stargazing-proof {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .experience-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 680px) {
+  .stargazing-nav {
+    height: auto;
+    padding-top: 18px;
+    padding-bottom: 18px;
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .stargazing-nav-links {
+    width: 100%;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    font-size: 10px;
+  }
+
+  .stargazing-nav-links a {
+    text-align: center;
+  }
+
+  .stargazing-hero {
+    padding: 18px;
+  }
+
+  .stargazing-hero-copy {
+    padding: 34px 20px 56px;
+  }
+
+  .stargazing-hero-details,
+  .stargazing-proof,
+  .experience-grid,
+  .experience-facts,
+  .masterclass-row {
+    grid-template-columns: 1fr;
+  }
+
+  .stargazing-hero-details span,
+  .stargazing-proof div {
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .stargazing-hero-details span:last-child,
+  .stargazing-proof div:last-child {
+    border-bottom: none;
+  }
+
+  .experience-picker button,
+  .stargazing-actions .stargazing-button {
+    width: 100%;
+  }
+
+  .hero-price-card {
+    right: 16px;
+    bottom: 16px;
+    left: 16px;
+    width: auto;
+  }
+
+  .stargazing-note,
+  .stargazing-footer {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
+
+@media (max-width: 480px) {
+  .wa-panel {
+    width: calc(100vw - 32px);
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "name": "@ephemeris/sky",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "index.js",
+  "exports": {
+    ".": "./index.js"
+  },
+  "scripts": {
+    "test": "node --test test/sky-events.test.mjs"
+  },
+  "dependencies": {
+    "astronomy-engine": "^2.1.19"
+  }
+}

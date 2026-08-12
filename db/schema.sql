@@ -23,7 +23,7 @@ EXCEPTION WHEN duplicate_object THEN NULL;
 END $$;
 
 DO $$ BEGIN
-  CREATE TYPE booking_status AS ENUM ('pending_review', 'booked', 'finished_experience', 'cancelled');
+  CREATE TYPE booking_status AS ENUM ('pending_review', 'accepted', 'rejected', 'booked', 'finished_experience', 'cancelled');
 EXCEPTION WHEN duplicate_object THEN NULL;
 END $$;
 
@@ -37,12 +37,26 @@ DO $$ BEGIN
 EXCEPTION WHEN duplicate_object THEN NULL;
 END $$;
 
+CREATE TABLE IF NOT EXISTS resorts (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  name text NOT NULL,
+  code text NOT NULL UNIQUE,
+  location text,
+  timezone text NOT NULL DEFAULT 'Indian/Maldives',
+  contact_name text,
+  contact_phone text,
+  status user_status NOT NULL DEFAULT 'active',
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
+
 CREATE TABLE IF NOT EXISTS users (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   name text NOT NULL,
   email text NOT NULL UNIQUE,
   phone text,
   role user_role NOT NULL,
+  resort_id uuid REFERENCES resorts(id),
   status user_status NOT NULL DEFAULT 'active',
   password_hash text NOT NULL,
   created_at timestamptz NOT NULL DEFAULT now(),
@@ -79,11 +93,20 @@ CREATE TABLE IF NOT EXISTS bookings (
   child_count integer NOT NULL DEFAULT 0 CHECK (child_count >= 0),
   child_ages text,
   special_occasion text,
+  guardian_name text,
+  guardian_phone text,
+  seating_setup text,
+  photo_request text,
+  privacy_preference text,
+  dietary_restrictions text,
+  reschedule_consent text,
+  slot_status text NOT NULL DEFAULT 'available',
   booking_source text,
   package_id uuid NOT NULL REFERENCES packages(id),
   add_ons jsonb NOT NULL DEFAULT '[]'::jsonb,
   package_notes text,
   staff_id uuid NOT NULL REFERENCES users(id),
+  resort_id uuid REFERENCES resorts(id),
   status booking_status NOT NULL DEFAULT 'booked',
   signed_by_guest boolean NOT NULL DEFAULT false,
   notes text,
@@ -147,6 +170,28 @@ CREATE TABLE IF NOT EXISTS audit_logs (
   created_at timestamptz NOT NULL DEFAULT now()
 );
 
+CREATE TABLE IF NOT EXISTS payout_requests (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  requester_id uuid NOT NULL REFERENCES users(id),
+  resort_id uuid REFERENCES resorts(id),
+  amount_usd numeric(10,2) NOT NULL CHECK (amount_usd > 0),
+  commission_usd numeric(10,2) NOT NULL DEFAULT 0 CHECK (commission_usd >= 0),
+  star_bonus_usd numeric(10,2) NOT NULL DEFAULT 0 CHECK (star_bonus_usd >= 0),
+  star_points numeric(10,2) NOT NULL DEFAULT 0 CHECK (star_points >= 0),
+  full_stars integer NOT NULL DEFAULT 0 CHECK (full_stars BETWEEN 0 AND 5),
+  payment_method text NOT NULL,
+  account_name text NOT NULL,
+  account_number text NOT NULL,
+  notes text,
+  admin_notes text,
+  status text NOT NULL DEFAULT 'requested' CHECK (status IN ('requested', 'approved', 'paid', 'rejected')),
+  reviewed_by uuid REFERENCES users(id),
+  reviewed_at timestamptz,
+  paid_at timestamptz,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
+
 CREATE OR REPLACE FUNCTION set_updated_at()
 RETURNS trigger AS $$
 BEGIN
@@ -165,20 +210,34 @@ CREATE TRIGGER packages_set_updated_at
 BEFORE UPDATE ON packages
 FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 
+DROP TRIGGER IF EXISTS resorts_set_updated_at ON resorts;
+CREATE TRIGGER resorts_set_updated_at
+BEFORE UPDATE ON resorts
+FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+
 DROP TRIGGER IF EXISTS bookings_set_updated_at ON bookings;
 CREATE TRIGGER bookings_set_updated_at
 BEFORE UPDATE ON bookings
 FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 
+DROP TRIGGER IF EXISTS payout_requests_set_updated_at ON payout_requests;
+CREATE TRIGGER payout_requests_set_updated_at
+BEFORE UPDATE ON payout_requests
+FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+
 CREATE INDEX IF NOT EXISTS idx_users_role ON users(role);
+CREATE INDEX IF NOT EXISTS idx_users_resort_id ON users(resort_id);
 CREATE INDEX IF NOT EXISTS idx_packages_active ON packages(is_active);
 CREATE INDEX IF NOT EXISTS idx_bookings_staff_id ON bookings(staff_id);
+CREATE INDEX IF NOT EXISTS idx_bookings_resort_id ON bookings(resort_id);
 CREATE INDEX IF NOT EXISTS idx_bookings_status ON bookings(status);
 CREATE INDEX IF NOT EXISTS idx_bookings_event_date ON bookings(event_date);
 CREATE INDEX IF NOT EXISTS idx_bookings_guest_phone ON bookings(guest_phone);
 CREATE INDEX IF NOT EXISTS idx_bookings_booking_source ON bookings(booking_source);
 CREATE INDEX IF NOT EXISTS idx_feedback_tokens_token ON feedback_tokens(token);
 CREATE INDEX IF NOT EXISTS idx_audit_logs_actor_created ON audit_logs(actor_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_payout_requests_requester ON payout_requests(requester_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_payout_requests_status ON payout_requests(status);
 
 CREATE TABLE IF NOT EXISTS sky_app_settings (
   id boolean PRIMARY KEY DEFAULT true CHECK (id = true),
@@ -222,6 +281,9 @@ SELECT
   b.room_number,
   p.name AS package_name,
   p.package_type,
+  r.id AS resort_id,
+  r.name AS resort_name,
+  r.code AS resort_code,
   u.id AS staff_id,
   u.name AS staff_name,
   u.role AS staff_role,
@@ -241,6 +303,7 @@ SELECT
 FROM bookings b
 JOIN packages p ON p.id = b.package_id
 JOIN users u ON u.id = b.staff_id
+LEFT JOIN resorts r ON r.id = b.resort_id
 LEFT JOIN feedback_submissions fs ON fs.booking_id = b.id;
 
 COMMIT;

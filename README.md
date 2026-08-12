@@ -1,36 +1,86 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
+# Ephemeris — Monorepo
 
-## Getting Started
+Sistem manajemen Observatorium Nasional / resort stargazing, disusun sebagai **monorepo** dengan 3 aplikasi Next.js independen + shared packages.
 
-First, run the development server:
+## Struktur
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+```
+├── apps/
+│   ├── landing/   → Domain publik (ephemeris.id): landing page, Sky Guide PWA (/sky), halaman feedback
+│   ├── admin/     → admin.ephemeris.id: dashboard admin (booking, keuangan, pengguna, audit, sky guide)
+│   └── staff/     → staff.ephemeris.id: dashboard staff internal & external (booking, jadwal, observasi)
+├── packages/
+│   ├── auth/      → @ephemeris/auth: sesi, login/logout handler per role, audit log
+│   ├── db/        → @ephemeris/db: koneksi PostgreSQL (pool, query, transaction)
+│   ├── finance/   → @ephemeris/finance: kalkulasi harga booking (SC, GST, komisi)
+│   ├── sky/       → @ephemeris/sky: kalender astronomi & normalisasi sky event (+ unit test)
+│   └── ui/        → @ephemeris/ui: komponen bersama (LoginClient)
+├── db/            → schema.sql, seed.sql, migrations/ (dipakai semua app)
+├── pnpm-workspace.yaml
+└── turbo.json
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Prasyarat
 
-You can start editing the page by modifying `app/page.js`. The page auto-updates as you edit the file.
+- Node.js 20+
+- pnpm 10+ (`npm install -g pnpm`)
+- PostgreSQL yang sudah diisi `db/schema.sql` dan `db/seed.sql`
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Setup
 
-## Learn More
+```bash
+pnpm install
+```
 
-To learn more about Next.js, take a look at the following resources:
+Setiap app membaca `.env.local`-nya sendiri (`apps/<app>/.env.local`):
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```bash
+DATABASE_URL=postgres://user:pass@localhost:5432/ephemeris
+SESSION_SECRET=<minimal 32 karakter, sama di semua app>
+# Lokal: isi sesuai app, agar login admin/staff tidak saling menimpa di localhost:
+# apps/admin/.env.local -> SESSION_COOKIE_NAME=ephemeris_admin_session
+# apps/staff/.env.local -> SESSION_COOKIE_NAME=ephemeris_staff_session
+# Di produksi dengan subdomain, agar sesi dipakai bersama:
+SESSION_COOKIE_DOMAIN=.ephemeris.id
+# URL antar app (untuk link lintas subdomain):
+NEXT_PUBLIC_STAFF_URL=http://localhost:3002
+NEXT_PUBLIC_LANDING_URL=http://localhost:3000
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Menjalankan di development
 
-## Deploy on Vercel
+```bash
+# Semua app sekaligus (landing:3000, admin:3001, staff:3002)
+pnpm dev
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+# Per app
+pnpm dev:landing
+pnpm dev:admin
+pnpm dev:staff
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Build & test
+
+```bash
+pnpm build          # build semua app (turbo)
+pnpm test           # test packages/sky
+pnpm lint
+```
+
+## Portal & kredensial demo
+
+| Portal | URL | Email | Password |
+| ------ | --- | ----- | -------- |
+| Landing | http://localhost:3000 | — | — |
+| Admin | http://localhost:3001/login | admin@ephemeris.id | admin123 |
+| Staff | http://localhost:3002/login | internal@ephemeris.id / external@ephemeris.id | internal123 / external123 |
+
+## Deploy (subdomain terpisah)
+
+Setiap app di-deploy sebagai project terpisah (mis. Vercel):
+
+1. **landing** → `ephemeris.id`, root directory `apps/landing`
+2. **admin** → `admin.ephemeris.id`, root directory `apps/admin`
+3. **staff** → `staff.ephemeris.id`, root directory `apps/staff`
+
+Sesi dibagikan antar subdomain dengan menyetel `SESSION_COOKIE_DOMAIN=.ephemeris.id` dan `SESSION_SECRET` yang identik di ketiga app. Database PostgreSQL tetap satu.

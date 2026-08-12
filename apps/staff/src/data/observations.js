@@ -1,0 +1,395 @@
+import { STATION_DATA } from './stations';
+
+const bosscha = STATION_DATA.find((s) => s.short === 'LBG');
+const paranal = STATION_DATA.find((s) => s.short === 'PRN');
+const maunaKea = STATION_DATA.find((s) => s.short === 'MKA');
+
+export const OBSERVATION_EXPERIENCES = [
+  {
+    slug: 'sun-observation',
+    title: 'Sun Observation',
+    icon: '☀️',
+    kind: 'resort',
+    image: '/stargazing-assets/experience-1.jpg',
+    tagline: 'Complimentary daytime solar viewing session.',
+    tip: {
+      icon: '🔭',
+      title: 'Safe Solar Viewing',
+      body: 'Solar filters are fitted before every session so guests can look directly at the sun safely.',
+    },
+    schedule: {
+      days: ['Tuesday', 'Saturday'],
+      time: '11:00 - 12:00',
+      display: 'Every Tuesday & Saturday, 11:00 - 12:00',
+    },
+    overview: [
+      { icon: '☀️', label: 'Program', value: 'Sun Observation' },
+      { icon: '🎟️', label: 'Type', value: 'Complimentary' },
+      { icon: '📍', label: 'Venue', value: 'Turquoise - Private Dining Room' },
+      { icon: '⏱️', label: 'Duration', value: '60 minutes' },
+      { icon: '🎁', label: 'Includes', value: 'Photo of the sun' },
+      { icon: '🕚', label: 'Best Time', value: '11:00 - 12:00' },
+    ],
+    price: 'Complimentary',
+    ageLimit: null,
+    description: 'Experience the dynamic beauty and complexity of our nearest star during a Solar Observation session. Our astronomer will guide you through the captivating world of solar dynamics, the life cycle of sunspots, and their profound impact on Earth.',
+    highlights: ['Complimentary', 'Family Friendly', 'Solar Filter Provided'],
+    whatYouSee: [
+      { icon: '☀️', label: 'Sunspots' },
+      { icon: '🔥', label: 'Solar Flares' },
+      { icon: '🌗', label: 'Photosphere' },
+    ],
+  },
+  {
+    slug: 'beach-stargazing',
+    title: 'Beach Stargazing',
+    icon: '🏖️',
+    kind: 'resort',
+    image: '/stargazing-assets/experience-3.jpg',
+    tagline: 'Evening lounge stargazing on Palm Beach.',
+    tip: {
+      icon: '🌌',
+      title: 'End With a Keepsake',
+      body: 'Every session closes with an astro-portrait beneath the stars as a memento of the evening.',
+    },
+    schedule: {
+      days: ['Monday', 'Thursday', 'Saturday'],
+      time: '21:00 - 22:00',
+      display: 'Monday, Thursday & Saturday, 21:00 - 22:00',
+    },
+    overview: [
+      { icon: '🏖️', label: 'Program', value: 'Beach Stargazing' },
+      { icon: '🎟️', label: 'Type', value: 'Paid, per person' },
+      { icon: '📍', label: 'Venue', value: 'Palm Beach' },
+      { icon: '⏱️', label: 'Duration', value: '60 minutes' },
+      { icon: '🥂', label: 'Includes', value: 'Beverages' },
+      { icon: '🕘', label: 'Best Time', value: '21:00 - 22:00' },
+    ],
+    price: '$90++ per person',
+    ageLimit: null,
+    description: 'Immerse yourself in a celestial journey with an evening of beach stargazing. Settle into comfortable lounge seating under the vast night sky as our astronomer guides you through the timeless mysteries of the cosmos. End the experience with a portrait beneath the stars as a unique keepsake.',
+    highlights: ['Lounge Seating', 'Beverages Included', 'Astro-Portrait'],
+    whatYouSee: [
+      { icon: '🌙', label: 'The Moon' },
+      { icon: '🪐', label: 'Planets' },
+      { icon: '✨', label: 'Constellations' },
+      { icon: '⭐', label: 'Bright Stars' },
+    ],
+  },
+  {
+    slug: 'private-beach-stargazing',
+    title: 'Private Beach Stargazing',
+    icon: '🌊',
+    kind: 'resort',
+    image: '/stargazing-assets/experience-5.jpg',
+    tagline: 'Intimate private session on Palm Beach.',
+    tip: {
+      icon: '💫',
+      title: 'Upon Request',
+      body: 'Book at least 3 days ahead so we can prepare the private setup and astro-portrait station.',
+    },
+    schedule: {
+      days: ['Upon request'],
+      time: '21:00 - 22:00',
+      display: 'Upon request, 21:00 - 22:00',
+    },
+    overview: [
+      { icon: '🌊', label: 'Program', value: 'Private Beach Stargazing' },
+      { icon: '🎟️', label: 'Type', value: 'Paid, per person' },
+      { icon: '📍', label: 'Venue', value: 'Palm Beach' },
+      { icon: '⏱️', label: 'Duration', value: '60 minutes' },
+      { icon: '🥂', label: 'Includes', value: 'Beverages and astro-portrait' },
+      { icon: '🕘', label: 'Best Time', value: '21:00 - 22:00' },
+    ],
+    price: '$140++ per person',
+    ageLimit: null,
+    description: 'Step into an intimate beachside stargazing experience, where the quiet rhythm of the ocean meets the brilliance of the night sky. Guided by our resident astronomer, uncover the stories behind the constellations and gain insight into the celestial wonders above.',
+    highlights: ['Private Setup', 'Beverages Included', 'Astro-Portrait'],
+    whatYouSee: [
+      { icon: '🌙', label: 'The Moon' },
+      { icon: '🪐', label: 'Planets' },
+      { icon: '✨', label: 'Constellations' },
+      { icon: '⭐', label: 'Bright Stars' },
+    ],
+  },
+  {
+    slug: 'celestial-dining',
+    title: 'Celestial Dining',
+    icon: '🍽️',
+    kind: 'resort',
+    image: '/stargazing-assets/experience-6.jpg',
+    tagline: 'Fine dining beneath the stars on Palm Beach.',
+    tip: {
+      icon: '🔭',
+      title: 'Guided Telescope Viewing',
+      body: 'A professional telescope is set up tableside so guests can explore constellations between courses.',
+    },
+    schedule: {
+      days: ['Upon request'],
+      time: '19:00 - 20:00',
+      display: 'Upon request, 19:00 - 20:00',
+    },
+    overview: [
+      { icon: '🍽️', label: 'Program', value: 'Celestial Dining' },
+      { icon: '🎟️', label: 'Type', value: 'Paid, per couple' },
+      { icon: '📍', label: 'Venue', value: 'Palm Beach' },
+      { icon: '⏱️', label: 'Duration', value: '60 minutes' },
+      { icon: '📷', label: 'Includes', value: 'Astro-portrait' },
+      { icon: '🕖', label: 'Best Time', value: '19:00 - 20:00' },
+    ],
+    price: '$185++ per couple',
+    ageLimit: null,
+    description: 'Indulge in a curated dining experience beneath the stars, where fine cuisine meets the quiet majesty of the night sky. As you dine, our resident astronomer will guide you through the constellations using a professional telescope, unveiling the celestial wonders above.',
+    highlights: ['Fine Dining', 'Telescope Viewing', 'Astro-Portrait'],
+    whatYouSee: [
+      { icon: '🌙', label: 'The Moon' },
+      { icon: '🪐', label: 'Planets' },
+      { icon: '✨', label: 'Constellations' },
+    ],
+  },
+  {
+    slug: 'kids-stargazing',
+    title: 'Kids Stargazing',
+    icon: '🧒',
+    kind: 'resort',
+    image: '/stargazing-assets/experience-10.jpg',
+    tagline: 'Fun and educational stargazing experience for kids with a safe and friendly environment.',
+    tip: {
+      icon: '🎓',
+      title: 'Learning Astronomy for Kids',
+      body: 'Turn stargazing into a fun and educational adventure for children.',
+    },
+    schedule: {
+      days: ['Thursday'],
+      time: '19:30 - 20:30',
+      display: 'Every Thursday, 19:30 - 20:30',
+    },
+    overview: [
+      { icon: '🧒', label: 'Program', value: 'Kids Stargazing' },
+      { icon: '🎓', label: 'Type', value: 'Educational & Fun' },
+      { icon: '📍', label: 'Location', value: 'Kids Stargazing Zone, Palm Beach' },
+      { icon: '⏱️', label: 'Duration', value: '60 minutes' },
+      { icon: '🥤', label: 'Includes', value: 'Light refreshment' },
+      { icon: '🕢', label: 'Best Time', value: '19:30 - 20:30' },
+      { icon: '🔞', label: 'Age Limit', value: '6 - 15 Years' },
+    ],
+    price: '$45++ per kid',
+    ageLimit: '6 - 15 Years',
+    description: 'Calling young explorers to join our astronomer for a fun and interactive evening where the night sky comes to life through stories, shapes, and imagination. With guided telescope viewing and simple explanations of stars and planets, this experience is designed to spark curiosity and wonder.',
+    highlights: ['Fun Learning', 'Safe & Comfortable', 'Kid Friendly', 'Astronomy Basics'],
+    whatYouSee: [
+      { icon: '🌙', label: 'The Moon' },
+      { icon: '🪐', label: 'Planets' },
+      { icon: '✨', label: 'Constellations' },
+      { icon: '⭐', label: 'Bright Stars' },
+    ],
+  },
+  {
+    slug: 'moon-observation',
+    title: 'Moon Observation',
+    icon: '🌕',
+    kind: 'observatory',
+    image: '/stargazing-assets/experience-2.jpg',
+    tagline: `Guided lunar observation relayed from ${bosscha?.name ?? 'Obs. Bosscha'}.`,
+    tip: {
+      icon: '🌕',
+      title: 'Placeholder Programme',
+      body: 'No resort flyer exists for this session yet — content is drafted from live observatory-network data and should be reviewed before publishing.',
+    },
+    schedule: {
+      days: ['Upon request'],
+      time: '19:30 - 21:00',
+      display: 'Upon request, 19:30 - 21:00',
+    },
+    overview: [
+      { icon: '🌕', label: 'Program', value: 'Moon Observation' },
+      { icon: '🎓', label: 'Type', value: 'Guided Observatory Session' },
+      { icon: '🛰️', label: 'Station', value: bosscha?.name ?? 'Obs. Bosscha, Lembang' },
+      { icon: '⏱️', label: 'Duration', value: '90 minutes' },
+      { icon: '🌤️', label: 'Seeing', value: bosscha?.seeing ?? 'N/A' },
+      { icon: '📶', label: 'Station Status', value: bosscha?.status === 'online' ? 'Online' : 'Offline' },
+    ],
+    price: 'Upon request',
+    ageLimit: null,
+    description: 'A guided lunar session relayed from the observatory network, exploring the surface, phases, and craters of the Moon through a live telescope feed and narrated commentary from our resident astronomer.',
+    highlights: ['Live Telescope Feed', 'Upon Request', 'Placeholder Content'],
+    whatYouSee: [
+      { icon: '🌕', label: 'Lunar Craters' },
+      { icon: '🌗', label: 'Moon Phases' },
+      { icon: '🌑', label: 'Terminator Line' },
+    ],
+  },
+  {
+    slug: 'night-sky',
+    title: 'Night Sky',
+    icon: '🌌',
+    kind: 'observatory',
+    image: '/stargazing-assets/experience-4.jpg',
+    tagline: `Wide-field night sky tour relayed from ${paranal?.name ?? 'ESO Paranal'}.`,
+    tip: {
+      icon: '🌌',
+      title: 'Placeholder Programme',
+      body: 'No resort flyer exists for this session yet — content is drafted from live observatory-network data and should be reviewed before publishing.',
+    },
+    schedule: {
+      days: ['Upon request'],
+      time: '20:00 - 21:30',
+      display: 'Upon request, 20:00 - 21:30',
+    },
+    overview: [
+      { icon: '🌌', label: 'Program', value: 'Night Sky' },
+      { icon: '🎓', label: 'Type', value: 'Guided Observatory Session' },
+      { icon: '🛰️', label: 'Station', value: paranal?.name ?? 'ESO Paranal, Chile' },
+      { icon: '⏱️', label: 'Duration', value: '90 minutes' },
+      { icon: '🌤️', label: 'Seeing', value: paranal?.seeing ?? 'N/A' },
+      { icon: '📶', label: 'Station Status', value: paranal?.status === 'online' ? 'Online' : 'Offline' },
+    ],
+    price: 'Upon request',
+    ageLimit: null,
+    description: 'A wide-field tour of the night sky relayed from one of the darkest sites in our observatory network, covering constellations, bright stars, and visible planets with live narration.',
+    highlights: ['Live Telescope Feed', 'Upon Request', 'Placeholder Content'],
+    whatYouSee: [
+      { icon: '✨', label: 'Constellations' },
+      { icon: '⭐', label: 'Bright Stars' },
+      { icon: '🪐', label: 'Planets' },
+    ],
+  },
+  {
+    slug: 'deep-sky',
+    title: 'Deep Sky',
+    icon: '🔭',
+    kind: 'observatory',
+    image: '/stargazing-assets/experience-9.jpg',
+    tagline: `Deep-sky object viewing relayed from ${maunaKea?.name ?? 'Mauna Kea'}.`,
+    tip: {
+      icon: '🔭',
+      title: 'Placeholder Programme',
+      body: 'No resort flyer exists for this session yet — content is drafted from live observatory-network data and should be reviewed before publishing.',
+    },
+    schedule: {
+      days: ['Upon request'],
+      time: '21:00 - 22:30',
+      display: 'Upon request, 21:00 - 22:30',
+    },
+    overview: [
+      { icon: '🔭', label: 'Program', value: 'Deep Sky' },
+      { icon: '🎓', label: 'Type', value: 'Guided Observatory Session' },
+      { icon: '🛰️', label: 'Station', value: maunaKea?.name ?? 'Mauna Kea, Hawaii' },
+      { icon: '⏱️', label: 'Duration', value: '90 minutes' },
+      { icon: '🌤️', label: 'Seeing', value: maunaKea?.seeing ?? 'N/A' },
+      { icon: '📶', label: 'Station Status', value: maunaKea?.status === 'online' ? 'Online' : 'Offline' },
+    ],
+    price: 'Upon request',
+    ageLimit: null,
+    description: 'An advanced session focused on deep-sky objects — nebulae, star clusters, and distant galaxies — relayed from one of the highest-altitude sites in our observatory network for exceptional clarity.',
+    highlights: ['Live Telescope Feed', 'Upon Request', 'Placeholder Content'],
+    whatYouSee: [
+      { icon: '🌠', label: 'Nebulae' },
+      { icon: '💫', label: 'Star Clusters' },
+      { icon: '🌀', label: 'Distant Galaxies' },
+    ],
+  },
+];
+
+export const PACKAGE_NAME_BY_SLUG = {
+  'sun-observation': 'Solar Observation',
+  'beach-stargazing': 'Beach Stargazing',
+  'private-beach-stargazing': 'Private Stargazing',
+  'celestial-dining': 'Celestial Dining',
+  'kids-stargazing': 'Kids Stargazing',
+  'moon-observation': 'Moon Observation',
+  'night-sky': 'Night Sky',
+  'deep-sky': 'Deep Sky',
+};
+
+const STATIC_SLUG_BY_PACKAGE_NAME = Object.fromEntries(
+  Object.entries(PACKAGE_NAME_BY_SLUG).map(([slug, name]) => [name, slug])
+);
+
+function formatUsd(value) {
+  return `$${Number(value || 0).toFixed(2)}`;
+}
+
+function formatPackageType(value) {
+  return String(value || 'regular').replace(/^\w/, (char) => char.toUpperCase());
+}
+
+export function getPackageSlug(pkg) {
+  return STATIC_SLUG_BY_PACKAGE_NAME[pkg.name] || pkg.id;
+}
+
+export function getPackageNavItems(packages) {
+  if (!packages.length) {
+    return OBSERVATION_EXPERIENCES.map((exp) => ({
+      slug: exp.slug,
+      title: exp.title,
+      icon: exp.icon,
+    }));
+  }
+
+  return packages.map((pkg) => {
+    const exp = getObservationBySlug(getPackageSlug(pkg));
+    return {
+      slug: getPackageSlug(pkg),
+      title: exp?.title || pkg.name,
+      icon: exp?.icon || (pkg.package_type === 'kids' ? '+' : pkg.package_type === 'private' ? '*' : 'o'),
+    };
+  });
+}
+
+export function findPackageForSlug(packages, slug, experience) {
+  const packageName = PACKAGE_NAME_BY_SLUG[slug] || experience?.title;
+  return packages.find((pkg) => pkg.id === slug || pkg.name === packageName);
+}
+
+export function getExperienceForPackage(pkg) {
+  if (!pkg) return null;
+
+  const staticExperience = getObservationBySlug(getPackageSlug(pkg));
+  if (staticExperience) return staticExperience;
+
+  const typeLabel = formatPackageType(pkg.package_type);
+  const price = [
+    `Adult ${formatUsd(pkg.adult_price_usd)}`,
+    pkg.child_price_usd === null ? null : `Child ${formatUsd(pkg.child_price_usd)}`,
+  ].filter(Boolean).join(' / ');
+
+  return {
+    slug: pkg.id,
+    title: pkg.name,
+    icon: pkg.package_type === 'kids' ? '+' : pkg.package_type === 'private' ? '*' : 'o',
+    kind: pkg.experience_type || 'resort',
+    image: pkg.package_type === 'private' ? '/stargazing-assets/experience-5.jpg' : '/stargazing-assets/experience-3.jpg',
+    tagline: `${typeLabel} package at ${pkg.location}.`,
+    tip: {
+      icon: 'i',
+      title: 'Package Baru',
+      body: 'Package ini dibuat dari admin dan sudah aktif untuk staff internal dan external.',
+    },
+    schedule: {
+      days: ['Upon request'],
+      time: '21:00 - 22:00',
+      display: 'Upon request, 21:00 - 22:00',
+    },
+    overview: [
+      { icon: '+', label: 'Program', value: pkg.name },
+      { icon: '$', label: 'Type', value: typeLabel },
+      { icon: '@', label: 'Location', value: pkg.location },
+      { icon: '#', label: 'Experience', value: formatPackageType(pkg.experience_type) },
+      { icon: '$', label: 'Price', value: price },
+    ],
+    price,
+    ageLimit: pkg.package_type === 'kids' ? 'Kids package' : null,
+    description: `${pkg.name} adalah package aktif yang dibuat oleh admin untuk proses booking staff.`,
+    highlights: [typeLabel, formatPackageType(pkg.experience_type), 'Admin Package'],
+    whatYouSee: [
+      { icon: 'o', label: 'Moon' },
+      { icon: '*', label: 'Stars' },
+      { icon: '+', label: 'Constellations' },
+    ],
+  };
+}
+
+export function getObservationBySlug(slug) {
+  return OBSERVATION_EXPERIENCES.find((item) => item.slug === slug);
+}
