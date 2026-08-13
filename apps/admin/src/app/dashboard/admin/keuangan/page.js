@@ -1,6 +1,7 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import AdminPencairanStaffPanel from '@/components/AdminPencairanStaffPanel';
 import { BOOKINGS } from '@/data/bookings';
 import { calculateBookingFinance, formatUsd } from '@/data/keuangan';
 
@@ -21,6 +22,17 @@ function Stars({ rating }) {
 
 export default function KeuanganPage() {
   const [tab, setTab] = useState('rekap');
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      const tabParam = new URLSearchParams(window.location.search).get('tab');
+      if (['rekap', 'receipt', 'commission', 'pencairan', 'tips'].includes(tabParam)) {
+        setTab(tabParam);
+      }
+    }, 0);
+
+    return () => clearTimeout(timer);
+  }, []);
 
   const completedBookings = useMemo(() => (
     BOOKINGS
@@ -69,6 +81,7 @@ export default function KeuanganPage() {
           ['rekap', 'Rekap'],
           ['receipt', 'Digital Receipt'],
           ['commission', 'Komisi Staff'],
+          ['pencairan', 'Pencairan Staff'],
           ['tips', 'Tip Lapangan'],
         ].map(([key, label]) => (
           <button key={key} onClick={() => setTab(key)} style={{
@@ -93,7 +106,7 @@ export default function KeuanganPage() {
             <KpiCard label="Invoice Tamu" value={formatUsd(totals.invoice)} border="var(--emerald)" accent="var(--emerald)" sub="Base + 10% service charge + 17% GST" />
             <KpiCard label="Base Revenue" value={formatUsd(totals.base)} border="var(--cyan)" accent="var(--cyan)" sub="Dasar split dan komisi" />
             <KpiCard label="Jatah Resort 50%" value={formatUsd(totals.operation)} border="var(--violet)" accent="var(--violet)" sub="Operation share" />
-            <KpiCard label="Komisi Staff" value={formatUsd(totals.commission)} border="var(--amber)" accent="var(--amber)" sub="5% dari jatah resort 50%" />
+            <KpiCard label="Komisi Staff" value={formatUsd(totals.commission)} border="var(--amber)" accent="var(--amber)" sub="External tetap lama, internal 9% dari base" />
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 24 }}>
@@ -178,6 +191,8 @@ export default function KeuanganPage() {
           </div>
         </div>
       )}
+
+      {tab === 'pencairan' && <AdminPencairanStaffPanel />}
 
       {tab === 'tips' && (
         <div className="card">

@@ -1,492 +1,294 @@
 'use client';
 
-import { useState, useMemo } from 'react';
-import { BOOKINGS } from '@/data/bookings';
-import { STATION_DATA } from '@/data/stations';
+import { useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 
-/* ── helpers ── */
-const fmt = (dateStr) => {
-  const d = new Date(dateStr + 'T00:00:00');
-  return d.toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-};
+const WEEKDAYS = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'];
+const MONTHS = Array.from({ length: 12 }, (_, month) => ({
+  value: month,
+  label: new Intl.DateTimeFormat('id-ID', { month: 'long' }).format(new Date(2026, month, 1)),
+}));
 
-const fmtShort = (dateStr) => {
-  const d = new Date(dateStr + 'T00:00:00');
-  return d.toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' });
-};
+function pad(value) {
+  return String(value).padStart(2, '0');
+}
 
-const addDays = (dateStr, n) => {
-  const d = new Date(dateStr + 'T00:00:00');
-  d.setDate(d.getDate() + n);
-  return d.toISOString().split('T')[0];
-};
+function dateKey(date) {
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+}
 
-const todayStr = () => new Date().toISOString().split('T')[0];
+function bookingDateKey(value) {
+  return String(value || '').slice(0, 10);
+}
 
-const startOfWeek = (dateStr) => {
-  const d = new Date(dateStr + 'T00:00:00');
-  d.setDate(d.getDate() - d.getDay());
-  return d.toISOString().split('T')[0];
-};
+function formatTime(value) {
+  return String(value || '').slice(0, 5);
+}
 
-const endOfWeek = (dateStr) => {
-  const d = new Date(dateStr + 'T00:00:00');
-  d.setDate(d.getDate() + (6 - d.getDay()));
-  return d.toISOString().split('T')[0];
-};
+function monthTitle(date) {
+  return new Intl.DateTimeFormat('id-ID', { month: 'long', year: 'numeric' }).format(date);
+}
 
-const getStatusStyle = (status) => {
-  switch (status) {
-    case 'Dikonfirmasi': return { bg: 'var(--emerald)', text: '#fff' };
-    case 'Menunggu':     return { bg: 'var(--amber)',   text: '#fff' };
-    case 'Dibatalkan':   return { bg: 'var(--accent)',  text: '#fff' };
-    case 'Selesai':      return { bg: 'var(--cyan)',    text: '#fff' };
-    default:             return { bg: 'var(--text-dim)', text: '#fff' };
-  }
-};
+function selectedDateTitle(key) {
+  const [year, month, day] = key.split('-').map(Number);
+  return new Intl.DateTimeFormat('id-ID', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  }).format(new Date(year, month - 1, day));
+}
 
-const getStatusTag = (status) => {
-  switch (status) {
-    case 'Dikonfirmasi': return 'tag tag-confirmed';
-    case 'Menunggu':     return 'tag tag-pending';
-    case 'Dibatalkan':   return 'tag tag-cancelled';
-    case 'Selesai':      return 'tag tag-completed';
-    default:             return 'tag';
-  }
-};
+function buildMonthDays(monthDate) {
+  const year = monthDate.getFullYear();
+  const month = monthDate.getMonth();
+  const first = new Date(year, month, 1);
+  const gridStart = new Date(year, month, 1 - first.getDay());
+  const today = dateKey(new Date());
 
-const toHour = (t) => {
-  const [h, m] = t.split(':').map(Number);
-  return h + m / 60;
-};
+  return Array.from({ length: 42 }, (_, index) => {
+    const date = new Date(gridStart);
+    date.setDate(gridStart.getDate() + index);
+    const key = dateKey(date);
+    return {
+      key,
+      day: date.getDate(),
+      inMonth: date.getMonth() === month,
+      isToday: key === today,
+    };
+  });
+}
 
-const TIMELINE_START = 12;
-const TIMELINE_HOURS = 24;
-const HOUR_LABELS = Array.from({ length: 13 }, (_, i) => {
-  const h = (TIMELINE_START + i * 2) % 24;
-  return `${String(h).padStart(2, '0')}:00`;
-});
+function groupBookings(bookings) {
+  return bookings.reduce((acc, booking) => {
+    const key = bookingDateKey(booking.event_date);
+    if (!key) return acc;
+    acc[key] = acc[key] || [];
+    acc[key].push(booking);
+    return acc;
+  }, {});
+}
 
-const blockPosition = (timeStart, timeEnd) => {
-  let start = toHour(timeStart);
-  let end   = toHour(timeEnd);
-  if (start < TIMELINE_START) start += 24;
-  if (end   < TIMELINE_START) end   += 24;
-  if (end <= start) end += 24;
-  const left  = ((start - TIMELINE_START) / TIMELINE_HOURS) * 100;
-  const width = ((end - start) / TIMELINE_HOURS) * 100;
-  return {
-    left:  `${Math.max(0, left).toFixed(2)}%`,
-    width: `${Math.min(width, 100 - Math.max(0, left)).toFixed(2)}%`,
+function bookingSort(a, b) {
+  return `${a.event_date} ${a.time_start}`.localeCompare(`${b.event_date} ${b.time_start}`);
+}
+
+function statusLabel(status) {
+  const labels = {
+    accepted: 'Accepted',
+    booked: 'Booked',
+    finished_experience: 'Finished',
+    cancelled: 'Cancelled',
   };
-};
+  return labels[status] || String(status || '-').replaceAll('_', ' ');
+}
 
-const FILTER_TABS = ['Semua', 'Hari Ini', 'Minggu Ini', 'Bulan Ini'];
+function staffRoleLabel(role) {
+  if (role === 'internal') return 'Staff Internal';
+  if (role === 'external') return 'Staff External';
+  return 'Staff';
+}
 
-export default function JadwalPage() {
-  const today = todayStr();
-  const [selectedDate, setSelectedDate] = useState(today);
-  const [activeFilter, setActiveFilter] = useState('Semua');
-  const [sortCol, setSortCol]   = useState('date');
-  const [sortDir, setSortDir]   = useState('asc');
-  const [searchQ, setSearchQ]   = useState('');
+function staffRoleShort(role) {
+  if (role === 'internal') return 'INT';
+  if (role === 'external') return 'EXT';
+  return 'ADM';
+}
 
-  /* ── filtered bookings for table ── */
-  const filteredBookings = useMemo(() => {
-    let list = [...BOOKINGS];
-    if (activeFilter === 'Hari Ini') {
-      list = list.filter(b => b.date === today);
-    } else if (activeFilter === 'Minggu Ini') {
-      const sw = startOfWeek(today);
-      const ew = endOfWeek(today);
-      list = list.filter(b => b.date >= sw && b.date <= ew);
-    } else if (activeFilter === 'Bulan Ini') {
-      const ym = today.slice(0, 7);
-      list = list.filter(b => b.date.startsWith(ym));
+export default function AdminMonthlyCalendarPage() {
+  const router = useRouter();
+  const now = new Date();
+  const [monthDate, setMonthDate] = useState(new Date(now.getFullYear(), now.getMonth(), 1));
+  const [selectedDate, setSelectedDate] = useState(dateKey(now));
+  const [bookings, setBookings] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    let alive = true;
+
+    async function loadBookings() {
+      setError('');
+      try {
+        const response = await fetch('/api/bookings');
+        if (response.status === 401) {
+          router.replace('/login');
+          return;
+        }
+        if (!response.ok) throw new Error('Gagal memuat data booking kalender.');
+        const data = await response.json();
+        if (alive) setBookings((data.bookings || []).sort(bookingSort));
+      } catch (err) {
+        if (alive) setError(err.message);
+      } finally {
+        if (alive) setLoading(false);
+      }
     }
-    if (searchQ.trim()) {
-      const q = searchQ.toLowerCase();
-      list = list.filter(b =>
-        b.objectName.toLowerCase().includes(q) ||
-        b.observer.toLowerCase().includes(q) ||
-        b.station.toLowerCase().includes(q)
-      );
-    }
-    list.sort((a, b) => {
-      let av = a[sortCol] ?? '';
-      let bv = b[sortCol] ?? '';
-      if (typeof av === 'string') av = av.toLowerCase();
-      if (typeof bv === 'string') bv = bv.toLowerCase();
-      if (av < bv) return sortDir === 'asc' ? -1 : 1;
-      if (av > bv) return sortDir === 'asc' ? 1  : -1;
-      return 0;
+
+    loadBookings();
+    return () => {
+      alive = false;
+    };
+  }, [router]);
+
+  const grouped = useMemo(() => groupBookings(bookings), [bookings]);
+  const days = useMemo(() => buildMonthDays(monthDate), [monthDate]);
+  const yearOptions = useMemo(() => {
+    const year = monthDate.getFullYear();
+    return Array.from({ length: 9 }, (_, index) => year - 4 + index);
+  }, [monthDate]);
+  const selectedBookings = grouped[selectedDate] || [];
+  const monthBookingCount = days.reduce((total, day) => {
+    if (!day.inMonth) return total;
+    return total + (grouped[day.key]?.length || 0);
+  }, 0);
+
+  const moveMonth = (direction) => {
+    setMonthDate((current) => {
+      const next = new Date(current.getFullYear(), current.getMonth() + direction, 1);
+      setSelectedDate(dateKey(next));
+      return next;
     });
-    return list;
-  }, [activeFilter, sortCol, sortDir, searchQ, today]);
-
-  /* ── bookings for selected date (timeline) ── */
-  const timelineBookings = useMemo(() =>
-    BOOKINGS.filter(b => b.date === selectedDate),
-  [selectedDate]);
-
-  const handleSort = (col) => {
-    if (sortCol === col) setSortDir(d => d === 'asc' ? 'desc' : 'asc');
-    else { setSortCol(col); setSortDir('asc'); }
   };
 
-  const SortIcon = ({ col }) =>
-    sortCol !== col
-      ? <span style={{ opacity: 0.3 }}>↕</span>
-      : <span style={{ color: 'var(--accent)' }}>{sortDir === 'asc' ? '↑' : '↓'}</span>;
+  const selectMonth = (month) => {
+    const next = new Date(monthDate.getFullYear(), Number(month), 1);
+    setMonthDate(next);
+    setSelectedDate(dateKey(next));
+  };
 
-  const stats = useMemo(() => ({
-    total:        BOOKINGS.length,
-    dikonfirmasi: BOOKINGS.filter(b => b.status === 'Dikonfirmasi').length,
-    menunggu:     BOOKINGS.filter(b => b.status === 'Menunggu').length,
-    dibatalkan:   BOOKINGS.filter(b => b.status === 'Dibatalkan').length,
-    selesai:      BOOKINGS.filter(b => b.status === 'Selesai').length,
-  }), []);
+  const selectYear = (year) => {
+    const next = new Date(Number(year), monthDate.getMonth(), 1);
+    setMonthDate(next);
+    setSelectedDate(dateKey(next));
+  };
+
+  const goToday = () => {
+    const today = new Date();
+    setMonthDate(new Date(today.getFullYear(), today.getMonth(), 1));
+    setSelectedDate(dateKey(today));
+  };
 
   return (
-    <div className="page-content fade-in-up">
+    <div className="fade-in-up stagger">
+      <header className="page-header calendar-page-header">
+        <div>
+          <h1 className="page-title">Kalender Booking Bulanan</h1>
+          <p>Menampilkan booking dari staff internal dan external berdasarkan data booking database.</p>
+        </div>
+        <div className="calendar-header-actions">
+          <Link href="/dashboard/admin/bookings" className="btn btn-primary btn-sm" style={{ textDecoration: 'none' }}>+ Tambah Sesi</Link>
+          <button className="btn btn-secondary btn-sm" type="button" onClick={() => moveMonth(-1)}>Prev</button>
+          <button className="btn btn-secondary btn-sm" type="button" onClick={goToday}>Today</button>
+          <button className="btn btn-secondary btn-sm" type="button" onClick={() => moveMonth(1)}>Next</button>
+        </div>
+      </header>
 
-      {/* ── Page Title ── */}
-      <div style={{ marginBottom: 24 }}>
-        <div style={{ fontSize: 11, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-dim)', marginBottom: 6 }}>
-          Admin / Jadwal
-        </div>
-        <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
-          <h1 style={{ fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: 28, letterSpacing: '-0.03em' }}>
-            Jadwal Pengamatan
-          </h1>
-          <button className="btn btn-primary btn-sm">+ Tambah Sesi</button>
-        </div>
-      </div>
-
-      {/* ── KPI Strip ── */}
-      <div className="kpi-grid stagger" style={{ gridTemplateColumns: 'repeat(5, 1fr)', marginBottom: 28 }}>
-        <div className="kpi-card">
-          <div className="kpi-label">Total Jadwal</div>
-          <div className="kpi-value" style={{ fontSize: 36 }}>{stats.total}</div>
-          <div className="kpi-note">semua waktu</div>
-        </div>
-        <div className="kpi-card">
-          <div className="kpi-label">Dikonfirmasi</div>
-          <div className="kpi-value" style={{ fontSize: 36, color: 'var(--emerald)' }}>{stats.dikonfirmasi}</div>
-          <div className="kpi-note" style={{ color: 'var(--emerald)' }}>siap observasi</div>
-        </div>
-        <div className="kpi-card">
-          <div className="kpi-label">Menunggu</div>
-          <div className="kpi-value" style={{ fontSize: 36, color: 'var(--amber)' }}>{stats.menunggu}</div>
-          <div className="kpi-note" style={{ color: 'var(--amber)' }}>perlu konfirmasi</div>
-        </div>
-        <div className="kpi-card">
-          <div className="kpi-label">Dibatalkan</div>
-          <div className="kpi-value" style={{ fontSize: 36, color: 'var(--accent)' }}>{stats.dibatalkan}</div>
-          <div className="kpi-note" style={{ color: 'var(--accent)' }}>tidak terlaksana</div>
-        </div>
-        <div className="kpi-card">
-          <div className="kpi-label">Selesai</div>
-          <div className="kpi-value" style={{ fontSize: 36, color: 'var(--cyan)' }}>{stats.selesai}</div>
-          <div className="kpi-note" style={{ color: 'var(--cyan)' }}>berhasil</div>
-        </div>
-      </div>
-
-      {/* ── Timeline Card ── */}
-      <div className="card" style={{ marginBottom: 24 }}>
-        <div className="card-header" style={{ flexWrap: 'wrap', gap: 12 }}>
-          <span className="card-title">⏱ Linimasa Stasiun</span>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-            <button className="btn btn-secondary btn-sm" onClick={() => setSelectedDate(d => addDays(d, -1))}>
-              ← Kemarin
-            </button>
-            <div style={{
-              padding: '6px 16px',
-              background: 'var(--bg-elevated)',
-              border: '1px solid var(--border)',
-              fontFamily: 'var(--font-heading)',
-              fontWeight: 700,
-              fontSize: 13,
-              whiteSpace: 'nowrap',
-              minWidth: 220,
-              textAlign: 'center',
-            }}>
-              {fmt(selectedDate)}
+      <section className="staff-calendar-shell">
+        <div className="staff-calendar-main">
+          <div className="staff-calendar-toolbar">
+            <div>
+              <div className="calendar-kicker">All Staff Calendar</div>
+              <h2>{monthTitle(monthDate)}</h2>
             </div>
-            <button className="btn btn-secondary btn-sm" onClick={() => setSelectedDate(d => addDays(d, 1))}>
-              Besok →
-            </button>
-            <button className="btn btn-ghost btn-sm" onClick={() => setSelectedDate(today)}>
-              Hari Ini
-            </button>
+            <div className="calendar-filter-bar" aria-label="Filter bulan dan tahun kalender">
+              <label>
+                <span>Bulan</span>
+                <select value={monthDate.getMonth()} onChange={(event) => selectMonth(event.target.value)}>
+                  {MONTHS.map((month) => (
+                    <option key={month.value} value={month.value}>{month.label}</option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                <span>Tahun</span>
+                <select value={monthDate.getFullYear()} onChange={(event) => selectYear(event.target.value)}>
+                  {yearOptions.map((year) => (
+                    <option key={year} value={year}>{year}</option>
+                  ))}
+                </select>
+              </label>
+            </div>
+            <div className="calendar-month-stats">
+              <strong>{monthBookingCount}</strong>
+              <span>booking bulan ini</span>
+            </div>
           </div>
-        </div>
 
-        {/* Info bar */}
-        <div style={{
-          padding: '10px 22px',
-          background: 'var(--bg-elevated)',
-          borderBottom: '1px solid var(--border)',
-          display: 'flex',
-          alignItems: 'center',
-          gap: 24,
-          fontSize: 12,
-          flexWrap: 'wrap',
-        }}>
-          <span style={{ fontWeight: 600, color: 'var(--text-secondary)' }}>
-            📅 {fmtShort(selectedDate)}
-          </span>
-          <span style={{ color: 'var(--text-muted)' }}>
-            {timelineBookings.length} sesi pengamatan terjadwal
-          </span>
-          <div style={{ display: 'flex', gap: 16, marginLeft: 'auto', flexWrap: 'wrap' }}>
-            {[
-              { label: 'Dikonfirmasi', color: 'var(--emerald)' },
-              { label: 'Menunggu',     color: 'var(--amber)'   },
-              { label: 'Dibatalkan',   color: 'var(--accent)'  },
-              { label: 'Selesai',      color: 'var(--cyan)'    },
-            ].map(({ label, color }) => (
-              <span key={label} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <span style={{ width: 10, height: 10, background: color, display: 'inline-block' }} />
-                <span style={{ color: 'var(--text-muted)' }}>{label}</span>
-              </span>
+          {error && <div className="external-booking-note" style={{ color: 'var(--accent)' }}>{error}</div>}
+
+          <div className="staff-month-grid">
+            {WEEKDAYS.map((day) => (
+              <div className="staff-calendar-weekday" key={day}>{day}</div>
             ))}
-          </div>
-        </div>
 
-        <div style={{ padding: '16px 22px 22px', overflowX: 'auto' }}>
-          {/* Hour labels row */}
-          <div style={{ display: 'grid', gridTemplateColumns: '140px 1fr', minWidth: 700 }}>
-            <div />
-            <div style={{ position: 'relative', height: 20, marginBottom: 8, borderBottom: '1px solid var(--border)' }}>
-              {HOUR_LABELS.map((label, i) => (
-                <span key={label} style={{
-                  position: 'absolute',
-                  left: `${(i / (HOUR_LABELS.length - 1)) * 100}%`,
-                  transform: i === 0 ? 'none' : i === HOUR_LABELS.length - 1 ? 'translateX(-100%)' : 'translateX(-50%)',
-                  fontSize: 9,
-                  fontWeight: 600,
-                  letterSpacing: '0.04em',
-                  color: 'var(--text-dim)',
-                  whiteSpace: 'nowrap',
-                  bottom: 4,
-                }}>
-                  {label}
-                </span>
-              ))}
-            </div>
-          </div>
+            {days.map((day) => {
+              const dayBookings = grouped[day.key] || [];
+              const shown = dayBookings.slice(0, 3);
+              const extra = dayBookings.length - shown.length;
 
-          {/* Station rows */}
-          <div style={{ minWidth: 700 }}>
-            {STATION_DATA.map((station) => {
-              const stationBookings = timelineBookings.filter(b =>
-                b.station.toLowerCase().includes(station.short.toLowerCase()) ||
-                station.name.toLowerCase().includes(b.station.toLowerCase())
-              );
               return (
-                <div key={station.short} className="timeline-row">
-                  <div className="timeline-station" style={{ borderRight: '1px solid var(--border)', paddingRight: 10 }}>
-                    <div style={{ fontWeight: 700, fontSize: 12, color: 'var(--text-primary)' }}>
-                      {station.short}
-                    </div>
-                    <div style={{ fontSize: 10, color: 'var(--text-dim)', marginTop: 1 }}>
-                      {station.status === 'online'
-                        ? <span style={{ color: 'var(--emerald)' }}>● Online</span>
-                        : <span style={{ color: 'var(--text-dim)' }}>○ Offline</span>}
-                    </div>
-                  </div>
-                  <div className="timeline-track" style={{ background: 'var(--bg-primary)' }}>
-                    {HOUR_LABELS.slice(1, -1).map((_, i) => (
-                      <div key={i} style={{
-                        position: 'absolute',
-                        left: `${((i + 1) / (HOUR_LABELS.length - 1)) * 100}%`,
-                        top: 0, bottom: 0, width: 1,
-                        background: 'var(--border-subtle)',
-                      }} />
+                <button
+                  className={`staff-calendar-day ${day.inMonth ? '' : 'muted'} ${day.isToday ? 'today' : ''} ${selectedDate === day.key ? 'selected' : ''}`}
+                  key={day.key}
+                  type="button"
+                  onClick={() => setSelectedDate(day.key)}
+                >
+                  <span className="staff-calendar-date-number">{day.day}</span>
+                  <div className="staff-calendar-events">
+                    {loading && day.inMonth && day.day <= 7 ? <span className="calendar-event skeleton">Loading</span> : null}
+                    {!loading && shown.map((booking) => (
+                      <span className="calendar-event" key={booking.id}>
+                        <b>{formatTime(booking.time_start)}</b>
+                        <span>{booking.guest_name} - {staffRoleShort(booking.staff_role)}</span>
+                      </span>
                     ))}
-                    {stationBookings.length === 0 && (
-                      <div style={{
-                        position: 'absolute', inset: 0,
-                        display: 'flex', alignItems: 'center', paddingLeft: 10,
-                        fontSize: 10, color: 'var(--text-dim)', letterSpacing: '0.06em',
-                      }}>
-                        — tidak ada sesi
-                      </div>
-                    )}
-                    {stationBookings.map((booking) => {
-                      const pos = blockPosition(booking.timeStart, booking.timeEnd);
-                      const { bg, text } = getStatusStyle(booking.status);
-                      return (
-                        <div
-                          key={booking.id}
-                          className="timeline-block"
-                          title={`${booking.objectName} | ${booking.observer} | ${booking.timeStart}–${booking.timeEnd} | ${booking.status}`}
-                          style={{ left: pos.left, width: pos.width, background: bg, color: text, fontSize: 10, minWidth: 4 }}
-                        >
-                          {parseFloat(pos.width) > 4 && (
-                            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                              {booking.objectName}
-                            </span>
-                          )}
-                        </div>
-                      );
-                    })}
+                    {!loading && extra > 0 && <span className="calendar-event more">+{extra} lainnya</span>}
                   </div>
-                </div>
+                </button>
               );
             })}
           </div>
-
-          {timelineBookings.length === 0 && (
-            <div className="empty-state">
-              <div style={{ fontSize: 32, marginBottom: 10 }}>🔭</div>
-              <h3>Tidak Ada Sesi</h3>
-              <p>Tidak ada pengamatan terjadwal untuk tanggal ini. Navigasi ke tanggal lain atau tambah sesi baru.</p>
-            </div>
-          )}
         </div>
-      </div>
 
-      {/* ── Booking Table ── */}
-      <div className="card">
-        <div className="card-header" style={{ flexWrap: 'wrap', gap: 12 }}>
-          <span className="card-title">📋 Daftar Pemesanan</span>
-          <div className="filter-bar">
-            {FILTER_TABS.map(tab => (
-              <button
-                key={tab}
-                className={`chip${activeFilter === tab ? ' active' : ''}`}
-                onClick={() => setActiveFilter(tab)}
-              >
-                {tab}
-                {tab === 'Hari Ini' && (
-                  <span style={{
-                    marginLeft: 4,
-                    background: activeFilter === tab ? 'rgba(255,255,255,0.25)' : 'var(--accent-muted)',
-                    color: activeFilter === tab ? '#fff' : 'var(--accent)',
-                    fontSize: 9, fontWeight: 700, padding: '1px 4px',
-                  }}>
-                    {BOOKINGS.filter(b => b.date === today).length}
-                  </span>
-                )}
-              </button>
+        <aside className="staff-calendar-side">
+          <div className="calendar-side-head">
+            <span>Selected Date</span>
+            <h3>{selectedDateTitle(selectedDate)}</h3>
+          </div>
+
+          <div className="calendar-day-bookings">
+            {loading && <div className="calendar-empty">Memuat booking...</div>}
+            {!loading && selectedBookings.length === 0 && (
+              <div className="calendar-empty">
+                <strong>Tidak ada booking</strong>
+                <span>Tanggal ini masih kosong.</span>
+              </div>
+            )}
+            {!loading && selectedBookings.map((booking) => (
+              <article className="calendar-booking-card" key={booking.id}>
+                <div className="calendar-booking-top">
+                  <strong>{formatTime(booking.time_start)} - {formatTime(booking.time_end)}</strong>
+                  <span>{statusLabel(booking.status)}</span>
+                </div>
+                <h4>{booking.guest_name}</h4>
+                <div className="calendar-staff-source">
+                  <span>{staffRoleLabel(booking.staff_role)}</span>
+                  <strong>{booking.staff_name}</strong>
+                </div>
+                <div className="calendar-booking-meta">
+                  <span>{booking.package_name}</span>
+                  <span>{booking.location}</span>
+                  <span>Room {booking.room_number}</span>
+                  {booking.resort_name && <span>{booking.resort_name}</span>}
+                </div>
+                {booking.notes && <p>{booking.notes}</p>}
+              </article>
             ))}
           </div>
-          <div className="search-bar" style={{ marginLeft: 'auto', maxWidth: 280 }}>
-            <input
-              type="text"
-              placeholder="Cari objek, observer, stasiun…"
-              value={searchQ}
-              onChange={e => setSearchQ(e.target.value)}
-            />
-          </div>
-        </div>
-
-        <div style={{
-          padding: '8px 22px',
-          background: 'var(--bg-elevated)',
-          borderBottom: '1px solid var(--border)',
-          fontSize: 12, color: 'var(--text-muted)',
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        }}>
-          <span>Menampilkan <strong style={{ color: 'var(--text-primary)' }}>{filteredBookings.length}</strong> dari {BOOKINGS.length} sesi</span>
-          <span style={{ fontSize: 11 }}>Filter aktif: <strong>{activeFilter}</strong></span>
-        </div>
-
-        <div className="table-container">
-          <table>
-            <thead>
-              <tr>
-                {[
-                  { label: 'Tanggal',   col: 'date'       },
-                  { label: 'Objek',     col: 'objectName' },
-                  { label: 'Jenis',     col: 'objectType' },
-                  { label: 'Observer',  col: 'observer'   },
-                  { label: 'Stasiun',   col: 'station'    },
-                  { label: 'Waktu',     col: 'timeStart'  },
-                  { label: 'Teleskop',  col: 'telescope'  },
-                  { label: 'Prioritas', col: 'priority'   },
-                  { label: 'Status',    col: 'status'     },
-                ].map(({ label, col }) => (
-                  <th key={col} onClick={() => handleSort(col)}>
-                    {label} <SortIcon col={col} />
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {filteredBookings.length === 0 ? (
-                <tr>
-                  <td colSpan={9} style={{ textAlign: 'center', padding: '40px 16px', color: 'var(--text-muted)' }}>
-                    Tidak ada data yang cocok.
-                  </td>
-                </tr>
-              ) : (
-                filteredBookings.map((b) => {
-                  const isToday = b.date === today;
-                  return (
-                    <tr key={b.id} style={{ background: isToday ? 'rgba(229,28,28,0.03)' : undefined }}>
-                      <td style={{ whiteSpace: 'nowrap' }}>
-                        <div style={{ fontWeight: 600, fontSize: 13, color: 'var(--text-primary)' }}>{fmtShort(b.date)}</div>
-                        {isToday && <div style={{ fontSize: 10, color: 'var(--accent)', fontWeight: 700, letterSpacing: '0.08em' }}>HARI INI</div>}
-                      </td>
-                      <td className="name-cell">
-                        <div>{b.objectName}</div>
-                        <div style={{ fontSize: 11, color: 'var(--text-dim)', fontWeight: 400 }}>{b.designation} · mag {b.magnitude}</div>
-                      </td>
-                      <td>
-                        <span className={`tag tag-${b.objectType === 'Planet Kerdil' ? 'dwarf' : b.objectType.toLowerCase()}`}>
-                          {b.objectType}
-                        </span>
-                      </td>
-                      <td style={{ color: 'var(--text-primary)', fontWeight: 500 }}>{b.observer}</td>
-                      <td style={{ fontWeight: 600, fontSize: 13 }}>{b.station}</td>
-                      <td style={{ whiteSpace: 'nowrap' }}>
-                        <div style={{ fontFamily: 'var(--font-mono)', fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>
-                          {b.timeStart} – {b.timeEnd}
-                        </div>
-                      </td>
-                      <td style={{ fontSize: 12, color: 'var(--text-muted)' }}>{b.telescope}</td>
-                      <td>
-                        <span style={{
-                          fontSize: 11, fontWeight: 700,
-                          color: b.priority === 'Tinggi' ? 'var(--accent)' : b.priority === 'Sedang' ? 'var(--amber)' : 'var(--text-muted)',
-                        }}>
-                          {b.priority === 'Tinggi' ? '▲' : b.priority === 'Sedang' ? '●' : '▼'} {b.priority}
-                        </span>
-                      </td>
-                      <td><span className={getStatusTag(b.status)}>{b.status}</span></td>
-                    </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
-        </div>
-
-        <div style={{
-          padding: '14px 22px',
-          borderTop: '1px solid var(--border)',
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          fontSize: 12, color: 'var(--text-muted)', flexWrap: 'wrap', gap: 8,
-        }}>
-          <span>{filteredBookings.length} sesi ditemukan</span>
-          <div style={{ display: 'flex', gap: 16, fontSize: 11, flexWrap: 'wrap' }}>
-            {[
-              { label: 'Dikonfirmasi', color: 'var(--emerald)', status: 'Dikonfirmasi' },
-              { label: 'Menunggu',     color: 'var(--amber)',   status: 'Menunggu'     },
-              { label: 'Dibatalkan',   color: 'var(--accent)',  status: 'Dibatalkan'   },
-              { label: 'Selesai',      color: 'var(--cyan)',    status: 'Selesai'      },
-            ].map(({ label, color, status }) => (
-              <span key={status}>
-                <span style={{ display: 'inline-block', width: 8, height: 8, background: color, marginRight: 4 }} />
-                {label}: {filteredBookings.filter(b => b.status === status).length}
-              </span>
-            ))}
-          </div>
-        </div>
-      </div>
+        </aside>
+      </section>
     </div>
   );
 }

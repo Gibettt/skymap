@@ -35,8 +35,12 @@ export function proxy(request) {
     const allowed = [
       '/dashboard/internal',
       '/dashboard/internal/bookings',
+      '/dashboard/internal/form-booking',
       '/dashboard/internal/jadwal',
       '/dashboard/internal/observations',
+      '/dashboard/internal/package',
+      '/dashboard/internal/payout',
+      '/dashboard/internal/settings',
     ];
     if (!allowed.some((path) => pathname === path || pathname.startsWith(`${path}/`))) {
       return NextResponse.redirect(new URL('/dashboard/internal', request.url));

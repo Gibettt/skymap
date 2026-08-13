@@ -4,6 +4,8 @@ export const SERVICE_CHARGE_RATE = 0.10;
 export const GST_RATE = 0.17;
 export const OPERATION_SHARE_RATE = 0.50;
 export const STAFF_COMMISSION_RATE = 0.05;
+export const INTERNAL_COMMISSION_BASE_RATE = 0.10;
+export const INTERNAL_COMMISSION_SHARE_RATE = 0.90;
 export const CURRENCY = 'USD';
 
 export const PELANGGAN = [
@@ -45,7 +47,10 @@ export function calculateBookingFinance(booking) {
   const invoiceTotalUsd = roundUsd(baseTotalUsd + serviceChargeUsd + gstUsd);
   const operationShareUsd = roundUsd(baseTotalUsd * OPERATION_SHARE_RATE);
   const companyShareUsd = roundUsd(baseTotalUsd * OPERATION_SHARE_RATE);
-  const staffCommissionUsd = roundUsd(operationShareUsd * STAFF_COMMISSION_RATE);
+  const staffRole = String(booking.staffRole || booking.staff_role || '').toLowerCase();
+  const staffCommissionUsd = staffRole === 'internal'
+    ? roundUsd(baseTotalUsd * INTERNAL_COMMISSION_BASE_RATE * INTERNAL_COMMISSION_SHARE_RATE)
+    : roundUsd(operationShareUsd * STAFF_COMMISSION_RATE);
   const tipIncentiveUsd = roundUsd(booking.tipIncentiveUsd || 0);
 
   return {

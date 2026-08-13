@@ -84,7 +84,7 @@ function numberValue(value) {
   return Number.isFinite(number) ? number : 0;
 }
 
-function calculatePreview(pkg, form) {
+function calculatePreview(pkg, form, role) {
   if (!pkg) return null;
   const adultPrice = numberValue(pkg.adult_price_usd);
   const childPrice = numberValue(pkg.child_price_usd ?? (pkg.package_type === 'kids' ? adultPrice : adultPrice * 0.5));
@@ -93,7 +93,7 @@ function calculatePreview(pkg, form) {
   const gst = baseTotal * 0.17;
   const invoiceTotal = baseTotal + serviceCharge + gst;
   const operationShare = baseTotal * 0.5;
-  const commission = operationShare * 0.05;
+  const commission = role === 'internal' ? baseTotal * 0.1 * 0.9 : operationShare * 0.05;
 
   return { adultPrice, childPrice, baseTotal, serviceCharge, gst, invoiceTotal, operationShare, commission };
 }
@@ -134,8 +134,8 @@ export default function StaffBookingsClient({ role }) {
     [packages, form.packageId]
   );
   const pricePreview = useMemo(
-    () => calculatePreview(selectedPackage, form),
-    [selectedPackage, form]
+    () => calculatePreview(selectedPackage, form, role),
+    [selectedPackage, form, role]
   );
 
   const showToast = (message) => {

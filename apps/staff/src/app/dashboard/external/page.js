@@ -46,24 +46,22 @@ export default function ExternalStaffPage() {
   const observerName = isInternal ? 'Ahmad Fauzi' : 'Budi Santoso';
   const [externalBookings, setExternalBookings] = useState(null);
   const [loadError, setLoadError] = useState('');
-  const fallbackBookings = BOOKINGS.filter(b => b.observer === observerName);
+  const fallbackBookings = BOOKINGS.filter((booking) => booking.observer === observerName);
   const myBookings = externalBookings || fallbackBookings;
-  
-  const totalBookings = myBookings.length;
-  const bookingAktif = myBookings.filter(b => COUNTED_STATUSES.has(b.status)).length;
-  const akanDatang = myBookings.filter(b => ['accepted', 'booked', 'Disetujui', 'Booked'].includes(b.status)).length;
-  const selesai = myBookings.filter(b => ['finished_experience', 'Finished Experience', 'Selesai'].includes(b.status)).length;
 
+  const totalBookings = myBookings.length;
+  const bookingAktif = myBookings.filter((booking) => COUNTED_STATUSES.has(booking.status)).length;
+  const akanDatang = myBookings.filter((booking) => ['accepted', 'booked', 'Disetujui', 'Booked'].includes(booking.status)).length;
+  const selesai = myBookings.filter((booking) => ['finished_experience', 'Finished Experience', 'Selesai'].includes(booking.status)).length;
   const top5Bookings = myBookings.slice(0, 5);
   const starPoints = useMemo(() => calculateStarPoints(myBookings), [myBookings]);
   const starValue = Math.min(starPoints / 10, 5);
   const progressPercent = Math.min((starPoints / 50) * 100, 100);
 
   useEffect(() => {
-
     let alive = true;
     fetch('/api/bookings')
-      .then((res) => res.ok ? res.json() : Promise.reject(new Error('Gagal memuat booking external.')))
+      .then((res) => res.ok ? res.json() : Promise.reject(new Error('Gagal memuat booking staff.')))
       .then((data) => {
         if (alive) setExternalBookings(data.bookings || []);
       })
@@ -106,27 +104,25 @@ export default function ExternalStaffPage() {
         </div>
       </section>
 
-      {!isInternal && (
-        <section className="card external-star-card">
-          <div className="card-body">
-            <div className="external-star-summary">
-              <div>
-                <div className="kpi-label">Progress Bintang External</div>
-                <div className="external-star-value">{starValue.toFixed(1)} / 5</div>
-              </div>
-              <StarMeter value={starValue} />
+      <section className="card external-star-card">
+        <div className="card-body">
+          <div className="external-star-summary">
+            <div>
+              <div className="kpi-label">Progress Bintang Staff</div>
+              <div className="external-star-value">{starValue.toFixed(1)} / 5</div>
             </div>
-            <div className="progress-bar external-star-progress">
-              <div className="progress-fill" style={{ width: `${progressPercent}%` }} />
-            </div>
-            <div className="external-star-note">
-              <span>{starPoints.toFixed(1)} / 50 poin</span>
-              <span>10 booking = 1 bintang, package kids: 20 anak = 1 bintang</span>
-            </div>
-            {loadError && <div className="external-star-error">{loadError}</div>}
+            <StarMeter value={starValue} />
           </div>
-        </section>
-      )}
+          <div className="progress-bar external-star-progress">
+            <div className="progress-fill" style={{ width: `${progressPercent}%` }} />
+          </div>
+          <div className="external-star-note">
+            <span>{starPoints.toFixed(1)} / 50 poin</span>
+            <span>10 booking = 1 bintang, package kids: 20 anak = 1 bintang</span>
+          </div>
+          {loadError && <div className="external-star-error">{loadError}</div>}
+        </div>
+      </section>
 
       <div className="external-dashboard-grid">
         <section className="card" style={{ gridColumn: '1 / -1' }}>
@@ -147,15 +143,15 @@ export default function ExternalStaffPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {top5Bookings.length > 0 ? top5Bookings.map(b => (
-                    <tr key={b.id}>
-                      <td>{getField(b, 'booking_code', 'bookingCode') || b.id}</td>
-                      <td>{getField(b, 'package_name', 'packageName') || getField(b, 'station', 'stationId')}</td>
-                      <td>{String(getField(b, 'event_date', 'date') || '').slice(0, 10)}</td>
-                      <td>{getField(b, 'time_start', 'timeStart')} - {getField(b, 'time_end', 'timeEnd')}</td>
+                  {top5Bookings.length > 0 ? top5Bookings.map((booking) => (
+                    <tr key={booking.id}>
+                      <td>{getField(booking, 'booking_code', 'bookingCode') || booking.id}</td>
+                      <td>{getField(booking, 'package_name', 'packageName') || getField(booking, 'station', 'stationId')}</td>
+                      <td>{String(getField(booking, 'event_date', 'date') || '').slice(0, 10)}</td>
+                      <td>{getField(booking, 'time_start', 'timeStart')} - {getField(booking, 'time_end', 'timeEnd')}</td>
                       <td>
-                        <span className={`tag ${statusClass(b.status)}`}>
-                          {statusLabel(b.status)}
+                        <span className={`tag ${statusClass(booking.status)}`}>
+                          {statusLabel(booking.status)}
                         </span>
                       </td>
                     </tr>
@@ -176,17 +172,8 @@ export default function ExternalStaffPage() {
           </div>
           <div className="card-body">
             <ul style={{ paddingLeft: '1.1rem', display: 'flex', flexDirection: 'column', gap: 10, margin: 0, fontSize: 13, lineHeight: 1.55 }}>
-              {isInternal ? (
-                <>
-                  <li><strong>Internal:</strong> staff operasional bisa melihat dan mengelola semua booking resort.</li>
-                  <li><strong>Booking Baru:</strong> booking dari external akan masuk dengan status <em>Pending Review</em>, perlu persetujuan admin untuk menjadi aktif.</li>
-                </>
-              ) : (
-                <>
-                  <li><strong>External:</strong> booking baru yang dibuat akan masuk dengan status <em>Pending Review</em> dan memerlukan persetujuan (ACC) dari admin sebelum menjadi aktif.</li>
-                  <li><strong>Status:</strong> pantau status booking Anda di tabel riwayat — <em>Pending Review</em> berarti menunggu ACC admin.</li>
-                </>
-              )}
+              <li><strong>Booking Baru:</strong> booking baru yang dibuat akan masuk dengan status <em>Pending Review</em> dan memerlukan persetujuan (ACC) dari admin sebelum menjadi aktif.</li>
+              <li><strong>Status:</strong> pantau status booking Anda di tabel riwayat. <em>Pending Review</em> berarti menunggu ACC admin.</li>
               <li><strong>Invoice:</strong> pembayaran tetap dicatat manual oleh resort.</li>
               <li><strong>Signed:</strong> centang setelah tamu tanda tangan fisik.</li>
               <li><strong>Feedback:</strong> kirim link WhatsApp setelah experience selesai.</li>

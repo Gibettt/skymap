@@ -103,6 +103,7 @@ export async function POST(request) {
         childCount,
         adultPriceUsd: Number(pkg.rows[0].adult_price_usd),
         childPriceUsd: Number(childPriceUsd),
+        staffRole: staff.rows[0].role,
       });
 
       const status = 'pending_review';

@@ -4,6 +4,11 @@ import { query, transaction } from '@ephemeris/db';
 const PACKAGE_TYPES = new Set(['regular', 'private', 'kids']);
 const EXPERIENCE_TYPES = new Set(['communal', 'private', 'kids']);
 
+async function ensurePackageMetadataColumns(client) {
+  await client.query('ALTER TABLE packages ADD COLUMN IF NOT EXISTS description text');
+  await client.query('ALTER TABLE packages ADD COLUMN IF NOT EXISTS child_age_range text');
+}
+
 export async function GET() {
   try {
     await requireUser(['admin']);
@@ -23,14 +28,19 @@ export async function POST(request) {
     const packageType = String(body.packageType || '').trim();
     const experienceType = String(body.experienceType || '').trim();
     const location = String(body.location || '').trim();
+    const description = String(body.description || '').trim() || null;
+    const childAgeRange = String(body.childAgeRange || '').trim() || null;
     const adultPriceUsd = Number(body.adultPriceUsd || 0);
     const childPriceUsd = body.childPriceUsd === null || body.childPriceUsd === '' ? null : Number(body.childPriceUsd);
+    const isActive = body.isActive !== false;
 
     if (
       !name ||
       !PACKAGE_TYPES.has(packageType) ||
       !EXPERIENCE_TYPES.has(experienceType) ||
       !location ||
+      (description !== null && description.length > 240) ||
+      (childAgeRange !== null && childAgeRange.length > 80) ||
       !Number.isFinite(adultPriceUsd) ||
       adultPriceUsd < 0 ||
       (childPriceUsd !== null && (!Number.isFinite(childPriceUsd) || childPriceUsd < 0))
@@ -39,12 +49,13 @@ export async function POST(request) {
     }
 
     const row = await transaction(async (client) => {
+      await ensurePackageMetadataColumns(client);
       const { rows } = await client.query(
         `INSERT INTO packages
-          (name, package_type, experience_type, location, adult_price_usd, child_price_usd, is_active)
-         VALUES ($1, $2, $3, $4, $5, $6, true)
+          (name, package_type, experience_type, location, description, adult_price_usd, child_price_usd, child_age_range, is_active)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
          RETURNING *`,
-        [name, packageType, experienceType, location, adultPriceUsd, childPriceUsd]
+        [name, packageType, experienceType, location, description, adultPriceUsd, childPriceUsd, childAgeRange, isActive]
       );
       await writeAudit(client, {
         actorId: user.id,

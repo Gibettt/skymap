@@ -324,15 +324,22 @@ export function getPackageNavItems(packages) {
       slug: exp.slug,
       title: exp.title,
       icon: exp.icon,
+      price: exp.price,
     }));
   }
 
   return packages.map((pkg) => {
     const exp = getObservationBySlug(getPackageSlug(pkg));
+    const price = [
+      `Adult ${formatUsd(pkg.adult_price_usd)}`,
+      pkg.child_price_usd == null ? null : `Child ${formatUsd(pkg.child_price_usd)}`,
+    ].filter(Boolean).join(' / ');
+
     return {
       slug: getPackageSlug(pkg),
       title: exp?.title || pkg.name,
       icon: exp?.icon || (pkg.package_type === 'kids' ? '+' : pkg.package_type === 'private' ? '*' : 'o'),
+      price,
     };
   });
 }
@@ -379,8 +386,8 @@ export function getExperienceForPackage(pkg) {
       { icon: '$', label: 'Price', value: price },
     ],
     price,
-    ageLimit: pkg.package_type === 'kids' ? 'Kids package' : null,
-    description: `${pkg.name} adalah package aktif yang dibuat oleh admin untuk proses booking staff.`,
+    ageLimit: pkg.child_age_range || (pkg.package_type === 'kids' ? 'Kids package' : null),
+    description: pkg.description || `${pkg.name} adalah package aktif yang dibuat oleh admin untuk proses booking staff.`,
     highlights: [typeLabel, formatPackageType(pkg.experience_type), 'Admin Package'],
     whatYouSee: [
       { icon: 'o', label: 'Moon' },

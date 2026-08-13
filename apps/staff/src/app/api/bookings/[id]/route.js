@@ -3,6 +3,29 @@ import { transaction } from '@ephemeris/db';
 import { calculateBookingTotals } from '@ephemeris/finance';
 
 const INTERNAL_STATUS_UPDATES = new Set(['finished_experience', 'cancelled']);
+const bookingSelect = `
+  SELECT
+    b.*,
+    p.name AS package_name,
+    p.package_type,
+    p.experience_type,
+    p.location,
+    u.name AS staff_name,
+    u.role AS staff_role,
+    r.name AS resort_name,
+    r.code AS resort_code,
+    r.location AS resort_location,
+    ft.token AS feedback_token,
+    ft.status AS feedback_status,
+    fs.rating,
+    fs.comment
+  FROM bookings b
+  JOIN packages p ON p.id = b.package_id
+  JOIN users u ON u.id = b.staff_id
+  LEFT JOIN resorts r ON r.id = b.resort_id
+  LEFT JOIN feedback_tokens ft ON ft.booking_id = b.id
+  LEFT JOIN feedback_submissions fs ON fs.booking_id = b.id
+`;
 
 function cleanText(value) {
   const text = String(value || '').trim();
@@ -32,6 +55,8 @@ export async function PATCH(request, { params }) {
       const packageId = body.packageId || before.package_id;
       const pkg = await client.query('SELECT * FROM packages WHERE id = $1', [packageId]);
       if (!pkg.rows[0]) throw new Error('Package not found');
+      const staffResult = await client.query('SELECT role FROM users WHERE id = $1', [before.staff_id]);
+      const staffRole = staffResult.rows[0]?.role || user.role;
 
       const adultCount = Number(body.adultCount ?? before.adult_count);
       const childCount = Number(body.childCount ?? before.child_count);
@@ -41,6 +66,7 @@ export async function PATCH(request, { params }) {
         childCount,
         adultPriceUsd: Number(pkg.rows[0].adult_price_usd),
         childPriceUsd: Number(childPriceUsd),
+        staffRole,
       });
 
       const nextStatus = body.status ?? before.status;
@@ -180,7 +206,8 @@ export async function PATCH(request, { params }) {
         afterData: rows[0],
         request,
       });
-      return rows[0];
+      const refreshed = await client.query(`${bookingSelect} WHERE b.id = $1`, [id]);
+      return refreshed.rows[0];
     });
 
     if (!updated) return Response.json({ error: 'Booking not found' }, { status: 404 });

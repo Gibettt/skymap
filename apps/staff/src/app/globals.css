@@ -741,7 +741,7 @@ textarea.input { min-height: 100px; resize: vertical; }
   grid-template-columns: 42px minmax(0, 1fr) auto;
   align-items: center;
   gap: 14px;
-  min-height: 76px;
+  min-height: 64px;
   padding: 14px 18px;
   color: var(--text-primary);
   text-decoration: none;
@@ -784,7 +784,8 @@ textarea.input { min-height: 100px; resize: vertical; }
   color: var(--text-secondary);
   font-size: 12px;
   font-weight: 800;
-  white-space: nowrap;
+  line-height: 1.35;
+  text-align: right;
 }
 
 .family-view-backdrop {

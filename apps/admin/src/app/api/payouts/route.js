@@ -9,6 +9,7 @@ export async function GET() {
         pr.*,
         u.name AS requester_name,
         u.email AS requester_email,
+        u.role AS requester_role,
         r.name AS resort_name,
         r.code AS resort_code,
         reviewer.name AS reviewed_by_name

@@ -2,6 +2,8 @@ const SERVICE_CHARGE_RATE = 0.10;
 const GST_RATE = 0.17;
 const OPERATION_SHARE_RATE = 0.50;
 const STAFF_COMMISSION_RATE = 0.05;
+const INTERNAL_COMMISSION_BASE_RATE = 0.10;
+const INTERNAL_COMMISSION_SHARE_RATE = 0.90;
 const STAR_BONUS_USD = 10;
 
 const STAR_STATUSES = new Set([
@@ -22,14 +24,16 @@ function field(row, snakeName, camelName) {
   return row[snakeName] ?? row[camelName];
 }
 
-export function calculateBookingTotals({ adultCount, childCount, adultPriceUsd, childPriceUsd }) {
+export function calculateBookingTotals({ adultCount, childCount, adultPriceUsd, childPriceUsd, staffRole = 'external' }) {
   const baseTotalUsd = roundUsd((adultCount * adultPriceUsd) + (childCount * childPriceUsd));
   const serviceChargeUsd = roundUsd(baseTotalUsd * SERVICE_CHARGE_RATE);
   const gstUsd = roundUsd(baseTotalUsd * GST_RATE);
   const invoiceTotalUsd = roundUsd(baseTotalUsd + serviceChargeUsd + gstUsd);
   const operationShareUsd = roundUsd(baseTotalUsd * OPERATION_SHARE_RATE);
   const companyShareUsd = roundUsd(baseTotalUsd * OPERATION_SHARE_RATE);
-  const staffCommissionUsd = roundUsd(operationShareUsd * STAFF_COMMISSION_RATE);
+  const staffCommissionUsd = String(staffRole).toLowerCase() === 'internal'
+    ? roundUsd(baseTotalUsd * INTERNAL_COMMISSION_BASE_RATE * INTERNAL_COMMISSION_SHARE_RATE)
+    : roundUsd(operationShareUsd * STAFF_COMMISSION_RATE);
 
   return {
     baseTotalUsd,
@@ -47,12 +51,8 @@ export function calculateStarPoints(bookings) {
     const status = field(booking, 'status', 'status');
     if (!STAR_STATUSES.has(status)) return total;
 
-    const packageType = String(field(booking, 'package_type', 'packageType') || '').toLowerCase();
-    if (packageType === 'kids') {
-      return total + Number(field(booking, 'child_count', 'childCount') || 0) * 0.5;
-    }
-
-    return total + 1;
+    const childCount = Number(field(booking, 'child_count', 'childCount') || 0);
+    return total + 1 + (childCount * 0.5);
   }, 0);
 }
 

@@ -100,6 +100,7 @@ export async function POST(request) {
         childCount,
         adultPriceUsd: Number(pkg.rows[0].adult_price_usd),
         childPriceUsd: Number(childPriceUsd),
+        staffRole: staffRow.role,
       });
 
       const status = 'accepted';

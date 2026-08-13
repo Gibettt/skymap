@@ -2,9 +2,12 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { getObservationBySlug, getPackageNavItems } from '@/data/observations';
+import { usePathname } from 'next/navigation';
+import { getPackageNavItems } from '@/data/observations';
 
 export default function ExternalPackagePage() {
+  const pathname = usePathname();
+  const basePath = pathname.startsWith('/dashboard/internal') ? '/dashboard/internal' : '/dashboard/external';
   const [packages, setPackages] = useState([]);
 
   useEffect(() => {
@@ -30,7 +33,7 @@ export default function ExternalPackagePage() {
           <h1>Package</h1>
           <p>Pilih service/package yang ingin dilihat atau digunakan untuk booking.</p>
         </div>
-        <Link href="/dashboard/external/form-booking" className="btn btn-primary" style={{ background: '#7c3aed', textDecoration: 'none' }}>
+        <Link href={`${basePath}/form-booking`} className="btn btn-primary" style={{ background: '#7c3aed', textDecoration: 'none' }}>
           Form Booking
         </Link>
       </div>
@@ -42,19 +45,15 @@ export default function ExternalPackagePage() {
         </div>
 
         <div className="package-service-list">
-          {serviceItems.map((item) => {
-            const experience = getObservationBySlug(item.slug);
-            return (
-              <Link key={item.slug} href={`/dashboard/external/observations/${item.slug}`} className="package-service-row">
-                <span className="package-service-icon">{item.icon}</span>
-                <span className="package-service-main">
-                  <strong>{item.title}</strong>
-                  <small>{experience?.tagline || 'Package aktif untuk staff external.'}</small>
-                </span>
-                <span className="package-service-meta">{experience?.schedule?.time || 'View'}</span>
-              </Link>
-            );
-          })}
+          {serviceItems.map((item) => (
+            <Link key={item.slug} href={`${basePath}/observations/${item.slug}`} className="package-service-row">
+              <span className="package-service-icon">{item.icon}</span>
+              <span className="package-service-main">
+                <strong>{item.title}</strong>
+              </span>
+              <span className="package-service-meta">{item.price || 'Upon request'}</span>
+            </Link>
+          ))}
         </div>
       </section>
     </div>

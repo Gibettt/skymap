@@ -69,8 +69,10 @@ CREATE TABLE IF NOT EXISTS packages (
   package_type package_type NOT NULL,
   experience_type experience_type NOT NULL,
   location text NOT NULL,
+  description text,
   adult_price_usd numeric(10,2) NOT NULL DEFAULT 0 CHECK (adult_price_usd >= 0),
   child_price_usd numeric(10,2) CHECK (child_price_usd IS NULL OR child_price_usd >= 0),
+  child_age_range text,
   is_active boolean NOT NULL DEFAULT true,
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz NOT NULL DEFAULT now()
@@ -192,6 +194,22 @@ CREATE TABLE IF NOT EXISTS payout_requests (
   updated_at timestamptz NOT NULL DEFAULT now()
 );
 
+CREATE TABLE IF NOT EXISTS notifications (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  recipient_user_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  type text NOT NULL CHECK (type IN ('booking', 'payout')),
+  source_table text NOT NULL CHECK (source_table IN ('bookings', 'payout_requests')),
+  source_id uuid NOT NULL,
+  title text NOT NULL,
+  message text NOT NULL,
+  meta text,
+  link text NOT NULL,
+  read_at timestamptz,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now(),
+  UNIQUE (recipient_user_id, type, source_id)
+);
+
 CREATE OR REPLACE FUNCTION set_updated_at()
 RETURNS trigger AS $$
 BEGIN
@@ -225,6 +243,11 @@ CREATE TRIGGER payout_requests_set_updated_at
 BEFORE UPDATE ON payout_requests
 FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 
+DROP TRIGGER IF EXISTS notifications_set_updated_at ON notifications;
+CREATE TRIGGER notifications_set_updated_at
+BEFORE UPDATE ON notifications
+FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+
 CREATE INDEX IF NOT EXISTS idx_users_role ON users(role);
 CREATE INDEX IF NOT EXISTS idx_users_resort_id ON users(resort_id);
 CREATE INDEX IF NOT EXISTS idx_packages_active ON packages(is_active);
@@ -238,6 +261,9 @@ CREATE INDEX IF NOT EXISTS idx_feedback_tokens_token ON feedback_tokens(token);
 CREATE INDEX IF NOT EXISTS idx_audit_logs_actor_created ON audit_logs(actor_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_payout_requests_requester ON payout_requests(requester_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_payout_requests_status ON payout_requests(status);
+CREATE INDEX IF NOT EXISTS idx_notifications_recipient_created ON notifications(recipient_user_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_notifications_recipient_read ON notifications(recipient_user_id, read_at);
+CREATE INDEX IF NOT EXISTS idx_notifications_source ON notifications(type, source_id);
 
 CREATE TABLE IF NOT EXISTS sky_app_settings (
   id boolean PRIMARY KEY DEFAULT true CHECK (id = true),

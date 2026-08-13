@@ -331,7 +331,7 @@ function BookingModal({ booking, onClose, onSave }) {
               <KpiMini label="Base" value={formatUsd(finance.baseTotalUsd)} />
               <KpiMini label="Invoice" value={formatUsd(finance.invoiceTotalUsd)} />
               <KpiMini label="Resort 50%" value={formatUsd(finance.operationShareUsd)} />
-              <KpiMini label="Staff 5%" value={formatUsd(finance.staffCommissionUsd)} />
+              <KpiMini label="Komisi Staff" value={formatUsd(finance.staffCommissionUsd)} />
             </div>
           </div>
           <div className="modal-footer">
@@ -404,7 +404,7 @@ function BookingDetail({ booking, onClose, onEdit, onDelete }) {
             <KpiMini label="Base" value={formatUsd(finance.baseTotalUsd)} />
             <KpiMini label="Invoice" value={formatUsd(finance.invoiceTotalUsd)} />
             <KpiMini label="Resort 50%" value={formatUsd(finance.operationShareUsd)} />
-            <KpiMini label="Staff 5%" value={formatUsd(finance.staffCommissionUsd)} />
+            <KpiMini label="Komisi Staff" value={formatUsd(finance.staffCommissionUsd)} />
           </div>
 
           <div style={{ padding: 14, background: 'var(--bg-elevated)', border: '1px solid var(--border)', marginBottom: 18 }}>

@@ -52,7 +52,7 @@ export default function StaffHeader({ role = 'Internal', onNewBooking }) {
       const exp = getObservationBySlug(slug);
       return { title: exp?.title ?? 'Package', crumb: 'Package' };
     }
-    if (pathname.endsWith('/bookings')) return { title: role === 'External' ? 'My Bookings' : 'All Bookings', crumb: 'Reservasi' };
+    if (pathname.endsWith('/bookings')) return { title: 'My Bookings', crumb: 'Reservasi' };
     if (pathname.endsWith('/payout')) return { title: 'Payout', crumb: 'Komisi' };
     if (pathname.endsWith('/jadwal')) return { title: 'Calendar', crumb: 'Penjadwalan' };
     if (pathname.endsWith('/instruments')) return { title: 'Instruments', crumb: 'Instruments' };

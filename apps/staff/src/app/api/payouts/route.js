@@ -6,7 +6,6 @@ const bookingSelect = `
   SELECT b.status, b.signed_by_guest, b.staff_commission_5_usd, b.child_count, p.package_type
   FROM bookings b
   JOIN packages p ON p.id = b.package_id
-  WHERE b.resort_id = $1
 `;
 
 const payoutSelect = `
@@ -14,8 +13,6 @@ const payoutSelect = `
   FROM payout_requests pr
   JOIN users u ON u.id = pr.requester_id
   LEFT JOIN resorts r ON r.id = pr.resort_id
-  WHERE pr.resort_id = $1
-  ORDER BY pr.created_at DESC
 `;
 
 function cleanText(value, max = 160) {
@@ -23,9 +20,28 @@ function cleanText(value, max = 160) {
   return text ? text.slice(0, max) : '';
 }
 
-async function loadSummary(resortId, client = { query }) {
-  const bookingResult = await client.query(bookingSelect, [resortId]);
-  const payoutResult = await client.query(payoutSelect, [resortId]);
+function payoutScope(user) {
+  if (user.role === 'external') {
+    return {
+      bookingWhere: 'WHERE b.resort_id = $1',
+      payoutWhere: 'WHERE pr.resort_id = $1',
+      values: [user.resort_id],
+      resortId: user.resort_id,
+    };
+  }
+
+  return {
+    bookingWhere: 'WHERE b.staff_id = $1',
+    payoutWhere: 'WHERE pr.requester_id = $1',
+    values: [user.id],
+    resortId: null,
+  };
+}
+
+async function loadSummary(user, client = { query }) {
+  const scope = payoutScope(user);
+  const bookingResult = await client.query(`${bookingSelect} ${scope.bookingWhere}`, scope.values);
+  const payoutResult = await client.query(`${payoutSelect} ${scope.payoutWhere} ORDER BY pr.created_at DESC`, scope.values);
 
   return {
     requests: payoutResult.rows,
@@ -35,10 +51,12 @@ async function loadSummary(resortId, client = { query }) {
 
 export async function GET() {
   try {
-    const user = await requireUser(['external']);
-    if (!user.resort_id) return Response.json({ error: 'External resort profile is not configured' }, { status: 403 });
+    const user = await requireUser(['internal', 'external']);
+    if (user.role === 'external' && !user.resort_id) {
+      return Response.json({ error: 'External resort profile is not configured' }, { status: 403 });
+    }
 
-    return Response.json(await loadSummary(user.resort_id));
+    return Response.json(await loadSummary(user));
   } catch (error) {
     return jsonError(error);
   }
@@ -47,8 +65,10 @@ export async function GET() {
 export async function POST(request) {
   try {
     await assertSameOrigin(request);
-    const user = await requireUser(['external']);
-    if (!user.resort_id) return Response.json({ error: 'External resort profile is not configured' }, { status: 403 });
+    const user = await requireUser(['internal', 'external']);
+    if (user.role === 'external' && !user.resort_id) {
+      return Response.json({ error: 'External resort profile is not configured' }, { status: 403 });
+    }
 
     const body = await request.json();
     const amountUsd = Number(body.amountUsd);
@@ -62,10 +82,11 @@ export async function POST(request) {
     }
 
     const created = await transaction(async (client) => {
-      const { summary } = await loadSummary(user.resort_id, client);
+      const { summary } = await loadSummary(user, client);
       if (Math.round(amountUsd * 100) > Math.round(summary.availableUsd * 100)) {
         return { error: 'Amount exceeds available payout balance' };
       }
+      const scope = payoutScope(user);
 
       const { rows } = await client.query(
         `INSERT INTO payout_requests
@@ -75,7 +96,7 @@ export async function POST(request) {
          RETURNING *`,
         [
           user.id,
-          user.resort_id,
+          scope.resortId,
           amountUsd,
           summary.commissionUsd,
           summary.starBonusUsd,

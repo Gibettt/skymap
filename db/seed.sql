@@ -24,22 +24,23 @@ ON CONFLICT (email) DO UPDATE SET
   status = EXCLUDED.status,
   password_hash = EXCLUDED.password_hash;
 
-INSERT INTO packages (name, package_type, experience_type, location, adult_price_usd, child_price_usd, is_active)
+INSERT INTO packages (name, package_type, experience_type, location, adult_price_usd, child_price_usd, child_age_range, is_active)
 VALUES
-  ('Beach Stargazing', 'regular', 'communal', 'Palm Beach', 90.00, 45.00, true),
-  ('Private Stargazing', 'private', 'private', 'Private Beach', 140.00, 70.00, true),
-  ('Kids Stargazing', 'kids', 'kids', 'Kids Club', 0.00, 45.00, true),
-  ('Solar Observation', 'regular', 'communal', 'Waves Cafe', 55.00, 27.50, true),
-  ('Celestial Dining', 'private', 'private', 'Palm Beach', 185.00, 0.00, true),
-  ('Moon Observation', 'regular', 'communal', 'Remote Observatory', 0.00, 0.00, true),
-  ('Night Sky', 'regular', 'communal', 'Remote Observatory', 0.00, 0.00, true),
-  ('Deep Sky', 'regular', 'communal', 'Remote Observatory', 0.00, 0.00, true)
+  ('Beach Stargazing', 'regular', 'communal', 'Palm Beach', 90.00, 45.00, NULL, true),
+  ('Private Stargazing', 'private', 'private', 'Private Beach', 140.00, 70.00, NULL, true),
+  ('Kids Stargazing', 'kids', 'kids', 'Kids Club', 0.00, 45.00, '6 - 15 tahun', true),
+  ('Solar Observation', 'regular', 'communal', 'Waves Cafe', 55.00, 27.50, NULL, true),
+  ('Celestial Dining', 'private', 'private', 'Palm Beach', 185.00, 0.00, NULL, true),
+  ('Moon Observation', 'regular', 'communal', 'Remote Observatory', 0.00, 0.00, NULL, true),
+  ('Night Sky', 'regular', 'communal', 'Remote Observatory', 0.00, 0.00, NULL, true),
+  ('Deep Sky', 'regular', 'communal', 'Remote Observatory', 0.00, 0.00, NULL, true)
 ON CONFLICT (name) DO UPDATE SET
   package_type = EXCLUDED.package_type,
   experience_type = EXCLUDED.experience_type,
   location = EXCLUDED.location,
   adult_price_usd = EXCLUDED.adult_price_usd,
   child_price_usd = EXCLUDED.child_price_usd,
+  child_age_range = EXCLUDED.child_age_range,
   is_active = EXCLUDED.is_active;
 
 WITH refs AS (

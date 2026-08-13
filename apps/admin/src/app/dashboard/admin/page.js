@@ -15,7 +15,12 @@ const fmt = (n) =>
   }).format(n);
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agt', 'Sep', 'Okt', 'Nov', 'Des'];
-const CURRENT_MONTH = 6; // July (0-indexed)
+const MONTH_LABELS = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+const bookingMonth = (booking) => {
+  const date = new Date(booking.date || booking.bookingDate || booking.createdAt);
+  return Number.isNaN(date.getTime()) ? null : date.getMonth();
+};
+const CURRENT_MONTH = Math.max(0, ...BOOKINGS.map(bookingMonth).filter((month) => month !== null));
 
 const OBJ_TAG = {
   Regular: 'tag-planet',
@@ -40,9 +45,18 @@ const CATALOG_COLORS = {
   Private: 'var(--violet)',
   Kids: 'var(--emerald)',
 };
+const PIE_COLORS = ['var(--accent)', 'var(--cyan)', 'var(--violet)', 'var(--emerald)'];
+const PIE_RADIUS = 34;
+const PIE_CIRCUMFERENCE = 2 * Math.PI * PIE_RADIUS;
+const CHART_LEFT = 52;
+const CHART_RIGHT = 968;
+const CHART_TOP = 28;
+const CHART_BOTTOM = 184;
 
 export default function AdminOverviewPage() {
   const [hoveredBar, setHoveredBar] = useState(null);
+  const [activePackageName, setActivePackageName] = useState(null);
+  const [chartMonth, setChartMonth] = useState(CURRENT_MONTH);
 
   /* ── derived stats ───────────────────────────────────── */
   const stats = useMemo(() => {
@@ -71,16 +85,31 @@ export default function AdminOverviewPage() {
 
   /* ── bar chart data (Jan–Jul real, rest future) ──────── */
   const barData = useMemo(() => {
-    const historical = [52, 68, 45, 71, 83, 60];
     return MONTHS.map((month, i) => ({
       month,
-      value: i < CURRENT_MONTH ? historical[i] : i === CURRENT_MONTH ? BOOKINGS.length : 0,
+      value: BOOKINGS.filter((booking) => bookingMonth(booking) === i).length,
       isCurrent: i === CURRENT_MONTH,
       isFuture: i > CURRENT_MONTH,
     }));
   }, []);
 
-  const maxBar = useMemo(() => Math.max(...barData.map((d) => d.value || 1)), [barData]);
+  const chartData = useMemo(() => barData.map((d, i) => ({
+    ...d,
+    isCurrent: i === chartMonth,
+    isFuture: i > chartMonth,
+  })), [barData, chartMonth]);
+
+  const maxChart = useMemo(() => Math.max(...chartData.filter((d) => !d.isFuture).map((d) => d.value || 1)), [chartData]);
+  const chartPoints = useMemo(() => chartData.map((d, i) => {
+    const x = CHART_LEFT + i * ((CHART_RIGHT - CHART_LEFT) / 11);
+    if (d.isFuture) return { ...d, x, y: null };
+    return { ...d, x, y: CHART_BOTTOM - ((d.value || 0) / maxChart) * (CHART_BOTTOM - CHART_TOP) };
+  }), [chartData, maxChart]);
+  const visiblePoints = chartPoints.filter((d) => d.y !== null);
+  const linePath = visiblePoints.map((d, i) => `${i === 0 ? 'M' : 'L'} ${d.x} ${d.y}`).join(' ');
+  const areaPath = visiblePoints.length
+    ? `M ${visiblePoints[0].x} ${CHART_BOTTOM} ${visiblePoints.map((d) => `L ${d.x} ${d.y}`).join(' ')} L ${visiblePoints[visiblePoints.length - 1].x} ${CHART_BOTTOM} Z`
+    : '';
 
   /* ── catalog distribution ────────────────────────────── */
   const catalogDist = useMemo(() => {
@@ -91,14 +120,39 @@ export default function AdminOverviewPage() {
     });
   }, []);
 
+  const packageLeaders = useMemo(() => {
+    const selectedMonthBookings = BOOKINGS.filter((booking) => bookingMonth(booking) === chartMonth);
+    const totals = selectedMonthBookings.reduce((acc, booking) => {
+      const key = booking.packageName || booking.objectName || 'Unknown Package';
+      acc[key] = acc[key] || { name: key, count: 0, revenue: 0 };
+      acc[key].count += 1;
+      acc[key].revenue += booking.status === 'Finished Experience' ? calculateBookingFinance(booking).invoiceTotalUsd : 0;
+      return acc;
+    }, {});
+    return Object.values(totals).sort((a, b) => b.count - a.count || b.revenue - a.revenue).slice(0, 4);
+  }, [chartMonth]);
+  const packageTotal = packageLeaders.reduce((total, item) => total + item.count, 0);
+  const packagePie = useMemo(() => {
+    return packageLeaders.map((item, index) => {
+      const pct = packageTotal ? Math.round((item.count / packageTotal) * 100) : 0;
+      const start = packageTotal
+        ? packageLeaders.slice(0, index).reduce((total, row) => total + row.count, 0) / packageTotal * 100
+        : 0;
+      const end = index === packageLeaders.length - 1 ? 100 : start + (packageTotal ? item.count / packageTotal * 100 : 0);
+      return { ...item, pct, start, end, color: PIE_COLORS[index % PIE_COLORS.length] };
+    });
+  }, [packageLeaders, packageTotal]);
+
   /* ── open alerts (only open ones) ───────────────────── */
   const openAlerts = useMemo(() => ALERTS.filter((a) => a.isOpen), []);
 
   /* ── bar chart summary stats ─────────────────────────── */
-  const historicalBars = barData.filter((d) => !d.isFuture);
+  const historicalBars = chartData.filter((d) => !d.isFuture);
   const barTotal = historicalBars.reduce((a, d) => a + d.value, 0);
   const barAvg = Math.round(barTotal / historicalBars.length);
   const barMax = Math.max(...historicalBars.map((d) => d.value));
+  const barMaxMonth = historicalBars.find((d) => d.value === barMax)?.month || MONTHS[chartMonth];
+  const activePackage = packagePie.find((item) => item.name === activePackageName) || packagePie[0];
 
   /* ── render ──────────────────────────────────────────── */
   return (
@@ -286,13 +340,22 @@ export default function AdminOverviewPage() {
       </div>
 
       {/* ── Bar Chart ─────────────────────────────────────── */}
-      <div className="card fade-in-up">
+      <div className="admin-chart-grid fade-in-up">
+      <div className="card admin-booking-chart-card">
         <div className="card-header">
           <span className="card-title">Booking per Bulan — 2026</span>
-          <div style={{ display: 'flex', gap: 20, alignItems: 'center' }}>
+          <div style={{ display: 'flex', gap: 14, alignItems: 'center', flexWrap: 'wrap' }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 11, color: 'var(--text-muted)' }}>
+              Sampai Bulan
+              <select className="input" value={chartMonth} onChange={(event) => setChartMonth(Number(event.target.value))} style={{ height: 32, minHeight: 32, width: 112, padding: '0 28px 0 10px', fontSize: 12 }}>
+                {MONTHS.slice(0, CURRENT_MONTH + 1).map((month, index) => (
+                  <option key={month} value={index}>{month}</option>
+                ))}
+              </select>
+            </label>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: 'var(--text-muted)' }}>
               <span style={{ width: 10, height: 10, background: 'var(--accent)', display: 'inline-block' }} />
-              Bulan Berjalan
+              Bulan Dipilih
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: 'var(--text-muted)' }}>
               <span
@@ -321,55 +384,46 @@ export default function AdminOverviewPage() {
           </div>
         </div>
         <div className="card-body">
-          <div className="bar-chart" style={{ height: 200, gap: 8 }}>
-            {barData.map((d, i) => {
-              const heightPct = d.value ? (d.value / maxBar) * 100 : 3;
-              const isHovered = hoveredBar === i;
-              return (
-                <div
-                  key={d.month}
-                  className="bar-item"
-                  onMouseEnter={() => !d.isFuture && setHoveredBar(i)}
-                  onMouseLeave={() => setHoveredBar(null)}
-                  style={{ cursor: d.isFuture ? 'default' : 'pointer' }}
-                >
-                  <div
-                    className="bar-value"
-                    style={{ color: d.isCurrent ? 'var(--accent)' : 'var(--text-muted)', fontWeight: d.isCurrent ? 700 : 400 }}
-                  >
-                    {d.isFuture ? '' : d.value}
-                  </div>
-                  <div
-                    className="bar-fill"
-                    style={{
-                      height: `${d.isFuture ? 3 : heightPct}%`,
-                      background: d.isCurrent
-                        ? 'var(--accent)'
-                        : d.isFuture
-                        ? 'transparent'
-                        : isHovered
-                        ? '#555'
-                        : 'var(--bg-elevated)',
-                      border: d.isCurrent
-                        ? '1px solid var(--accent-dark)'
-                        : d.isFuture
-                        ? '1px dashed var(--border)'
-                        : '1px solid var(--border)',
-                      transition: 'background 0.2s, height 0.6s cubic-bezier(0.4,0,0.2,1)',
-                    }}
-                  />
-                  <div
-                    className="bar-label"
-                    style={{
-                      color: d.isCurrent ? 'var(--accent)' : 'var(--text-dim)',
-                      fontWeight: d.isCurrent ? 700 : 400,
-                    }}
-                  >
-                    {d.month}
-                  </div>
-                </div>
-              );
-            })}
+          <div className="line-chart">
+            <svg viewBox="0 0 1000 220" role="img" aria-label="Grafik booking per bulan 2026">
+              <defs>
+                <linearGradient id="bookingTrendFill" x1="0" x2="0" y1="0" y2="1">
+                  <stop offset="0%" stopColor="var(--accent)" stopOpacity="0.2" />
+                  <stop offset="100%" stopColor="var(--accent)" stopOpacity="0" />
+                </linearGradient>
+              </defs>
+              {[0, 0.25, 0.5, 0.75, 1].map((ratio) => {
+                const y = CHART_BOTTOM - ratio * (CHART_BOTTOM - CHART_TOP);
+                return (
+                  <g key={ratio}>
+                    <text x="8" y={y + 4} className="line-chart-axis">{Math.round(maxChart * ratio)}</text>
+                    <line x1={CHART_LEFT} x2={CHART_RIGHT} y1={y} y2={y} className="line-chart-grid" />
+                  </g>
+                );
+              })}
+              {areaPath && <path d={areaPath} fill="url(#bookingTrendFill)" />}
+              {linePath && <path d={linePath} className="line-chart-path" />}
+              {chartPoints.map((point, index) => {
+                if (point.y === null) {
+                  return <line key={point.month} x1={point.x - 24} x2={point.x + 24} y1={CHART_BOTTOM} y2={CHART_BOTTOM} className="line-chart-future" />;
+                }
+
+                const active = point.isCurrent || hoveredBar === index;
+                return (
+                  <g key={point.month} onMouseEnter={() => setHoveredBar(index)} onMouseLeave={() => setHoveredBar(null)}>
+                    <circle cx={point.x} cy={point.y} r={active ? 7 : 5} className={`line-chart-dot${point.isCurrent ? ' current' : ''}`} />
+                    <text x={point.x} y={point.y - 14} textAnchor="middle" className={`line-chart-value${point.isCurrent ? ' current' : ''}`}>
+                      {point.value}
+                    </text>
+                  </g>
+                );
+              })}
+            </svg>
+            <div className="line-chart-labels">
+              {chartData.map((point) => (
+                <span key={point.month} className={point.isCurrent ? 'current' : point.isFuture ? 'future' : ''}>{point.month}</span>
+              ))}
+            </div>
           </div>
 
           {/* summary strip */}
@@ -391,7 +445,7 @@ export default function AdminOverviewPage() {
             ].map(({ label, value, highlight }) => (
               <div key={label} style={{ textAlign: 'center' }}>
                 <div style={{ fontSize: 10, color: 'var(--text-dim)', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 4 }}>
-                  {label}
+                  {label.includes('Total') ? `Total Jan-${MONTHS[chartMonth]}` : label.includes('Tertinggi') ? `Tertinggi (${barMaxMonth})` : label}
                 </div>
                 <div
                   style={{
@@ -411,6 +465,52 @@ export default function AdminOverviewPage() {
       </div>
 
       {/* ── Two-column section ────────────────────────────── */}
+      <div className="card admin-package-pie-card">
+        <div className="card-header">
+          <div>
+            <span className="card-title">Package Terlaris</span>
+            <p className="admin-chart-subtitle">Proporsi package berdasarkan jumlah booking.</p>
+          </div>
+          <span style={{ fontSize: 11, color: 'var(--text-dim)' }}>{packageTotal} booking</span>
+        </div>
+        <div className="card-body">
+          <div className="package-pie-wrap">
+            <div className="package-pie-shell">
+              <svg className="package-pie-svg" viewBox="0 0 100 100" role="img" aria-label="Grafik lingkaran package terlaris">
+                <circle className="package-pie-track" cx="50" cy="50" r={PIE_RADIUS} />
+                {packagePie.map((item) => {
+                  const arc = ((item.end - item.start) / 100) * PIE_CIRCUMFERENCE;
+                  const gap = Math.min(1.8, arc * 0.12);
+                  return (
+                    <circle
+                      key={item.name}
+                      className={`package-pie-segment${activePackage?.name === item.name ? ' active' : ''}`}
+                      cx="50"
+                      cy="50"
+                      r={PIE_RADIUS}
+                      style={{
+                        stroke: item.color,
+                        strokeDasharray: `${Math.max(0, arc - gap)} ${PIE_CIRCUMFERENCE}`,
+                        strokeDashoffset: -((item.start / 100) * PIE_CIRCUMFERENCE),
+                      }}
+                      onMouseEnter={() => setActivePackageName(item.name)}
+                    >
+                      <title>{item.name}: {item.pct}%</title>
+                    </circle>
+                  );
+                })}
+              </svg>
+              <div className="package-pie-center">
+                <span style={{ color: activePackage?.color || 'var(--accent)' }}>{activePackage?.pct || 0}%</span>
+                <strong>{activePackage?.name || '-'}</strong>
+                <small>{activePackage?.count || 0} booking</small>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      </div>
+
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24, alignItems: 'start' }}>
 
         {/* LEFT: Prioritas Malam Ini */}
