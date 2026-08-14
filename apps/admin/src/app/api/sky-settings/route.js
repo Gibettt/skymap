@@ -1,5 +1,6 @@
-import { assertSameOrigin, jsonError, requireUser, writeAudit } from '@ephemeris/auth';
+import { assertSameOrigin, jsonError, parseJsonBody, requireUser, writeAudit } from '@ephemeris/auth';
 import { query, transaction } from '@ephemeris/db';
+import { updateSkySettingsSchema } from '@ephemeris/db/validators/sky-settings';
 import { validateResortLocation } from '@ephemeris/sky';
 
 const DEFAULT_LOCATION = {
@@ -32,14 +33,12 @@ export async function PUT(request) {
   try {
     await assertSameOrigin(request);
     const user = await requireUser(['admin']);
-    const body = await request.json();
-    const name = String(body.name || '').trim();
-    const timezone = String(body.timezone || '').trim();
-    const { latitude, longitude } = validateResortLocation(body);
-
-    if (!name || name.length > 120 || !timezone || timezone.length > 64) {
-      return Response.json({ error: 'Invalid location settings' }, { status: 400 });
+    const parsed = updateSkySettingsSchema.safeParse(await parseJsonBody(request));
+    if (!parsed.success) {
+      return Response.json({ error: 'Data pengaturan langit tidak valid', details: parsed.error.flatten() }, { status: 400 });
     }
+    const { name, timezone } = parsed.data;
+    const { latitude, longitude } = validateResortLocation(parsed.data);
 
     const setting = await transaction(async (client) => {
       const before = await client.query('SELECT * FROM sky_app_settings WHERE id = true');

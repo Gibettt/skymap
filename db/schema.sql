@@ -172,6 +172,11 @@ CREATE TABLE IF NOT EXISTS audit_logs (
   created_at timestamptz NOT NULL DEFAULT now()
 );
 
+CREATE TABLE IF NOT EXISTS rate_limit_login (
+  email text NOT NULL,
+  attempted_at timestamptz NOT NULL DEFAULT now()
+);
+
 CREATE TABLE IF NOT EXISTS payout_requests (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   requester_id uuid NOT NULL REFERENCES users(id),
@@ -259,6 +264,7 @@ CREATE INDEX IF NOT EXISTS idx_bookings_guest_phone ON bookings(guest_phone);
 CREATE INDEX IF NOT EXISTS idx_bookings_booking_source ON bookings(booking_source);
 CREATE INDEX IF NOT EXISTS idx_feedback_tokens_token ON feedback_tokens(token);
 CREATE INDEX IF NOT EXISTS idx_audit_logs_actor_created ON audit_logs(actor_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_rate_limit_login_email_time ON rate_limit_login(email, attempted_at);
 CREATE INDEX IF NOT EXISTS idx_payout_requests_requester ON payout_requests(requester_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_payout_requests_status ON payout_requests(status);
 CREATE INDEX IF NOT EXISTS idx_notifications_recipient_created ON notifications(recipient_user_id, created_at DESC);

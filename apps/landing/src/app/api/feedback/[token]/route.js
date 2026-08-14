@@ -1,5 +1,6 @@
-import { jsonError } from '@ephemeris/auth';
+import { assertSameOrigin, jsonError, parseJsonBody } from '@ephemeris/auth';
 import { query, transaction } from '@ephemeris/db';
+import { submitFeedbackSchema } from '@ephemeris/db/validators/feedback';
 
 export async function GET(_request, { params }) {
   try {
@@ -30,14 +31,15 @@ export async function GET(_request, { params }) {
 
 export async function POST(request, { params }) {
   try {
+    await assertSameOrigin(request);
     const { token } = await params;
-    const body = await request.json();
-    const rating = Number(body.rating);
-    const comment = String(body.comment || '').trim();
+    const parsed = submitFeedbackSchema.safeParse(await parseJsonBody(request));
 
-    if (!Number.isInteger(rating) || rating < 1 || rating > 5) {
-      return Response.json({ error: 'Rating must be 1-5' }, { status: 400 });
+    if (!parsed.success) {
+      return Response.json({ error: 'Data feedback tidak valid', details: parsed.error.flatten() }, { status: 400 });
     }
+
+    const { rating, comment } = parsed.data;
 
     const result = await transaction(async (client) => {
       const tokenResult = await client.query(
@@ -51,7 +53,7 @@ export async function POST(request, { params }) {
       await client.query(
         `INSERT INTO feedback_submissions (booking_id, token_id, rating, comment)
          VALUES ($1, $2, $3, $4)`,
-        [feedbackToken.booking_id, feedbackToken.id, rating, comment || null]
+        [feedbackToken.booking_id, feedbackToken.id, rating, comment]
       );
       await client.query(
         `UPDATE feedback_tokens

@@ -4,8 +4,10 @@ import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { getPackageNavItems } from '@/data/observations';
+import { useLanguage } from '@/context/LanguageContext';
 
 export default function ExternalPackagePage() {
+  const { t } = useLanguage();
   const pathname = usePathname();
   const basePath = pathname.startsWith('/dashboard/internal') ? '/dashboard/internal' : '/dashboard/external';
   const [packages, setPackages] = useState([]);
@@ -31,7 +33,7 @@ export default function ExternalPackagePage() {
       <div className="form-booking-toolbar">
         <div>
           <h1>Package</h1>
-          <p>Pilih service/package yang ingin dilihat atau digunakan untuk booking.</p>
+          <p>{t('package_desc')}</p>
         </div>
         <Link href={`${basePath}/form-booking`} className="btn btn-primary" style={{ background: '#7c3aed', textDecoration: 'none' }}>
           Form Booking
@@ -41,7 +43,7 @@ export default function ExternalPackagePage() {
       <section className="card">
         <div className="card-header">
           <h2 className="card-title">Service Package</h2>
-          <span style={{ color: 'var(--text-muted)', fontSize: 12 }}>{serviceItems.length} service</span>
+          <span style={{ color: 'var(--text-muted)', fontSize: 12 }}>{t('package_service_count').replace('{count}', serviceItems.length)}</span>
         </div>
 
         <div className="package-service-list">

@@ -130,6 +130,13 @@ button {
   bottom: 0;
   z-index: 40;
   transition: transform 0.3s var(--ease);
+  transform: translateX(-100%);
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.sidebar.open {
+  transform: translateX(0);
 }
 
 .sidebar-brand {
@@ -320,11 +327,19 @@ button {
 
 /* === Main Content === */
 .main-content {
-  margin-left: var(--sidebar-width);
+  margin-left: 0;
   flex: 1;
   min-height: 100vh;
   display: flex;
   flex-direction: column;
+  transition: margin-left 0.3s var(--ease);
+}
+
+/* Desktop: push main content when sidebar is open */
+@media (min-width: 769px) {
+  .sidebar.open ~ .main-content {
+    margin-left: var(--sidebar-width);
+  }
 }
 
 /* === Header === */
@@ -853,6 +868,260 @@ textarea.input { min-height: 100px; resize: vertical; }
   flex-direction: column;
   gap: 18px;
   overflow-y: auto;
+}
+
+/* === Fullscreen Booking Detail Modal (Matching Staff View) === */
+.family-view-backdrop {
+  position: fixed;
+  inset: 0;
+  background: var(--bg-modal);
+  display: flex;
+  align-items: stretch;
+  justify-content: stretch;
+  padding: 24px;
+  overflow: hidden;
+  z-index: 1000;
+  animation: fadeIn 0.2s var(--ease);
+}
+
+.family-view-modal {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  max-height: none;
+  margin: 0;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
+  animation: slideUp 0.25s var(--ease);
+  overflow: hidden;
+}
+
+.family-view-hero {
+  flex-shrink: 0;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 16px 28px;
+  background: linear-gradient(135deg, #ffffff 0%, #f4efff 56%, #fff7ed 100%);
+  border-bottom: 1px solid var(--border);
+}
+
+.family-view-hero span {
+  color: var(--violet);
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.family-view-hero h2 {
+  margin: 8px 0 0;
+  color: var(--text-primary);
+  font-family: var(--font-heading);
+  font-size: 24px;
+  line-height: 1.1;
+}
+
+.family-view-hero p {
+  margin-top: 6px;
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+
+.family-view-hero-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.family-view-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 20px 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.family-view-modal .modal-footer {
+  flex-shrink: 0;
+  background: var(--bg-card);
+  padding: 14px 28px;
+  border-top: 1px solid var(--border);
+}
+
+.family-view-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.family-view-item {
+  min-height: 66px;
+  padding: 10px 14px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+}
+
+.family-view-item span {
+  display: block;
+  margin-bottom: 4px;
+  color: var(--text-dim);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.family-view-item strong {
+  color: var(--text-primary);
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+.family-view-section {
+  padding: 14px 16px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+}
+
+.family-view-package-card {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  background: var(--bg-elevated);
+}
+
+.family-view-section h3 {
+  margin-bottom: 6px;
+  font-family: var(--font-heading);
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.family-view-family-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 12px;
+}
+
+.family-view-card {
+  padding: 14px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+}
+
+.family-view-card h3 {
+  margin-bottom: 8px;
+  color: var(--text-primary);
+  font-family: var(--font-heading);
+  font-size: 13px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.family-view-card p {
+  min-height: 48px;
+  margin: 0 0 10px;
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1.55;
+  white-space: pre-wrap;
+}
+
+.family-view-card div {
+  padding-top: 10px;
+  border-top: 1px solid var(--border-subtle);
+}
+
+.family-view-card span {
+  display: block;
+  margin-bottom: 4px;
+  color: var(--text-dim);
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.family-view-card strong {
+  color: var(--violet);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+/* === Sub-Modal: Catatan Lengkap Overlay (Niban di depan layar) === */
+.notes-popup-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1200;
+  padding: 20px;
+  animation: fadeIn 0.2s var(--ease);
+}
+
+.notes-popup-modal {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  width: 800px;
+  max-width: 95vw;
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.6);
+  animation: slideUp 0.25s var(--ease);
+  overflow: hidden;
+}
+
+.notes-popup-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 24px;
+  background: var(--bg-elevated);
+  border-bottom: 1px solid var(--border);
+}
+
+.notes-popup-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px 24px;
+  background: var(--bg-card);
+}
+
+.notes-popup-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 24px;
+  background: var(--bg-elevated);
+  border-top: 1px solid var(--border);
+}
+
+.notes-pre-content {
+  margin: 0;
+  padding: 16px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  font-family: var(--font-mono, monospace);
+  font-size: 12px;
+  line-height: 1.65;
+  color: var(--text-primary);
+  white-space: pre-wrap;
+  word-break: break-word;
 }
 
 .external-booking-note {
@@ -1708,3 +1977,131 @@ textarea.input { min-height: 100px; resize: vertical; }
 .empty-state { text-align: center; padding: 60px 20px; color: var(--text-muted); }
 .empty-state h3 { font-family: var(--font-heading); font-size: 14px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-secondary); margin-bottom: 8px; }
 .empty-state p { font-size: 13px; max-width: 360px; margin: 0 auto; }
+
+/* =============================================
+   RESPONSIVE SIDEBAR TOGGLE (ALL SCREEN SIZES)
+   ============================================= */
+
+/* Hamburger toggle — always visible */
+.sidebar-toggle {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 4px;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  background: none;
+  border: 1px solid var(--border);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.15s var(--ease);
+}
+
+.sidebar-toggle:hover {
+  background: rgba(0, 0, 0, 0.04);
+}
+
+.hamburger-line {
+  display: block;
+  width: 18px;
+  height: 2px;
+  background: var(--text-primary);
+  transition: transform 0.2s var(--ease), opacity 0.2s var(--ease);
+}
+
+/* Sidebar overlay backdrop — only shown on mobile */
+.sidebar-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  z-index: 45;
+  animation: overlayFadeIn 0.25s var(--ease);
+}
+
+@keyframes overlayFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* ---- Tablet breakpoint (≤ 900px) ---- */
+@media (max-width: 900px) {
+  .header-clock {
+    gap: 14px;
+    padding: 0 14px;
+  }
+
+  .clock-value {
+    font-size: 13px;
+  }
+}
+
+/* ---- Mobile breakpoint (≤ 768px): sidebar becomes overlay drawer ---- */
+@media (max-width: 768px) {
+  /* Show overlay when sidebar is open */
+  .sidebar-overlay {
+    display: block;
+  }
+
+  /* Mobile sidebar adjustments */
+  .sidebar {
+    width: 280px;
+    z-index: 50;
+  }
+
+  /* Override desktop push — no margin on mobile */
+  .sidebar.open ~ .main-content {
+    margin-left: 0;
+  }
+
+  /* Header responsive tweaks */
+  .header {
+    padding: 0 16px;
+    gap: 12px;
+  }
+
+  .header-title {
+    font-size: 18px;
+  }
+
+  .header-breadcrumb {
+    font-size: 10px;
+  }
+
+  /* Hide clock on small screens */
+  .header-clock {
+    display: none;
+  }
+
+  .page-content {
+    padding: 24px 16px;
+  }
+}
+
+/* ---- Small phone (≤ 480px) ---- */
+@media (max-width: 480px) {
+  .sidebar {
+    width: 260px;
+  }
+
+  .header {
+    padding: 0 12px;
+    gap: 8px;
+    height: 56px;
+  }
+
+  .header-title {
+    font-size: 16px;
+  }
+
+  .btn.btn-sm {
+    font-size: 10px;
+    padding: 6px 10px;
+  }
+
+  .page-content {
+    padding: 16px 12px;
+  }
+}

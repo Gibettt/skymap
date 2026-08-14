@@ -1,13 +1,22 @@
-import { assertSameOrigin, jsonError, requireUser, writeAudit } from '@ephemeris/auth';
+import { assertSameOrigin, jsonError, parseJsonBody, requireUser, writeAudit } from '@ephemeris/auth';
 import { transaction } from '@ephemeris/db';
+import { uuidSchema } from '@ephemeris/db/validators/common';
+import { updateSkyEventSchema } from '@ephemeris/db/validators/sky-event';
 import { normalizeSkyEventInput } from '@ephemeris/sky';
 
 export async function PATCH(request, { params }) {
   try {
     await assertSameOrigin(request);
     const user = await requireUser(['admin']);
-    const { id } = await params;
-    const body = await request.json();
+    const { id: rawId } = await params;
+    const parseId = uuidSchema.safeParse(rawId);
+    if (!parseId.success) return Response.json({ error: 'ID tidak valid' }, { status: 400 });
+    const id = parseId.data;
+    const parsed = updateSkyEventSchema.safeParse(await parseJsonBody(request));
+    if (!parsed.success) {
+      return Response.json({ error: 'Data sky event tidak valid', details: parsed.error.flatten() }, { status: 400 });
+    }
+    const body = parsed.data;
     const updated = await transaction(async (client) => {
       const before = await client.query('SELECT * FROM sky_events WHERE id = $1', [id]);
       if (!before.rows[0]) return null;
@@ -51,7 +60,10 @@ export async function DELETE(request, { params }) {
   try {
     await assertSameOrigin(request);
     const user = await requireUser(['admin']);
-    const { id } = await params;
+    const { id: rawId } = await params;
+    const parseId = uuidSchema.safeParse(rawId);
+    if (!parseId.success) return Response.json({ error: 'ID tidak valid' }, { status: 400 });
+    const id = parseId.data;
     const removed = await transaction(async (client) => {
       const before = await client.query('DELETE FROM sky_events WHERE id = $1 RETURNING *', [id]);
       if (!before.rows[0]) return null;

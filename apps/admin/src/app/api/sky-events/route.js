@@ -1,5 +1,6 @@
-import { assertSameOrigin, jsonError, requireUser, writeAudit } from '@ephemeris/auth';
+import { assertSameOrigin, jsonError, parseJsonBody, requireUser, writeAudit } from '@ephemeris/auth';
 import { query, transaction } from '@ephemeris/db';
+import { createSkyEventSchema } from '@ephemeris/db/validators/sky-event';
 import { calculatedSkyEvents } from '@ephemeris/sky';
 import { filterPublicEvents, normalizeSkyEventInput } from '@ephemeris/sky';
 
@@ -80,7 +81,11 @@ export async function POST(request) {
   try {
     await assertSameOrigin(request);
     const user = await requireUser(['admin']);
-    const event = normalizeSkyEventInput(await request.json());
+    const parsed = createSkyEventSchema.safeParse(await parseJsonBody(request));
+    if (!parsed.success) {
+      return Response.json({ error: 'Data sky event tidak valid', details: parsed.error.flatten() }, { status: 400 });
+    }
+    const event = normalizeSkyEventInput(parsed.data);
     const created = await transaction(async (client) => {
       const { rows } = await client.query(
         `INSERT INTO sky_events

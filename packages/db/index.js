@@ -10,7 +10,12 @@ export function getPool() {
   if (!pool) {
     pool = new Pool({
       connectionString: process.env.DATABASE_URL,
-      ssl: process.env.DATABASE_SSL === 'true' ? { rejectUnauthorized: false } : false,
+      ssl: process.env.DATABASE_SSL === 'true'
+        ? { rejectUnauthorized: process.env.NODE_ENV === 'production' }
+        : false,
+      max: parseInt(process.env.DB_POOL_MAX || '5', 10),
+      idleTimeoutMillis: 30000,
+      connectionTimeoutMillis: 5000,
     });
   }
 

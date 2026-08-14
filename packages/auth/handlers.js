@@ -1,5 +1,6 @@
 import { cookies } from 'next/headers';
 import { query, transaction } from '@ephemeris/db';
+import { ApiError, parseJsonBody } from './errors.js';
 import {
   createSessionValue,
   sessionCookieOptions,
@@ -8,15 +9,37 @@ import {
 } from './session.js';
 import { writeAudit } from './audit.js';
 
-const loginAttempts = new Map();
+let rateLimitTableReady = false;
 
-function checkRateLimit(email) {
+async function ensureRateLimitTable() {
+  if (rateLimitTableReady) return;
+  await query(`
+    CREATE TABLE IF NOT EXISTS rate_limit_login (
+      email text NOT NULL,
+      attempted_at timestamptz NOT NULL DEFAULT now()
+    )
+  `);
+  await query(`
+    CREATE INDEX IF NOT EXISTS idx_rate_limit_login_email_time
+    ON rate_limit_login(email, attempted_at)
+  `);
+  rateLimitTableReady = true;
+}
+
+async function checkRateLimit(email) {
+  await ensureRateLimitTable();
   const key = email.toLowerCase();
-  const now = Date.now();
-  const attempts = (loginAttempts.get(key) || []).filter((time) => now - time < 15 * 60 * 1000);
-  if (attempts.length >= 10) return false;
-  attempts.push(now);
-  loginAttempts.set(key, attempts);
+  await query("DELETE FROM rate_limit_login WHERE attempted_at < now() - interval '1 hour'");
+  const { rows } = await query(
+    `SELECT COUNT(*) AS count
+     FROM rate_limit_login
+     WHERE email = $1
+       AND attempted_at > now() - interval '15 minutes'`,
+    [key]
+  );
+  if (Number(rows[0].count) >= 10) return false;
+
+  await query('INSERT INTO rate_limit_login (email) VALUES ($1)', [key]);
   return true;
 }
 
@@ -27,11 +50,11 @@ function checkRateLimit(email) {
 export function createLoginHandler({ allowedRoles = [] } = {}) {
   return async function POST(request) {
     try {
-      const body = await request.json();
+      const body = await parseJsonBody(request);
       const email = String(body.email || '').trim().toLowerCase();
       const password = String(body.password || '');
 
-      if (!email || !password || !checkRateLimit(email)) {
+      if (!email || !password || !(await checkRateLimit(email))) {
         return Response.json({ error: 'Invalid login' }, { status: 401 });
       }
 
@@ -82,6 +105,7 @@ export function createLoginHandler({ allowedRoles = [] } = {}) {
         },
       });
     } catch (error) {
+      if (error instanceof ApiError) return Response.json({ error: error.message }, { status: error.status });
       console.error(error);
       return Response.json({ error: 'Login failed' }, { status: 500 });
     }

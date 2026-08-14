@@ -1,8 +1,7 @@
-import { ApiError, assertSameOrigin, jsonError, requireUser, writeAudit } from '@ephemeris/auth';
+import { assertSameOrigin, jsonError, parseJsonBody, requireUser, writeAudit } from '@ephemeris/auth';
 import { transaction } from '@ephemeris/db';
-
-const PACKAGE_TYPES = new Set(['regular', 'private', 'kids']);
-const EXPERIENCE_TYPES = new Set(['communal', 'private', 'kids']);
+import { uuidSchema } from '@ephemeris/db/validators/common';
+import { updatePackageSchema } from '@ephemeris/db/validators/package';
 
 async function ensurePackageMetadataColumns(client) {
   await client.query('ALTER TABLE packages ADD COLUMN IF NOT EXISTS description text');
@@ -13,8 +12,15 @@ export async function PATCH(request, { params }) {
   try {
     await assertSameOrigin(request);
     const user = await requireUser(['admin']);
-    const { id } = await params;
-    const body = await request.json();
+    const { id: rawId } = await params;
+    const parseId = uuidSchema.safeParse(rawId);
+    if (!parseId.success) return Response.json({ error: 'ID tidak valid' }, { status: 400 });
+    const id = parseId.data;
+    const parsed = updatePackageSchema.safeParse(await parseJsonBody(request));
+    if (!parsed.success) {
+      return Response.json({ error: 'Data package tidak valid', details: parsed.error.flatten() }, { status: 400 });
+    }
+    const body = parsed.data;
 
     const updated = await transaction(async (client) => {
       await ensurePackageMetadataColumns(client);
@@ -32,20 +38,6 @@ export async function PATCH(request, { params }) {
         child_age_range: body.childAgeRange === undefined ? before.rows[0].child_age_range : String(body.childAgeRange || '').trim() || null,
         is_active: body.isActive ?? before.rows[0].is_active,
       };
-
-      if (
-        !patch.name ||
-        !PACKAGE_TYPES.has(patch.package_type) ||
-        !EXPERIENCE_TYPES.has(patch.experience_type) ||
-        !patch.location ||
-        (patch.description !== null && patch.description.length > 240) ||
-        (patch.child_age_range !== null && patch.child_age_range.length > 80) ||
-        !Number.isFinite(patch.adult_price_usd) ||
-        patch.adult_price_usd < 0 ||
-        (patch.child_price_usd !== null && (!Number.isFinite(Number(patch.child_price_usd)) || Number(patch.child_price_usd) < 0))
-      ) {
-        throw new ApiError(400, 'Invalid package data');
-      }
 
       const { rows } = await client.query(
         `UPDATE packages SET

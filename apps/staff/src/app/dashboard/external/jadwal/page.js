@@ -2,12 +2,12 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
+import { useLanguage } from '@/context/LanguageContext';
 
-const WEEKDAYS = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'];
-const MONTHS = Array.from({ length: 12 }, (_, month) => ({
-  value: month,
-  label: new Intl.DateTimeFormat('id-ID', { month: 'long' }).format(new Date(2026, month, 1)),
-}));
+const WEEKDAYS = {
+  id: ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'],
+  en: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'],
+};
 
 function pad(value) {
   return String(value).padStart(2, '0');
@@ -25,13 +25,17 @@ function formatTime(value) {
   return String(value || '').slice(0, 5);
 }
 
-function monthTitle(date) {
-  return new Intl.DateTimeFormat('id-ID', { month: 'long', year: 'numeric' }).format(date);
+function localeFor(language) {
+  return language === 'en' ? 'en-US' : 'id-ID';
 }
 
-function selectedDateTitle(key) {
+function monthTitle(date, language) {
+  return new Intl.DateTimeFormat(localeFor(language), { month: 'long', year: 'numeric' }).format(date);
+}
+
+function selectedDateTitle(key, language) {
   const [year, month, day] = key.split('-').map(Number);
-  return new Intl.DateTimeFormat('id-ID', {
+  return new Intl.DateTimeFormat(localeFor(language), {
     weekday: 'long',
     day: 'numeric',
     month: 'long',
@@ -74,6 +78,7 @@ function bookingSort(a, b) {
 }
 
 export default function StaffMonthlyCalendarPage() {
+  const { language, t } = useLanguage();
   const pathname = usePathname();
   const router = useRouter();
   const isInternal = pathname.startsWith('/dashboard/internal');
@@ -95,7 +100,7 @@ export default function StaffMonthlyCalendarPage() {
           router.replace('/login');
           return;
         }
-        if (!response.ok) throw new Error('Gagal memuat data booking kalender.');
+        if (!response.ok) throw new Error(language === 'en' ? 'Failed to load calendar bookings.' : 'Gagal memuat data booking kalender.');
         const data = await response.json();
         if (alive) setBookings((data.bookings || []).sort(bookingSort));
       } catch (err) {
@@ -109,7 +114,7 @@ export default function StaffMonthlyCalendarPage() {
     return () => {
       alive = false;
     };
-  }, [router]);
+  }, [router, language]);
 
   const grouped = useMemo(() => groupBookings(bookings), [bookings]);
   const days = useMemo(() => buildMonthDays(monthDate), [monthDate]);
@@ -117,6 +122,10 @@ export default function StaffMonthlyCalendarPage() {
     const year = monthDate.getFullYear();
     return Array.from({ length: 9 }, (_, index) => year - 4 + index);
   }, [monthDate]);
+  const monthOptions = useMemo(() => Array.from({ length: 12 }, (_, month) => ({
+    value: month,
+    label: new Intl.DateTimeFormat(localeFor(language), { month: 'long' }).format(new Date(2026, month, 1)),
+  })), [language]);
   const selectedBookings = grouped[selectedDate] || [];
   const monthBookingCount = days.reduce((total, day) => {
     if (!day.inMonth) return total;
@@ -153,12 +162,7 @@ export default function StaffMonthlyCalendarPage() {
     <div className="fade-in-up stagger">
       <header className="page-header calendar-page-header">
         <div>
-          <h1 className="page-title">Kalender Booking Bulanan</h1>
-          <p>
-            {isInternal
-              ? 'Menampilkan semua booking staff internal dan external dari database.'
-              : 'Menampilkan semua booking dari resort Anda.'}
-          </p>
+          <h1 className="page-title">{t('calendar_title')}</h1>
         </div>
         <div className="calendar-header-actions">
           <button className="btn btn-secondary btn-sm" type="button" onClick={() => moveMonth(-1)}>Prev</button>
@@ -171,20 +175,20 @@ export default function StaffMonthlyCalendarPage() {
         <div className="staff-calendar-main">
           <div className="staff-calendar-toolbar">
             <div>
-              <div className="calendar-kicker">{isInternal ? 'All Staff Calendar' : 'Resort Booking Calendar'}</div>
-              <h2>{monthTitle(monthDate)}</h2>
+              <div className="calendar-kicker">{t(isInternal ? 'calendar_all_staff' : 'calendar_resort')}</div>
+              <h2>{monthTitle(monthDate, language)}</h2>
             </div>
-            <div className="calendar-filter-bar" aria-label="Filter bulan dan tahun kalender">
+            <div className="calendar-filter-bar" aria-label={t('calendar_filter_label')}>
               <label>
-                <span>Bulan</span>
+                <span>{t('calendar_month')}</span>
                 <select value={monthDate.getMonth()} onChange={(event) => selectMonth(event.target.value)}>
-                  {MONTHS.map((month) => (
+                  {monthOptions.map((month) => (
                     <option key={month.value} value={month.value}>{month.label}</option>
                   ))}
                 </select>
               </label>
               <label>
-                <span>Tahun</span>
+                <span>{t('calendar_year')}</span>
                 <select value={monthDate.getFullYear()} onChange={(event) => selectYear(event.target.value)}>
                   {yearOptions.map((year) => (
                     <option key={year} value={year}>{year}</option>
@@ -194,14 +198,14 @@ export default function StaffMonthlyCalendarPage() {
             </div>
             <div className="calendar-month-stats">
               <strong>{monthBookingCount}</strong>
-              <span>booking bulan ini</span>
+              <span>{t('calendar_this_month')}</span>
             </div>
           </div>
 
           {error && <div className="external-booking-note" style={{ color: 'var(--accent)' }}>{error}</div>}
 
           <div className="staff-month-grid">
-            {WEEKDAYS.map((day) => (
+            {WEEKDAYS[language].map((day) => (
               <div className="staff-calendar-weekday" key={day}>{day}</div>
             ))}
 
@@ -219,14 +223,14 @@ export default function StaffMonthlyCalendarPage() {
                 >
                   <span className="staff-calendar-date-number">{day.day}</span>
                   <div className="staff-calendar-events">
-                    {loading && day.inMonth && day.day <= 7 ? <span className="calendar-event skeleton">Loading</span> : null}
+                    {loading && day.inMonth && day.day <= 7 ? <span className="calendar-event skeleton">{language === 'en' ? 'Loading' : 'Memuat'}</span> : null}
                     {!loading && shown.map((booking) => (
                       <span className="calendar-event" key={booking.id}>
                         <b>{formatTime(booking.time_start)}</b>
                         <span>{booking.guest_name}</span>
                       </span>
                     ))}
-                    {!loading && extra > 0 && <span className="calendar-event more">+{extra} lainnya</span>}
+                    {!loading && extra > 0 && <span className="calendar-event more">{t('calendar_more').replace('{count}', extra)}</span>}
                   </div>
                 </button>
               );
@@ -236,16 +240,16 @@ export default function StaffMonthlyCalendarPage() {
 
         <aside className="staff-calendar-side">
           <div className="calendar-side-head">
-            <span>Selected Date</span>
-            <h3>{selectedDateTitle(selectedDate)}</h3>
+            <span>{t('calendar_selected_date')}</span>
+            <h3>{selectedDateTitle(selectedDate, language)}</h3>
           </div>
 
           <div className="calendar-day-bookings">
-            {loading && <div className="calendar-empty">Memuat booking...</div>}
+            {loading && <div className="calendar-empty">{t('calendar_loading')}</div>}
             {!loading && selectedBookings.length === 0 && (
               <div className="calendar-empty">
-                <strong>Tidak ada booking</strong>
-                <span>Tanggal ini masih kosong.</span>
+                <strong>{t('calendar_empty_title')}</strong>
+                <span>{t('calendar_empty_desc')}</span>
               </div>
             )}
             {!loading && selectedBookings.map((booking) => (

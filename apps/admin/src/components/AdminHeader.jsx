@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
+import { useAdminLanguage } from '@/context/AdminLanguageContext';
 
 const PAGE_META = {
   '/dashboard/admin': { title: 'Overview', crumb: 'Dasbor' },
@@ -18,7 +19,36 @@ const PAGE_META = {
   '/dashboard/admin/pengaturan': { title: 'Pengaturan', crumb: 'Sistem' },
 };
 
-function Clock() {
+const META_KEYS = {
+  Dasbor: 'page_dashboard',
+  'Booking - Observasi': 'page_booking_observation',
+  'Laporan Keuangan': 'page_finance_report',
+  'Pencairan Staff': 'page_staff_payout',
+  'Package & Harga': 'page_package_price',
+  'Manajemen Pengguna': 'page_user_management',
+  Keamanan: 'page_security',
+  Kalender: 'nav_calendar',
+  'PWA & Kalender Langit': 'page_sky_calendar',
+  Peringatan: 'nav_alerts',
+  Pengaturan: 'nav_settings',
+  Keuangan: 'nav_finance',
+  Pengguna: 'nav_users',
+  Monitoring: 'page_monitoring',
+  Sistem: 'page_system',
+  Overview: 'nav_overview',
+  Packages: 'nav_packages',
+  'Audit Log': 'nav_audit',
+  'Sky Guide': 'nav_sky_guide',
+  Dashboard: 'page_dashboard',
+  Admin: null,
+};
+
+function translateMeta(value, t) {
+  const key = META_KEYS[value];
+  return key ? t(key, value) : value;
+}
+
+function Clock({ language, t }) {
   const [time, setTime] = useState({ wib: '', utc: '', date: '' });
 
   useEffect(() => {
@@ -27,7 +57,7 @@ function Clock() {
       setTime({
         wib: now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false }),
         utc: now.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', timeZone: 'UTC' }),
-        date: now.toLocaleDateString('id-ID', { weekday: 'short', day: 'numeric', month: 'short' }),
+        date: now.toLocaleDateString(language === 'en' ? 'en-US' : 'id-ID', { weekday: 'short', day: 'numeric', month: 'short' }),
       });
     };
     const first = setTimeout(update, 0);
@@ -36,7 +66,7 @@ function Clock() {
       clearTimeout(first);
       clearInterval(timer);
     };
-  }, []);
+  }, [language]);
 
   return (
     <div className="header-clock">
@@ -49,7 +79,7 @@ function Clock() {
         <div className="clock-value">{time.utc}</div>
       </div>
       <div className="clock-item">
-        <div className="clock-label">Tanggal</div>
+        <div className="clock-label">{t('date')}</div>
         <div className="clock-value" style={{ fontSize: '13px', fontWeight: 600 }}>{time.date}</div>
       </div>
     </div>
@@ -105,7 +135,8 @@ function useAdminNotifications() {
   return { items, loading, setItems };
 }
 
-export default function AdminHeader() {
+export default function AdminHeader({ onNewBooking, onMenuToggle }) {
+  const { language, setLanguage, t } = useAdminLanguage();
   const pathname = usePathname();
   const meta = PAGE_META[pathname] || { title: 'Dashboard', crumb: 'Admin' };
   const [notificationOpen, setNotificationOpen] = useState(false);
@@ -130,20 +161,26 @@ export default function AdminHeader() {
 
   return (
     <div className="header">
+      {/* Hamburger — visible on all screens via CSS */}
+      <button className="sidebar-toggle" onClick={onMenuToggle} aria-label="Toggle menu">
+        <span className="hamburger-line" />
+        <span className="hamburger-line" />
+        <span className="hamburger-line" />
+      </button>
       <div>
-        <div className="header-breadcrumb">Admin - {meta.crumb}</div>
-        <div className="header-title">{meta.title}</div>
+        <div className="header-breadcrumb">Admin - {translateMeta(meta.crumb, t)}</div>
+        <div className="header-title">{translateMeta(meta.title, t)}</div>
       </div>
 
-      <Clock />
+      <Clock language={language} t={t} />
 
       <div className="admin-header-actions">
         <div className="admin-notification">
           <button
             type="button"
             className="btn-icon admin-notification-button"
-            title="Notifikasi"
-            aria-label="Buka notifikasi"
+            title={t('notifications')}
+            aria-label={t('open_notifications')}
             aria-expanded={notificationOpen}
             onClick={() => setNotificationOpen((open) => !open)}
           >
@@ -154,14 +191,14 @@ export default function AdminHeader() {
           {notificationOpen && (
             <div className="admin-notification-panel">
               <div className="admin-notification-head">
-                <strong>Notifikasi</strong>
-                <span>{loading ? 'Memuat' : `${unreadCount} baru`}</span>
+                <strong>{t('notifications')}</strong>
+                <span>{loading ? t('loading') : t('new_count').replace('{count}', unreadCount)}</span>
               </div>
 
               <div className="admin-notification-list">
-                {loading && <div className="admin-notification-empty">Mengambil data notifikasi...</div>}
+                {loading && <div className="admin-notification-empty">{t('loading_notifications')}</div>}
                 {!loading && notifications.length === 0 && (
-                  <div className="admin-notification-empty">Belum ada booking atau payout baru.</div>
+                  <div className="admin-notification-empty">{t('no_notifications')}</div>
                 )}
                 {!loading && notifications.map((item) => (
                   <Link
@@ -186,7 +223,16 @@ export default function AdminHeader() {
           )}
         </div>
 
-        <Link href="/dashboard/admin/pengaturan" className="admin-avatar-button" title="Pengaturan admin" aria-label="Buka pengaturan admin">
+        <button
+          type="button"
+          className="btn btn-secondary btn-sm"
+          title={t('toggle_language')}
+          onClick={() => setLanguage(language === 'en' ? 'id' : 'en')}
+        >
+          {language === 'en' ? 'ID' : 'EN'}
+        </button>
+
+        <Link href="/dashboard/admin/pengaturan" className="admin-avatar-button" title={t('admin_settings')} aria-label={t('admin_settings')}>
           <span className="admin-person-icon" aria-hidden="true" />
         </Link>
       </div>

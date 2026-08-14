@@ -1,21 +1,7 @@
 import { cookies, headers } from 'next/headers';
 import { query } from '@ephemeris/db';
 import { readSessionValue, SESSION_COOKIE } from './session.js';
-
-export class ApiError extends Error {
-  constructor(status, message) {
-    super(message);
-    this.status = status;
-  }
-}
-
-export function jsonError(error) {
-  if (error instanceof ApiError) {
-    return Response.json({ error: error.message }, { status: error.status });
-  }
-  console.error(error);
-  return Response.json({ error: 'Internal server error' }, { status: 500 });
-}
+import { ApiError } from './errors.js';
 
 export async function currentUser() {
   const cookieStore = await cookies();
@@ -60,3 +46,4 @@ export async function assertSameOrigin(request) {
 
 export { writeAudit } from './audit.js';
 export { createLoginHandler, createLogoutHandler } from './handlers.js';
+export { ApiError, jsonError, parseJsonBody } from './errors.js';

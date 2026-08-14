@@ -1,25 +1,21 @@
-import { assertSameOrigin, jsonError, requireUser, writeAudit } from '@ephemeris/auth';
+import { assertSameOrigin, jsonError, parseJsonBody, requireUser, writeAudit } from '@ephemeris/auth';
 import { transaction } from '@ephemeris/db';
-
-const NEXT_STATUS = new Set(['approved', 'paid', 'rejected']);
-
-function cleanText(value, max = 500) {
-  const text = String(value || '').trim();
-  return text ? text.slice(0, max) : null;
-}
+import { uuidSchema } from '@ephemeris/db/validators/common';
+import { reviewPayoutSchema } from '@ephemeris/db/validators/payout';
 
 export async function PATCH(request, { params }) {
   try {
     await assertSameOrigin(request);
     const user = await requireUser(['admin']);
-    const { id } = await params;
-    const body = await request.json();
-    const status = String(body.status || '').trim();
-    const adminNotes = cleanText(body.adminNotes);
-
-    if (!NEXT_STATUS.has(status)) {
-      return Response.json({ error: 'Invalid payout status' }, { status: 400 });
+    const { id: rawId } = await params;
+    const parseId = uuidSchema.safeParse(rawId);
+    if (!parseId.success) return Response.json({ error: 'ID tidak valid' }, { status: 400 });
+    const id = parseId.data;
+    const parsed = reviewPayoutSchema.safeParse(await parseJsonBody(request));
+    if (!parsed.success) {
+      return Response.json({ error: 'Data payout tidak valid', details: parsed.error.flatten() }, { status: 400 });
     }
+    const { status, adminNotes } = parsed.data;
 
     const updated = await transaction(async (client) => {
       const before = await client.query('SELECT * FROM payout_requests WHERE id = $1', [id]);

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { STATION_DATA } from '@/data/stations';
+import { useAdminLanguage } from '@/context/AdminLanguageContext';
 
 /* ── Toast Component ── */
 function ToastContainer({ toasts, onDismiss }) {
@@ -61,6 +62,7 @@ function SectionHeader({ icon, title, subtitle }) {
 }
 
 export default function PengaturanPage() {
+  const { language, setLanguage } = useAdminLanguage();
   /* ── Toast state ── */
   const [toasts, setToasts] = useState([]);
   const addToast = (message, type = 'success') => {
@@ -74,7 +76,7 @@ export default function PengaturanPage() {
   const [generalSettings, setGeneralSettings] = useState({
     systemName:  'Ephemeris Observatory Management System',
     timezone:    'Asia/Jakarta',
-    language:    'id',
+    language,
     adminEmail:  'admin@ephemeris.id',
     maxSessions: '50',
     dataRetention: '365',
@@ -241,7 +243,7 @@ export default function PengaturanPage() {
 
               <div className="input-group">
                 <label className="input-label">Bahasa Antarmuka</label>
-                <select className="input" value={generalSettings.language} onChange={e => updateGeneral('language', e.target.value)}>
+                <select className="input" value={language} onChange={(e) => { setLanguage(e.target.value); updateGeneral('language', e.target.value); addToast(e.target.value === 'en' ? 'Language switched to English.' : 'Bahasa berhasil diubah ke Bahasa Indonesia.', 'success'); }}>
                   <option value="id">Bahasa Indonesia</option>
                   <option value="en">English</option>
                   <option value="de">Deutsch</option>

@@ -1,8 +1,10 @@
 'use client';
 
+import { useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { STATION_DATA } from '@/data/stations';
+import { useAdminLanguage } from '@/context/AdminLanguageContext';
 
 const NAV_ITEMS = [
   { href: '/dashboard/admin', label: 'Overview', icon: '◉', exact: true },
@@ -17,13 +19,27 @@ const NAV_ITEMS = [
   { href: '/dashboard/admin/pengaturan', label: 'Pengaturan', icon: '⊞' },
 ];
 
-export default function AdminSidebar({ alertCount = 0, bookingCount = 0 }) {
+const NAV_LABEL_KEYS = {
+  '/dashboard/admin': 'nav_overview',
+  '/dashboard/admin/bookings': 'nav_bookings',
+  '/dashboard/admin/keuangan': 'nav_finance',
+  '/dashboard/admin/packages': 'nav_packages',
+  '/dashboard/admin/pengguna': 'nav_users',
+  '/dashboard/admin/audit': 'nav_audit',
+  '/dashboard/admin/jadwal': 'nav_calendar',
+  '/dashboard/admin/sky-events': 'nav_sky_guide',
+  '/dashboard/admin/alerts': 'nav_alerts',
+  '/dashboard/admin/pengaturan': 'nav_settings',
+};
+
+export default function AdminSidebar({ alertCount = 0, bookingCount = 0, isOpen = false, onClose }) {
+  const { t } = useAdminLanguage();
   const pathname = usePathname();
   const router = useRouter();
 
   const handleLogout = async () => {
     try {
-      await fetch('/api/logout', { method: 'POST' });
+      await fetch('/api/auth/logout', { method: 'POST' });
     } catch {
       // tetap lanjut ke halaman login walau API logout gagal
     }
@@ -35,9 +51,15 @@ export default function AdminSidebar({ alertCount = 0, bookingCount = 0 }) {
     return pathname.startsWith(item.href);
   };
 
+  useEffect(() => {
+    if (onClose) onClose();
+  }, [pathname, onClose]);
+
   return (
-    <div className="sidebar">
-      {/* Brand */}
+    <>
+      {isOpen && <div className="sidebar-overlay" onClick={onClose} />}
+      <div className={`sidebar${isOpen ? ' open' : ''}`}>
+        {/* Brand */}
       <div className="sidebar-brand">
         <div className="sidebar-brand-icon">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
@@ -73,7 +95,7 @@ export default function AdminSidebar({ alertCount = 0, bookingCount = 0 }) {
 
       {/* Nav */}
       <nav className="sidebar-nav" style={{ marginTop: '8px' }}>
-        <div className="sidebar-section-label">Navigasi</div>
+        <div className="sidebar-section-label">{t('nav_section')}</div>
         {NAV_ITEMS.map(item => {
           const active = isActive(item);
           const showBadge = item.href.includes('alerts') && alertCount > 0;
@@ -89,7 +111,7 @@ export default function AdminSidebar({ alertCount = 0, bookingCount = 0 }) {
                   flexShrink: 0,
                   opacity: active ? 1 : 0.5,
                 }}>{item.icon}</span>
-                <span>{item.label}</span>
+                <span>{t(NAV_LABEL_KEYS[item.href], item.label)}</span>
                 {showBadge && (
                   <span className="sidebar-badge">{alertCount}</span>
                 )}
@@ -105,7 +127,7 @@ export default function AdminSidebar({ alertCount = 0, bookingCount = 0 }) {
       {/* Station Status */}
       <div className="sidebar-footer">
         <div className="sidebar-section-label" style={{ padding: '0 0 10px' }}>
-          Stasiun Aktif
+          {t('active_stations')}
         </div>
         <div className="sidebar-stations">
           {STATION_DATA.map((s, i) => (
@@ -146,11 +168,12 @@ export default function AdminSidebar({ alertCount = 0, bookingCount = 0 }) {
               Administrator
             </div>
           </div>
-          <button onClick={handleLogout} title="Keluar" style={{ color: 'var(--text-dim)', fontSize: '14px', flexShrink: 0, background: 'none', border: 'none', cursor: 'pointer' }}>
+          <button onClick={handleLogout} title={t('logout')} style={{ color: 'var(--text-dim)', fontSize: '14px', flexShrink: 0, background: 'none', border: 'none', cursor: 'pointer' }}>
             ⏏
           </button>
         </div>
       </div>
     </div>
+    </>
   );
 }

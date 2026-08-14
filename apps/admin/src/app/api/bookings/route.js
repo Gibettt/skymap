@@ -1,55 +1,28 @@
-import crypto from 'crypto';
-import { assertSameOrigin, jsonError, requireUser, writeAudit } from '@ephemeris/auth';
+import { assertSameOrigin, jsonError, parseJsonBody, requireUser, writeAudit } from '@ephemeris/auth';
 import { query, transaction } from '@ephemeris/db';
+import {
+  bookingSelectQuery,
+  generateBookingCode,
+  generateFeedbackToken,
+  paginationFromRequest,
+  paginationMeta,
+} from '@ephemeris/db/helpers';
+import { createBookingSchema } from '@ephemeris/db/validators/booking';
 import { calculateBookingTotals } from '@ephemeris/finance';
 
-const bookingSelect = `
-  SELECT
-    b.*,
-    p.name AS package_name,
-    p.package_type,
-    p.experience_type,
-    p.location,
-    u.name AS staff_name,
-    u.role AS staff_role,
-    r.name AS resort_name,
-    r.code AS resort_code,
-    r.location AS resort_location,
-    ft.token AS feedback_token,
-    ft.status AS feedback_status,
-    fs.rating,
-    fs.comment
-  FROM bookings b
-  JOIN packages p ON p.id = b.package_id
-  JOIN users u ON u.id = b.staff_id
-  LEFT JOIN resorts r ON r.id = b.resort_id
-  LEFT JOIN feedback_tokens ft ON ft.booking_id = b.id
-  LEFT JOIN feedback_submissions fs ON fs.booking_id = b.id
-`;
-
-function bookingCode() {
-  return `LM-SKY-${Date.now().toString().slice(-6)}`;
-}
-
-function token() {
-  return `fb-${crypto.randomBytes(18).toString('hex')}`;
-}
-
-function cleanText(value) {
-  const text = String(value || '').trim();
-  return text || null;
-}
-
-function cleanList(value) {
-  if (!Array.isArray(value)) return [];
-  return value.map((item) => String(item || '').trim()).filter(Boolean).slice(0, 12);
-}
-
-export async function GET() {
+export async function GET(request) {
   try {
-    const user = await requireUser(['admin']);
-    const { rows } = await query(`${bookingSelect} ORDER BY b.event_date DESC, b.created_at DESC`);
-    return Response.json({ bookings: rows });
+    await requireUser(['admin']);
+    const pagination = paginationFromRequest(request);
+    const { rows } = await query(
+      `${bookingSelectQuery} ORDER BY b.event_date DESC, b.created_at DESC LIMIT $1 OFFSET $2`,
+      [pagination.limit, pagination.offset]
+    );
+    const { rows: countRows } = await query('SELECT COUNT(*) FROM bookings');
+    return Response.json({
+      bookings: rows,
+      pagination: paginationMeta({ ...pagination, total: Number(countRows[0].count) }),
+    });
   } catch (error) {
     return jsonError(error);
   }
@@ -59,31 +32,13 @@ export async function POST(request) {
   try {
     await assertSameOrigin(request);
     const user = await requireUser(['admin']);
-    const body = await request.json();
-    const packageId = String(body.packageId || '');
-    const staffId = user.role === 'admin' && body.staffId ? String(body.staffId) : user.id;
-
-    const guestName = String(body.guestName || '').trim();
-    const roomNumber = String(body.roomNumber || '').trim();
-    const nationality = String(body.nationality || '').trim();
-    const guestPhone = cleanText(body.guestPhone);
-    const guestEmail = cleanText(body.guestEmail);
-    const adultCount = Number(body.adultCount || 0);
-    const childCount = Number(body.childCount || 0);
-    const fieldTip = Number(body.fieldTipIncentiveUsd || 0);
-
-    if (
-      !packageId ||
-      !guestName ||
-      !roomNumber ||
-      !nationality ||
-      !guestPhone ||
-      adultCount + childCount <= 0 ||
-      fieldTip < 0 ||
-      (guestEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(guestEmail))
-    ) {
-      return Response.json({ error: 'Invalid booking data' }, { status: 400 });
+    const parsed = createBookingSchema.safeParse(await parseJsonBody(request));
+    if (!parsed.success) {
+      return Response.json({ error: 'Data booking tidak valid', details: parsed.error.flatten() }, { status: 400 });
     }
+    const data = parsed.data;
+    const packageId = data.packageId;
+    const staffId = data.staffId || user.id;
 
     const created = await transaction(async (client) => {
       const pkg = await client.query('SELECT * FROM packages WHERE id = $1 AND is_active = true', [packageId]);
@@ -92,12 +47,12 @@ export async function POST(request) {
       const staff = await client.query('SELECT id, role, resort_id FROM users WHERE id = $1 AND status = $2', [staffId, 'active']);
       const staffRow = staff.rows[0];
       if (!staffRow) throw new Error('Staff not found');
-      const resortId = staffRow.role === 'external' ? staffRow.resort_id : cleanText(body.resortId);
+      const resortId = staffRow.role === 'external' ? staffRow.resort_id : data.resortId;
 
       const childPriceUsd = pkg.rows[0].child_price_usd ?? (pkg.rows[0].package_type === 'kids' ? pkg.rows[0].adult_price_usd : pkg.rows[0].adult_price_usd * 0.5);
       const totals = calculateBookingTotals({
-        adultCount,
-        childCount,
+        adultCount: data.adultCount,
+        childCount: data.childCount,
         adultPriceUsd: Number(pkg.rows[0].adult_price_usd),
         childPriceUsd: Number(childPriceUsd),
         staffRole: staffRow.role,
@@ -133,44 +88,44 @@ export async function POST(request) {
           $46, $47, $48, $49, $49
         ) RETURNING *`,
         [
-          bookingCode(),
-          body.eventDate,
-          body.timeStart,
-          body.timeEnd,
-          guestName,
-          guestPhone,
-          guestEmail,
-          cleanText(body.preferredLanguage),
-          roomNumber,
-          nationality,
-          adultCount,
-          childCount,
-          String(body.childAges || '').trim() || null,
-          cleanText(body.specialOccasion),
-          cleanText(body.guardianName),
-          cleanText(body.guardianPhone),
-          cleanText(body.seatingSetup),
-          cleanText(body.photoRequest),
-          cleanText(body.privacyPreference),
-          cleanText(body.dietaryRestrictions),
-          cleanText(body.rescheduleConsent),
-          cleanText(body.slotStatus) || 'available',
-          cleanText(body.bookingSource),
+          generateBookingCode(),
+          data.eventDate,
+          data.timeStart,
+          data.timeEnd,
+          data.guestName,
+          data.guestPhone,
+          data.guestEmail,
+          data.preferredLanguage,
+          data.roomNumber,
+          data.nationality,
+          data.adultCount,
+          data.childCount,
+          data.childAges,
+          data.specialOccasion,
+          data.guardianName,
+          data.guardianPhone,
+          data.seatingSetup,
+          data.photoRequest,
+          data.privacyPreference,
+          data.dietaryRestrictions,
+          data.rescheduleConsent,
+          data.slotStatus || 'available',
+          data.bookingSource,
           packageId,
-          JSON.stringify(cleanList(body.addOns)),
-          cleanText(body.packageNotes),
+          JSON.stringify(data.addOns),
+          data.packageNotes,
           staffId,
           resortId,
           status,
-          String(body.notes || '').trim() || null,
-          cleanText(body.paymentMethod),
-          cleanText(body.invoiceNumber),
-          cleanText(body.billingNotes),
-          cleanText(body.weatherCondition),
-          cleanText(body.equipmentNeeded),
-          cleanText(body.assignedAstronomer),
-          cleanText(body.assignedButler),
-          cleanText(body.setupStatus) || 'not_started',
+          data.notes,
+          data.paymentMethod,
+          data.invoiceNumber,
+          data.billingNotes,
+          data.weatherCondition,
+          data.equipmentNeeded,
+          data.assignedAstronomer,
+          data.assignedButler,
+          data.setupStatus || 'not_started',
           totals.baseTotalUsd,
           totals.serviceChargeUsd,
           totals.gstUsd,
@@ -178,9 +133,9 @@ export async function POST(request) {
           totals.operationShareUsd,
           totals.companyShareUsd,
           totals.staffCommissionUsd,
-          fieldTip,
-          cleanText(body.tipRecipient),
-          cleanText(body.tipNotes),
+          data.fieldTipIncentiveUsd,
+          data.tipRecipient,
+          data.tipNotes,
           user.id,
         ]
       );
@@ -188,7 +143,7 @@ export async function POST(request) {
       const booking = rows[0];
       await client.query(
         'INSERT INTO feedback_tokens (booking_id, token, status) VALUES ($1, $2, $3)',
-        [booking.id, token(), 'not_sent']
+        [booking.id, generateFeedbackToken(), 'not_sent']
       );
       await writeAudit(client, {
         actorId: user.id,

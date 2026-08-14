@@ -19,30 +19,32 @@ const STAR_STATUSES = new Set([
 const PAYOUT_BLOCKING_STATUSES = new Set(['requested', 'approved', 'paid']);
 
 const roundUsd = (value) => Math.round((Number(value) + Number.EPSILON) * 100) / 100;
+const toCents = (value) => Math.round(Number(value) * 100);
+const toUsd = (cents) => cents / 100;
 
 function field(row, snakeName, camelName) {
   return row[snakeName] ?? row[camelName];
 }
 
 export function calculateBookingTotals({ adultCount, childCount, adultPriceUsd, childPriceUsd, staffRole = 'external' }) {
-  const baseTotalUsd = roundUsd((adultCount * adultPriceUsd) + (childCount * childPriceUsd));
-  const serviceChargeUsd = roundUsd(baseTotalUsd * SERVICE_CHARGE_RATE);
-  const gstUsd = roundUsd(baseTotalUsd * GST_RATE);
-  const invoiceTotalUsd = roundUsd(baseTotalUsd + serviceChargeUsd + gstUsd);
-  const operationShareUsd = roundUsd(baseTotalUsd * OPERATION_SHARE_RATE);
-  const companyShareUsd = roundUsd(baseTotalUsd * OPERATION_SHARE_RATE);
-  const staffCommissionUsd = String(staffRole).toLowerCase() === 'internal'
-    ? roundUsd(baseTotalUsd * INTERNAL_COMMISSION_BASE_RATE * INTERNAL_COMMISSION_SHARE_RATE)
-    : roundUsd(operationShareUsd * STAFF_COMMISSION_RATE);
+  const baseCents = (adultCount * toCents(adultPriceUsd)) + (childCount * toCents(childPriceUsd));
+  const serviceChargeCents = Math.round(baseCents * SERVICE_CHARGE_RATE);
+  const gstCents = Math.round(baseCents * GST_RATE);
+  const invoiceCents = baseCents + serviceChargeCents + gstCents;
+  const operationShareCents = Math.round(baseCents * OPERATION_SHARE_RATE);
+  const companyShareCents = Math.round(baseCents * OPERATION_SHARE_RATE);
+  const staffCommissionCents = String(staffRole).toLowerCase() === 'internal'
+    ? Math.round(baseCents * INTERNAL_COMMISSION_BASE_RATE * INTERNAL_COMMISSION_SHARE_RATE)
+    : Math.round(operationShareCents * STAFF_COMMISSION_RATE);
 
   return {
-    baseTotalUsd,
-    serviceChargeUsd,
-    gstUsd,
-    invoiceTotalUsd,
-    operationShareUsd,
-    companyShareUsd,
-    staffCommissionUsd,
+    baseTotalUsd: toUsd(baseCents),
+    serviceChargeUsd: toUsd(serviceChargeCents),
+    gstUsd: toUsd(gstCents),
+    invoiceTotalUsd: toUsd(invoiceCents),
+    operationShareUsd: toUsd(operationShareCents),
+    companyShareUsd: toUsd(companyShareCents),
+    staffCommissionUsd: toUsd(staffCommissionCents),
   };
 }
 

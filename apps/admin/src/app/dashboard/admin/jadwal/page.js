@@ -3,12 +3,12 @@
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { useAdminLanguage } from '@/context/AdminLanguageContext';
 
-const WEEKDAYS = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'];
-const MONTHS = Array.from({ length: 12 }, (_, month) => ({
-  value: month,
-  label: new Intl.DateTimeFormat('id-ID', { month: 'long' }).format(new Date(2026, month, 1)),
-}));
+const WEEKDAYS = {
+  id: ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'],
+  en: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'],
+};
 
 function pad(value) {
   return String(value).padStart(2, '0');
@@ -26,13 +26,17 @@ function formatTime(value) {
   return String(value || '').slice(0, 5);
 }
 
-function monthTitle(date) {
-  return new Intl.DateTimeFormat('id-ID', { month: 'long', year: 'numeric' }).format(date);
+function localeFor(language) {
+  return language === 'en' ? 'en-US' : 'id-ID';
 }
 
-function selectedDateTitle(key) {
+function monthTitle(date, language) {
+  return new Intl.DateTimeFormat(localeFor(language), { month: 'long', year: 'numeric' }).format(date);
+}
+
+function selectedDateTitle(key, language) {
   const [year, month, day] = key.split('-').map(Number);
-  return new Intl.DateTimeFormat('id-ID', {
+  return new Intl.DateTimeFormat(localeFor(language), {
     weekday: 'long',
     day: 'numeric',
     month: 'long',
@@ -97,6 +101,7 @@ function staffRoleShort(role) {
 }
 
 export default function AdminMonthlyCalendarPage() {
+  const { language } = useAdminLanguage();
   const router = useRouter();
   const now = new Date();
   const [monthDate, setMonthDate] = useState(new Date(now.getFullYear(), now.getMonth(), 1));
@@ -116,7 +121,7 @@ export default function AdminMonthlyCalendarPage() {
           router.replace('/login');
           return;
         }
-        if (!response.ok) throw new Error('Gagal memuat data booking kalender.');
+        if (!response.ok) throw new Error(language === 'en' ? 'Failed to load calendar bookings.' : 'Gagal memuat data booking kalender.');
         const data = await response.json();
         if (alive) setBookings((data.bookings || []).sort(bookingSort));
       } catch (err) {
@@ -130,7 +135,7 @@ export default function AdminMonthlyCalendarPage() {
     return () => {
       alive = false;
     };
-  }, [router]);
+  }, [router, language]);
 
   const grouped = useMemo(() => groupBookings(bookings), [bookings]);
   const days = useMemo(() => buildMonthDays(monthDate), [monthDate]);
@@ -138,6 +143,10 @@ export default function AdminMonthlyCalendarPage() {
     const year = monthDate.getFullYear();
     return Array.from({ length: 9 }, (_, index) => year - 4 + index);
   }, [monthDate]);
+  const monthOptions = useMemo(() => Array.from({ length: 12 }, (_, month) => ({
+    value: month,
+    label: new Intl.DateTimeFormat(localeFor(language), { month: 'long' }).format(new Date(2026, month, 1)),
+  })), [language]);
   const selectedBookings = grouped[selectedDate] || [];
   const monthBookingCount = days.reduce((total, day) => {
     if (!day.inMonth) return total;
@@ -174,11 +183,11 @@ export default function AdminMonthlyCalendarPage() {
     <div className="fade-in-up stagger">
       <header className="page-header calendar-page-header">
         <div>
-          <h1 className="page-title">Kalender Booking Bulanan</h1>
-          <p>Menampilkan booking dari staff internal dan external berdasarkan data booking database.</p>
+          <h1 className="page-title">{language === 'en' ? 'Monthly Booking Calendar' : 'Kalender Booking Bulanan'}</h1>
+          <p>{language === 'en' ? 'Showing bookings from internal and external staff based on database records.' : 'Menampilkan booking dari staff internal dan external berdasarkan data booking database.'}</p>
         </div>
         <div className="calendar-header-actions">
-          <Link href="/dashboard/admin/bookings" className="btn btn-primary btn-sm" style={{ textDecoration: 'none' }}>+ Tambah Sesi</Link>
+          <Link href="/dashboard/admin/bookings" className="btn btn-primary btn-sm" style={{ textDecoration: 'none' }}>{language === 'en' ? '+ Add Session' : '+ Tambah Sesi'}</Link>
           <button className="btn btn-secondary btn-sm" type="button" onClick={() => moveMonth(-1)}>Prev</button>
           <button className="btn btn-secondary btn-sm" type="button" onClick={goToday}>Today</button>
           <button className="btn btn-secondary btn-sm" type="button" onClick={() => moveMonth(1)}>Next</button>
@@ -190,19 +199,19 @@ export default function AdminMonthlyCalendarPage() {
           <div className="staff-calendar-toolbar">
             <div>
               <div className="calendar-kicker">All Staff Calendar</div>
-              <h2>{monthTitle(monthDate)}</h2>
+              <h2>{monthTitle(monthDate, language)}</h2>
             </div>
-            <div className="calendar-filter-bar" aria-label="Filter bulan dan tahun kalender">
+            <div className="calendar-filter-bar" aria-label={language === 'en' ? 'Filter calendar month and year' : 'Filter bulan dan tahun kalender'}>
               <label>
-                <span>Bulan</span>
+                <span>{language === 'en' ? 'Month' : 'Bulan'}</span>
                 <select value={monthDate.getMonth()} onChange={(event) => selectMonth(event.target.value)}>
-                  {MONTHS.map((month) => (
+                  {monthOptions.map((month) => (
                     <option key={month.value} value={month.value}>{month.label}</option>
                   ))}
                 </select>
               </label>
               <label>
-                <span>Tahun</span>
+                <span>{language === 'en' ? 'Year' : 'Tahun'}</span>
                 <select value={monthDate.getFullYear()} onChange={(event) => selectYear(event.target.value)}>
                   {yearOptions.map((year) => (
                     <option key={year} value={year}>{year}</option>
@@ -212,14 +221,14 @@ export default function AdminMonthlyCalendarPage() {
             </div>
             <div className="calendar-month-stats">
               <strong>{monthBookingCount}</strong>
-              <span>booking bulan ini</span>
+              <span>{language === 'en' ? 'bookings this month' : 'booking bulan ini'}</span>
             </div>
           </div>
 
           {error && <div className="external-booking-note" style={{ color: 'var(--accent)' }}>{error}</div>}
 
           <div className="staff-month-grid">
-            {WEEKDAYS.map((day) => (
+            {WEEKDAYS[language].map((day) => (
               <div className="staff-calendar-weekday" key={day}>{day}</div>
             ))}
 
@@ -244,7 +253,7 @@ export default function AdminMonthlyCalendarPage() {
                         <span>{booking.guest_name} - {staffRoleShort(booking.staff_role)}</span>
                       </span>
                     ))}
-                    {!loading && extra > 0 && <span className="calendar-event more">+{extra} lainnya</span>}
+                    {!loading && extra > 0 && <span className="calendar-event more">{language === 'en' ? `+${extra} more` : `+${extra} lainnya`}</span>}
                   </div>
                 </button>
               );
@@ -255,15 +264,15 @@ export default function AdminMonthlyCalendarPage() {
         <aside className="staff-calendar-side">
           <div className="calendar-side-head">
             <span>Selected Date</span>
-            <h3>{selectedDateTitle(selectedDate)}</h3>
+            <h3>{selectedDateTitle(selectedDate, language)}</h3>
           </div>
 
           <div className="calendar-day-bookings">
-            {loading && <div className="calendar-empty">Memuat booking...</div>}
+            {loading && <div className="calendar-empty">{language === 'en' ? 'Loading bookings...' : 'Memuat booking...'}</div>}
             {!loading && selectedBookings.length === 0 && (
               <div className="calendar-empty">
-                <strong>Tidak ada booking</strong>
-                <span>Tanggal ini masih kosong.</span>
+                <strong>{language === 'en' ? 'No bookings' : 'Tidak ada booking'}</strong>
+                <span>{language === 'en' ? 'This date is still empty.' : 'Tanggal ini masih kosong.'}</span>
               </div>
             )}
             {!loading && selectedBookings.map((booking) => (

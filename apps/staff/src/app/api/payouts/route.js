@@ -1,5 +1,6 @@
-import { assertSameOrigin, jsonError, requireUser, writeAudit } from '@ephemeris/auth';
+import { assertSameOrigin, jsonError, parseJsonBody, requireUser, writeAudit } from '@ephemeris/auth';
 import { query, transaction } from '@ephemeris/db';
+import { createPayoutRequestSchema } from '@ephemeris/db/validators/payout';
 import { calculatePayoutSummary } from '@ephemeris/finance';
 
 const bookingSelect = `
@@ -14,11 +15,6 @@ const payoutSelect = `
   JOIN users u ON u.id = pr.requester_id
   LEFT JOIN resorts r ON r.id = pr.resort_id
 `;
-
-function cleanText(value, max = 160) {
-  const text = String(value || '').trim();
-  return text ? text.slice(0, max) : '';
-}
 
 function payoutScope(user) {
   if (user.role === 'external') {
@@ -70,16 +66,11 @@ export async function POST(request) {
       return Response.json({ error: 'External resort profile is not configured' }, { status: 403 });
     }
 
-    const body = await request.json();
-    const amountUsd = Number(body.amountUsd);
-    const paymentMethod = cleanText(body.paymentMethod, 40);
-    const accountName = cleanText(body.accountName, 120);
-    const accountNumber = cleanText(body.accountNumber, 120);
-    const notes = cleanText(body.notes, 500) || null;
-
-    if (!Number.isFinite(amountUsd) || amountUsd <= 0 || !paymentMethod || !accountName || !accountNumber) {
-      return Response.json({ error: 'Invalid payout request data' }, { status: 400 });
+    const parsed = createPayoutRequestSchema.safeParse(await parseJsonBody(request));
+    if (!parsed.success) {
+      return Response.json({ error: 'Data payout tidak valid', details: parsed.error.flatten() }, { status: 400 });
     }
+    const { amountUsd, paymentMethod, accountName, accountNumber, notes } = parsed.data;
 
     const created = await transaction(async (client) => {
       const { summary } = await loadSummary(user, client);

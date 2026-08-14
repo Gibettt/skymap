@@ -130,6 +130,13 @@ button {
   bottom: 0;
   z-index: 40;
   transition: transform 0.3s var(--ease);
+  transform: translateX(-100%);
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.sidebar.open {
+  transform: translateX(0);
 }
 
 .sidebar-brand {
@@ -320,11 +327,19 @@ button {
 
 /* === Main Content === */
 .main-content {
-  margin-left: var(--sidebar-width);
+  margin-left: 0;
   flex: 1;
   min-height: 100vh;
   display: flex;
   flex-direction: column;
+  transition: margin-left 0.3s var(--ease);
+}
+
+/* Desktop: push main content when sidebar is open */
+@media (min-width: 769px) {
+  .sidebar.open ~ .main-content {
+    margin-left: var(--sidebar-width);
+  }
 }
 
 /* === Header === */
@@ -653,6 +668,106 @@ textarea.input { min-height: 100px; resize: vertical; }
   font-size: 13px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
+}
+
+.section-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-secondary);
+  gap: 12px;
+}
+
+.section-header-row h3 {
+  padding: 0;
+  border-bottom: none;
+}
+
+.section-badge-required {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+  background: rgba(229, 28, 28, 0.08);
+  border: 1px solid rgba(229, 28, 28, 0.2);
+  padding: 3px 8px;
+}
+
+.section-badge-optional {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  background: var(--bg-primary);
+  border: 1px solid var(--border);
+  padding: 3px 8px;
+}
+
+.section-badge-info {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--violet);
+  background: rgba(124, 58, 237, 0.08);
+  border: 1px solid rgba(124, 58, 237, 0.2);
+  padding: 3px 8px;
+}
+
+.booking-empty-children-box {
+  padding: 32px 20px;
+  text-align: center;
+  background: var(--bg-secondary);
+  border: 1px dashed var(--border);
+  margin: 16px;
+}
+
+.booking-child-card {
+  border: 1px solid var(--border);
+  background: var(--bg-secondary);
+  padding: 14px;
+  display: grid;
+  gap: 12px;
+}
+
+.booking-child-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--border);
+}
+
+.booking-child-tag {
+  font-family: var(--font-heading);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.booking-child-delete-btn {
+  background: none;
+  border: 1px solid rgba(229, 28, 28, 0.25);
+  color: var(--accent);
+  font-size: 11px;
+  font-weight: 600;
+  padding: 4px 10px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.booking-child-delete-btn:hover {
+  background: rgba(229, 28, 28, 0.1);
+  border-color: var(--accent);
 }
 
 .booking-form-grid {
@@ -988,6 +1103,71 @@ textarea.input { min-height: 100px; resize: vertical; }
   line-height: 1.45;
   background: var(--bg-card);
   border: 1px solid var(--border-subtle);
+}
+
+/* === Sub-Modal: Catatan Lengkap Overlay (Niban di depan layar) === */
+.notes-popup-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1200;
+  padding: 20px;
+  animation: fadeIn 0.2s var(--ease);
+}
+
+.notes-popup-modal {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  width: 800px;
+  max-width: 95vw;
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.6);
+  animation: slideUp 0.25s var(--ease);
+  overflow: hidden;
+}
+
+.notes-popup-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 24px;
+  background: var(--bg-elevated);
+  border-bottom: 1px solid var(--border);
+}
+
+.notes-popup-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px 24px;
+  background: var(--bg-card);
+}
+
+.notes-popup-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 24px;
+  background: var(--bg-elevated);
+  border-top: 1px solid var(--border);
+}
+
+.notes-pre-content {
+  margin: 0;
+  padding: 16px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  font-family: var(--font-mono, monospace);
+  font-size: 12px;
+  line-height: 1.65;
+  color: var(--text-primary);
+  white-space: pre-wrap;
+  word-break: break-word;
 }
 
 .booking-checkbox-grid {
@@ -2162,5 +2342,146 @@ textarea.input { min-height: 100px; resize: vertical; }
 
   .booking-landscape-foot .btn {
     width: 100%;
+  }
+}
+
+/* =============================================
+   RESPONSIVE SIDEBAR TOGGLE (ALL SCREEN SIZES)
+   ============================================= */
+
+/* Hamburger toggle — always visible */
+.sidebar-toggle {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 4px;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  background: none;
+  border: 1px solid var(--border);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.15s var(--ease);
+}
+
+.sidebar-toggle:hover {
+  background: rgba(0, 0, 0, 0.04);
+}
+
+.hamburger-line {
+  display: block;
+  width: 18px;
+  height: 2px;
+  background: var(--text-primary);
+  transition: transform 0.2s var(--ease), opacity 0.2s var(--ease);
+}
+
+/* Sidebar overlay backdrop — only shown on mobile */
+.sidebar-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  z-index: 45;
+  animation: overlayFadeIn 0.25s var(--ease);
+}
+
+@keyframes overlayFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* ---- Tablet breakpoint (≤ 900px): compact adjustments ---- */
+@media (max-width: 900px) {
+  .header-clock {
+    gap: 14px;
+    padding: 0 14px;
+  }
+
+  .clock-value {
+    font-size: 13px;
+  }
+
+  .external-compact-layout .page-content {
+    padding: 32px 20px 64px;
+  }
+}
+
+/* ---- Mobile breakpoint (≤ 768px): sidebar becomes overlay drawer ---- */
+@media (max-width: 768px) {
+  /* Show overlay when sidebar is open */
+  .sidebar-overlay {
+    display: block;
+  }
+
+  /* Mobile sidebar adjustments */
+  .sidebar {
+    width: 280px;
+    z-index: 50;
+  }
+
+  /* Override desktop push — no margin on mobile */
+  .sidebar.open ~ .main-content {
+    margin-left: 0;
+  }
+
+  /* Header responsive tweaks */
+  .header {
+    padding: 0 16px;
+    gap: 12px;
+  }
+
+  .header-title {
+    font-size: 18px;
+  }
+
+  .header-breadcrumb {
+    font-size: 10px;
+  }
+
+  /* Hide clock on small screens to save space */
+  .header-clock {
+    display: none;
+  }
+
+  /* Page content padding */
+  .external-compact-layout .page-content {
+    padding: 24px 16px 64px;
+  }
+
+  .page-content {
+    padding: 24px 16px;
+  }
+}
+
+/* ---- Small phone (≤ 480px) ---- */
+@media (max-width: 480px) {
+  .sidebar {
+    width: 260px;
+  }
+
+  .header {
+    padding: 0 12px;
+    gap: 8px;
+    height: 56px;
+  }
+
+  .header-title {
+    font-size: 16px;
+  }
+
+  .btn.btn-sm {
+    font-size: 10px;
+    padding: 6px 10px;
+  }
+
+  .page-content {
+    padding: 16px 12px;
+  }
+
+  .external-compact-layout .page-content {
+    padding: 16px 12px 48px;
   }
 }

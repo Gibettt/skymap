@@ -3,10 +3,19 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useRouter } from 'next/navigation';
+import { useLanguage } from '@/context/LanguageContext';
 
 const ROLE_STYLE = {
-  internal: { color: '#0891b2', title: 'Booking Operasional', subtitle: 'Booking baru harus diterima admin sebelum bisa diproses operasional.' },
-  external: { color: '#7c3aed', title: 'Booking Resort', subtitle: 'Input booking customer, lalu tunggu keputusan admin.' },
+  internal: {
+    color: '#0891b2',
+    title: { id: 'Booking Operasional', en: 'Operational Bookings' },
+    subtitle: { id: 'Booking baru harus diterima admin sebelum bisa diproses operasional.', en: 'New bookings must be accepted by admin before operational processing.' },
+  },
+  external: {
+    color: '#7c3aed',
+    title: { id: 'Booking Resort', en: 'Resort Bookings' },
+    subtitle: { id: 'Input booking customer, lalu tunggu keputusan admin.', en: 'Submit guest bookings, then await admin approval.' },
+  },
 };
 
 const ADD_ON_OPTIONS = ['Astro portrait', 'Dining setup', 'Beverages', 'Sky map', 'Private seating'];
@@ -55,14 +64,15 @@ function formatUsd(value) {
   return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(Number(value || 0));
 }
 
-function statusLabel(status) {
+function statusLabel(status, lang = 'id') {
+  const isEn = lang === 'en';
   const labels = {
-    pending_review: 'Menunggu Admin',
-    accepted: 'Diterima',
-    rejected: 'Ditolak',
+    pending_review: isEn ? 'Pending Review' : 'Menunggu Admin',
+    accepted: isEn ? 'Accepted' : 'Diterima',
+    rejected: isEn ? 'Rejected' : 'Ditolak',
     booked: 'Booked',
-    finished_experience: 'Finished',
-    cancelled: 'Cancelled',
+    finished_experience: isEn ? 'Finished' : 'Selesai',
+    cancelled: isEn ? 'Cancelled' : 'Dibatalkan',
   };
   return labels[status] || status;
 }
@@ -120,7 +130,10 @@ function canToggleSigned(booking) {
 
 export default function StaffBookingsClient({ role }) {
   const router = useRouter();
+  const { language, t } = useLanguage();
   const config = ROLE_STYLE[role];
+  const pageTitle = config.title[language] || config.title.id;
+  const pageSubtitle = config.subtitle[language] || config.subtitle.id;
   const [bookings, setBookings] = useState([]);
   const [packages, setPackages] = useState([]);
   const [form, setForm] = useState(EMPTY_FORM);
@@ -140,24 +153,19 @@ export default function StaffBookingsClient({ role }) {
 
   const showToast = (message) => {
     setToast(message);
-    setTimeout(() => setToast(''), 2500);
+    setTimeout(() => setToast(null), 3000);
   };
 
   const loadData = useCallback(async () => {
-    setError('');
-    const meRes = await fetch('/api/me');
-    if (!meRes.ok) {
-      router.replace('/login');
-      throw new Error('Session login tidak aktif. Silakan login ulang.');
+    const userRes = await fetch('/api/me');
+    if (!userRes.ok) {
+      router.push('/login');
+      return;
     }
-    const meData = await meRes.json();
-    if (!meData.user) {
-      router.replace('/login');
-      throw new Error('Session login tidak aktif. Silakan login ulang.');
-    }
-    if (meData.user.role !== role) {
-      router.replace(`/dashboard/${meData.user.role}/bookings`);
-      throw new Error(`Session aktif adalah ${meData.user.role}. Mengalihkan ke dashboard yang sesuai.`);
+    const userData = await userRes.json();
+    if (userData.user.role !== role) {
+      router.push(`/dashboard/${userData.user.role}`);
+      return;
     }
 
     const [bookingRes, packageRes] = await Promise.all([
@@ -165,7 +173,7 @@ export default function StaffBookingsClient({ role }) {
       fetch('/api/packages'),
     ]);
     if (!bookingRes.ok || !packageRes.ok) {
-      throw new Error('Gagal memuat data. Pastikan login dan database sudah aktif.');
+      throw new Error('FAILED_LOAD_DATA');
     }
     const bookingData = await bookingRes.json();
     const packageData = await packageRes.json();
@@ -206,13 +214,13 @@ export default function StaffBookingsClient({ role }) {
     });
     const data = await response.json();
     if (!response.ok) {
-      showToast(data.error || 'Booking gagal dibuat.');
+      showToast(data.error || (language === 'en' ? 'Failed to create booking.' : 'Booking gagal dibuat.'));
       return;
     }
     setModalOpen(false);
     setForm({ ...EMPTY_FORM, packageId: packages[0]?.id || '' });
     await loadData();
-    showToast('Booking berhasil dibuat dan menunggu persetujuan admin.');
+    showToast(language === 'en' ? 'Booking successfully submitted and awaiting admin approval.' : 'Booking berhasil dibuat dan menunggu persetujuan admin.');
   };
 
   const updateBooking = async (booking, patch) => {
@@ -223,34 +231,36 @@ export default function StaffBookingsClient({ role }) {
     });
     const data = await response.json();
     if (!response.ok) {
-      showToast(data.error || 'Update gagal.');
+      showToast(data.error || (language === 'en' ? 'Update failed.' : 'Update gagal.'));
       return;
     }
     setBookings((current) => current.map((item) => item.id === booking.id ? { ...item, ...data.booking } : item));
-    showToast('Booking diperbarui.');
+    showToast(language === 'en' ? 'Booking updated.' : 'Booking diperbarui.');
   };
 
   return (
     <div className="fade-in-up">
       <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, alignItems: 'center', marginBottom: 24 }}>
         <div>
-          <h2 style={{ fontSize: 24, fontFamily: 'var(--font-heading)', color: 'var(--text-primary)' }}>{config.title}</h2>
-          <p style={{ color: 'var(--text-secondary)', fontSize: 14 }}>{config.subtitle}</p>
+          <h2 style={{ fontSize: 24, fontFamily: 'var(--font-heading)', color: 'var(--text-primary)' }}>{pageTitle}</h2>
+          <p style={{ color: 'var(--text-secondary)', fontSize: 14 }}>{pageSubtitle}</p>
         </div>
         <button className="btn" style={{ background: config.color, color: 'white' }} onClick={() => setModalOpen(true)}>
-          + Booking Baru
+          {t('btn_new_booking', '+ Booking Baru')}
         </button>
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 24 }}>
-        <MiniCard label="Booking" value={bookings.length} />
-        <MiniCard label="Menunggu Admin" value={totals.pending} />
-        <MiniCard label="Diterima" value={totals.accepted} />
-        <MiniCard label="Finished" value={totals.finished} />
+        <MiniCard label={language === 'en' ? 'Total Bookings' : 'Total Booking'} value={bookings.length} />
+        <MiniCard label={t('status_pending_review', 'Menunggu Admin')} value={totals.pending} />
+        <MiniCard label={t('status_accepted', 'Diterima')} value={totals.accepted} />
+        <MiniCard label={t('status_finished', 'Selesai')} value={totals.finished} />
       </div>
 
       <div className="external-booking-note" style={{ marginBottom: 18, borderColor: `${config.color}40`, background: `${config.color}14` }}>
-        Booking baru berstatus Menunggu Admin. Setelah admin klik Terima, staff baru bisa menandai Finished atau Signed.
+        {language === 'en'
+          ? 'New bookings are marked as Pending Review. Once accepted by admin, staff can proceed with operations and mark as Finished or Signed.'
+          : 'Booking baru berstatus Menunggu Admin. Setelah admin klik Terima, staff baru bisa menandai Finished atau Signed.'}
       </div>
 
       {error && (
@@ -269,12 +279,12 @@ export default function StaffBookingsClient({ role }) {
                 <th>Pax</th>
                 <th>Status</th>
                 <th>Signed</th>
-                <th style={{ textAlign: 'right' }}>Komisi</th>
-                {role === 'internal' && <th style={{ textAlign: 'center' }}>Aksi</th>}
+                <th style={{ textAlign: 'right' }}>{language === 'en' ? 'Commission' : 'Komisi'}</th>
+                {role === 'internal' && <th style={{ textAlign: 'center' }}>{language === 'en' ? 'Action' : 'Aksi'}</th>}
               </tr>
             </thead>
             <tbody>
-              {loading && <tr><td colSpan={role === 'internal' ? 9 : 8} style={{ textAlign: 'center', padding: 36 }}>Memuat...</td></tr>}
+              {loading && <tr><td colSpan={role === 'internal' ? 9 : 8} style={{ textAlign: 'center', padding: 36 }}>{language === 'en' ? 'Loading...' : 'Memuat...'}</td></tr>}
               {!loading && bookings.map((booking) => (
                 <tr key={booking.id}>
                   <td className="name-cell">
@@ -291,15 +301,15 @@ export default function StaffBookingsClient({ role }) {
                   </td>
                   <td>{booking.package_name}</td>
                   <td style={{ fontSize: 12 }}>{String(booking.event_date).slice(0, 10)}<br />{booking.time_start}-{booking.time_end}</td>
-                  <td>{booking.adult_count} adult / {booking.child_count} child</td>
-                  <td><span className={`tag ${statusClass(booking.status)}`}>{statusLabel(booking.status)}</span></td>
+                  <td>{booking.adult_count} {language === 'en' ? 'adult' : 'dewasa'} / {booking.child_count} {language === 'en' ? 'child' : 'anak'}</td>
+                  <td><span className={`tag ${statusClass(booking.status)}`}>{statusLabel(booking.status, language)}</span></td>
                   <td><span className={`tag ${booking.signed_by_guest ? 'tag-completed' : 'tag-pending'}`}>{booking.signed_by_guest ? 'Yes' : 'No'}</span></td>
                   <td style={{ textAlign: 'right', fontWeight: 800 }}>{formatUsd(booking.staff_commission_5_usd)}</td>
                   {role === 'internal' && (
                     <td style={{ textAlign: 'center' }}>
                       <div style={{ display: 'flex', justifyContent: 'center', gap: 6 }}>
-                        {booking.status === 'pending_review' && <span style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 700 }}>Menunggu admin</span>}
-                        {booking.status === 'rejected' && <span style={{ fontSize: 11, color: 'var(--accent)', fontWeight: 700 }}>Ditolak</span>}
+                        {booking.status === 'pending_review' && <span style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 700 }}>{language === 'en' ? 'Awaiting admin' : 'Menunggu admin'}</span>}
+                        {booking.status === 'rejected' && <span style={{ fontSize: 11, color: 'var(--accent)', fontWeight: 700 }}>{language === 'en' ? 'Rejected' : 'Ditolak'}</span>}
                         {canOperate(booking) && <button className="btn btn-secondary btn-sm" onClick={() => updateBooking(booking, { status: 'finished_experience' })}>Finish</button>}
                         {canToggleSigned(booking) && <button className="btn btn-secondary btn-sm" onClick={() => updateBooking(booking, { signedByGuest: !booking.signed_by_guest })}>Signed</button>}
                       </div>
@@ -308,7 +318,7 @@ export default function StaffBookingsClient({ role }) {
                 </tr>
               ))}
               {!loading && bookings.length === 0 && (
-                <tr><td colSpan={role === 'internal' ? 9 : 8} style={{ textAlign: 'center', padding: 40, color: 'var(--text-muted)' }}>Belum ada booking</td></tr>
+                <tr><td colSpan={role === 'internal' ? 9 : 8} style={{ textAlign: 'center', padding: 40, color: 'var(--text-muted)' }}>{language === 'en' ? 'No bookings found' : 'Belum ada booking'}</td></tr>
               )}
             </tbody>
           </table>

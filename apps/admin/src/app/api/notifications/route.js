@@ -1,5 +1,6 @@
-import { assertSameOrigin, ApiError, jsonError, requireUser } from '@ephemeris/auth';
+import { assertSameOrigin, ApiError, jsonError, parseJsonBody, requireUser } from '@ephemeris/auth';
 import { transaction } from '@ephemeris/db';
+import { uuidSchema } from '@ephemeris/db/validators/common';
 
 async function syncAdminNotifications(client) {
   await client.query(
@@ -120,7 +121,7 @@ export async function PATCH(request) {
   try {
     await assertSameOrigin(request);
     const user = await requireUser(['admin']);
-    const body = await request.json();
+    const body = await parseJsonBody(request);
     const ids = Array.isArray(body.ids) ? body.ids : [body.id];
     const cleanIds = ids
       .map((id) => String(id || '').trim())
@@ -129,6 +130,9 @@ export async function PATCH(request) {
 
     if (!cleanIds.length) {
       throw new ApiError(400, 'Notification id is required');
+    }
+    if (cleanIds.some((id) => !uuidSchema.safeParse(id).success)) {
+      throw new ApiError(400, 'ID notifikasi tidak valid');
     }
 
     const { rows } = await transaction(async (client) => client.query(

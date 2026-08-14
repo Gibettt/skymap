@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { OBJECT_TYPES, PACKAGE_CATALOG, STATIONS } from '@/data/bookings';
 import { calculateBookingFinance, formatUsd } from '@/data/keuangan';
 
@@ -326,17 +327,71 @@ function BookingModal({ booking, onClose, onSave }) {
                 <textarea className="input" value={form.notes} onChange={(e) => set('notes', e.target.value)} />
               </div>
             </div>
-
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginTop: 18 }}>
-              <KpiMini label="Base" value={formatUsd(finance.baseTotalUsd)} />
-              <KpiMini label="Invoice" value={formatUsd(finance.invoiceTotalUsd)} />
-              <KpiMini label="Resort 50%" value={formatUsd(finance.operationShareUsd)} />
-              <KpiMini label="Komisi Staff" value={formatUsd(finance.staffCommissionUsd)} />
+            <div className="form-grid">
+              <div className="form-group">
+                <label className="form-label">Tamu Utama</label>
+                <input className="input" value={form.clientName} onChange={(e) => setField('clientName', e.target.value)} required />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Room / Villa</label>
+                <input className="input" value={form.roomNumber} onChange={(e) => setField('roomNumber', e.target.value)} required />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Nationality</label>
+                <input className="input" value={form.nationality} onChange={(e) => setField('nationality', e.target.value)} required />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Paket Observasi</label>
+                <select className="input" value={form.packageName} onChange={(e) => setField('packageName', e.target.value)}>
+                  {PACKAGE_CATALOG.map((p) => (
+                    <option key={p.name} value={p.name}>{p.name} (${p.adultPriceUsd})</option>
+                  ))}
+                </select>
+              </div>
+              <div className="form-group">
+                <label className="form-label">Tanggal Observasi</label>
+                <input type="date" className="input" value={form.date} onChange={(e) => setField('date', e.target.value)} required />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Jam (Start - End)</label>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <input type="time" className="input" value={form.timeStart} onChange={(e) => setField('timeStart', e.target.value)} required />
+                  <input type="time" className="input" value={form.timeEnd} onChange={(e) => setField('timeEnd', e.target.value)} required />
+                </div>
+              </div>
+              <div className="form-group">
+                <label className="form-label">Adults (Dewasa)</label>
+                <input type="number" min="1" className="input" value={form.adultCount} onChange={(e) => setField('adultCount', Number(e.target.value))} required />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Children (Anak)</label>
+                <input type="number" min="0" className="input" value={form.childCount} onChange={(e) => setField('childCount', Number(e.target.value))} />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Staff Owner</label>
+                <select className="input" value={form.staffName} onChange={(e) => setField('staffName', e.target.value)}>
+                  {STAFF_OPTIONS.map((s) => (
+                    <option key={s.staffId} value={s.staffName}>{s.staffName} ({s.staffRole})</option>
+                  ))}
+                </select>
+              </div>
+              <div className="form-group">
+                <label className="form-label">Status</label>
+                <select className="input" value={form.status} onChange={(e) => setField('status', e.target.value)}>
+                  {STATUS_FILTERS.filter((s) => s !== 'Semua').map((s) => (
+                    <option key={s} value={s}>{s}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="form-group full-width">
+                <label className="form-label">Catatan</label>
+                <textarea className="input" rows={3} value={form.notes} onChange={(e) => setField('notes', e.target.value)} placeholder="Catatan khusus..." />
+              </div>
             </div>
           </div>
           <div className="modal-footer">
-            <button type="button" className="btn btn-secondary" onClick={onClose}>Batal</button>
-            <button type="submit" className="btn btn-primary">{booking ? 'Simpan' : 'Book Now'}</button>
+            <button type="button" className="btn btn-secondary btn-sm" onClick={onClose}>Batal</button>
+            <button type="submit" className="btn btn-primary btn-sm">{booking ? 'Simpan Perubahan' : 'Tambah Booking'}</button>
           </div>
         </form>
       </div>
@@ -353,104 +408,321 @@ function KpiMini({ label, value }) {
   );
 }
 
-function BookingDetail({ booking, onClose, onEdit, onDelete }) {
-  const finance = getFinance(booking);
-  const feedbackUrl = `/feedback/${booking.feedbackToken}`;
-  const fatherData = familyLine(booking.packageNotes, 'Ayah') || 'Ayah: -';
-  const motherData = familyLine(booking.packageNotes, 'Ibu') || 'Ibu: -';
-  const childData = familyLine(booking.packageNotes, 'Anak') || 'Anak: -';
-  const packageFather = packageLine(booking.packageNotes, 'Package ayah');
-  const packageMother = packageLine(booking.packageNotes, 'Package ibu');
-  const packageChild = packageLine(booking.packageNotes, 'Package anak');
+function NotesPopupModal({ title, bookingCode, guestName, notes, onClose }) {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = () => {
+    if (typeof navigator !== 'undefined' && navigator.clipboard) {
+      navigator.clipboard.writeText(notes);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
 
   return (
-    <div className="modal-backdrop">
-      <div className="modal" style={{ width: 700 }}>
-        <div className="modal-header">
-          <div>
-            <div style={{ fontSize: 11, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-dim)' }}>
-              Detail Booking #{booking.id}
-            </div>
-            <span className="modal-title">{booking.clientName} - {booking.packageName}</span>
-          </div>
-          <button className="modal-close" onClick={onClose}>x</button>
-        </div>
-        <div className="modal-body">
-          <div style={{ display: 'flex', gap: 10, marginBottom: 18, flexWrap: 'wrap' }}>
-            <span className={`tag ${getStatusClass(booking.status)}`}>{booking.status}</span>
-            <span className={`tag ${getTypeClass(booking.packageType)}`}>{booking.packageType}</span>
-            <span className={`tag ${booking.signedByGuest ? 'tag-completed' : 'tag-pending'}`}>{booking.signedByGuest ? 'Signed' : 'Not Signed'}</span>
-          </div>
-
-          <div className="detail-grid" style={{ border: '1px solid var(--border)', marginBottom: 18 }}>
-            {[
-              ['Kepala Keluarga', booking.clientName],
-              ['Room', booking.roomNumber],
-              ['Nationality', booking.nationality],
-              ['Pax', `${booking.adultCount} adult / ${booking.childCount} child`],
-              ['Event Date', booking.date],
-              ['Time', `${booking.timeStart} - ${booking.timeEnd}`],
-              ['Location', booking.location],
-              ['Staff Owner', `${booking.staffRole} - ${booking.staffName}`],
-            ].map(([label, value]) => (
-              <div key={label} className="detail-stat">
-                <div className="detail-stat-label">{label}</div>
-                <div className="detail-stat-value" style={{ fontSize: 14 }}>{value}</div>
+    <div className="notes-popup-backdrop" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+      <div className="notes-popup-modal">
+        <div className="notes-popup-header">
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <span style={{ fontSize: 22 }}>📋</span>
+            <div>
+              <div style={{ fontSize: 15, fontWeight: 800, fontFamily: 'var(--font-heading)', color: 'var(--text-primary)' }}>
+                {title || 'Catatan Lengkap Form & Log Intake'}
               </div>
-            ))}
-          </div>
-
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: 18 }}>
-            <KpiMini label="Base" value={formatUsd(finance.baseTotalUsd)} />
-            <KpiMini label="Invoice" value={formatUsd(finance.invoiceTotalUsd)} />
-            <KpiMini label="Resort 50%" value={formatUsd(finance.operationShareUsd)} />
-            <KpiMini label="Komisi Staff" value={formatUsd(finance.staffCommissionUsd)} />
-          </div>
-
-          <div style={{ padding: 14, background: 'var(--bg-elevated)', border: '1px solid var(--border)', marginBottom: 18 }}>
-            <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--text-dim)', marginBottom: 8 }}>
-              Family Intake Data
-            </div>
-            <div className="admin-family-detail-grid">
-              <FamilyDetailCard title="Data Ayah" value={fatherData.replace(/^Ayah:\s*/, '')} packageValue={packageFather} />
-              <FamilyDetailCard title="Data Ibu" value={motherData.replace(/^Ibu:\s*/, '')} packageValue={packageMother} />
-              <FamilyDetailCard title="Data Anak" value={childData.replace(/^Anak:\s*/, '')} packageValue={packageChild} />
-              <FamilyDetailCard title="Kontak & Consent" value={`Phone: ${booking.guestPhone || '-'}\nEmail: ${booking.guestEmail || '-'}\nGuardian WA: ${booking.guardianPhone || '-'}\nAllergy/Dietary: ${booking.dietaryRestrictions || '-'}`} packageValue={booking.addOns.length ? booking.addOns.join(', ') : '-'} />
-            </div>
-            <div style={{ marginTop: 12 }}>
-              <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-dim)', marginBottom: 6 }}>Catatan Lengkap</div>
-              <pre style={{ margin: 0, whiteSpace: 'pre-wrap', fontFamily: 'var(--font-body)', fontSize: 12, color: 'var(--text-secondary)' }}>
-                {booking.packageNotes || booking.notes || 'Tidak ada catatan family intake.'}
-              </pre>
+              <div style={{ fontSize: 11, color: 'var(--text-dim)', marginTop: 2 }}>
+                Kode: <strong>{bookingCode}</strong> &bull; Tamu: <strong>{guestName}</strong>
+              </div>
             </div>
           </div>
-
-          <div style={{ padding: 14, background: 'var(--bg-elevated)', border: '1px solid var(--border)' }}>
-            <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--text-dim)', marginBottom: 8 }}>
-              WhatsApp Feedback Link
-            </div>
-            <div style={{ fontFamily: 'var(--font-mono)', fontSize: 12 }}>{feedbackUrl}</div>
-            <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 8 }}>
-              Token one-time: {booking.feedbackSubmittedAt ? 'Expired / submitted' : 'Available'}
-            </div>
-          </div>
+          <button className="modal-close" onClick={onClose} title="Tutup">x</button>
         </div>
-        <div className="modal-footer">
-          <button className="btn btn-secondary btn-sm" onClick={() => { onClose(); onDelete(booking.id); }} style={{ color: 'var(--accent)', borderColor: 'rgba(229,28,28,0.3)' }}>Hapus</button>
-          <button className="btn btn-secondary btn-sm" onClick={onClose}>Tutup</button>
-          <button className="btn btn-primary btn-sm" onClick={() => { onClose(); onEdit(booking); }}>Edit</button>
+
+        <div className="notes-popup-body">
+          <pre className="notes-pre-content">
+            {notes || 'Tidak ada catatan tambahan yang terlampir.'}
+          </pre>
+        </div>
+
+        <div className="notes-popup-footer">
+          <button
+            type="button"
+            className="btn btn-secondary btn-sm"
+            onClick={handleCopy}
+          >
+            {copied ? '✓ Berhasil Disalin!' : '📄 Salin Seluruh Catatan'}
+          </button>
+          <button
+            type="button"
+            className="btn btn-primary btn-sm"
+            onClick={onClose}
+          >
+            Tutup Catatan
+          </button>
         </div>
       </div>
     </div>
   );
 }
 
-function FamilyDetailCard({ title, value, packageValue }) {
+function extractAdminGuestName(line, fallbackName) {
+  if (!line) return fallbackName || '-';
+  const cleaned = line.replace(/^(Tamu Utama|Tamu 2 \(Pasangan\/Pendamping\)|Tamu 2|Ayah|Ibu|Anak\s*\d*)\s*:\s*/i, '').trim();
+  if (cleaned.includes('|')) {
+    const firstPart = cleaned.split('|')[0].trim();
+    const matchAge = cleaned.match(/Umur\s*:\s*(\d+\s*thn?|\d+)/i);
+    if (matchAge && matchAge[1]) {
+      return `${firstPart} (${matchAge[1].trim()})`;
+    }
+    return firstPart || fallbackName || '-';
+  }
+  return cleaned || fallbackName || '-';
+}
+
+function extractAdminChildName(line, defaultIndex) {
+  if (!line) return `Anak #${defaultIndex}`;
+  const cleaned = line.replace(/^Anak\s*\d*\s*:\s*/i, '').trim();
+  if (cleaned.includes('|')) {
+    const parts = cleaned.split('|').map((p) => p.trim());
+    const name = parts[0] || `Anak #${defaultIndex}`;
+    const agePart = parts.find((p) => /^Umur/i.test(p));
+    if (agePart) {
+      const ageVal = agePart.replace(/^Umur\s*:\s*/i, '').trim();
+      return `${name} (${ageVal})`;
+    }
+    return name;
+  }
+  return cleaned || `Anak #${defaultIndex}`;
+}
+
+function BookingDetail({ booking, onClose, onEdit, onDelete, onReview, reviewingId }) {
+  const [showNotesModal, setShowNotesModal] = useState(false);
+  const finance = getFinance(booking);
+  const notes = booking.packageNotes || booking.notes || '';
+  const mainPkgName = booking.packageName || '-';
+
+  // Parse Lead Guest
+  const leadLine = familyLine(notes, 'Tamu Utama') || familyLine(notes, 'Ayah') || `Tamu Utama: ${booking.clientName}`;
+  const rawPkgLead = packageLine(notes, 'Package Tamu Utama') !== '-'
+    ? packageLine(notes, 'Package Tamu Utama')
+    : (packageLine(notes, 'Package ayah') !== '-' ? packageLine(notes, 'Package ayah') : '');
+  const packageLead = rawPkgLead || mainPkgName;
+
+  // Parse Companion / Partner
+  const companionLine = familyLine(notes, 'Tamu 2 (Pasangan/Pendamping)') || familyLine(notes, 'Tamu 2') || familyLine(notes, 'Ibu');
+  const rawPkgCompanion = packageLine(notes, 'Package Tamu 2') !== '-'
+    ? packageLine(notes, 'Package Tamu 2')
+    : (packageLine(notes, 'Package ibu') !== '-' ? packageLine(notes, 'Package ibu') : '');
+  const packageCompanion = rawPkgCompanion || mainPkgName;
+
+  // Parse Child Lines
+  const childLines = String(notes || '')
+    .split('\n')
+    .filter((line) => /^Anak\s*\d*:/i.test(line));
+
+  const leadName = extractAdminGuestName(leadLine, booking.clientName);
+  const companionName = extractAdminGuestName(companionLine, '-');
+
+  const modal = (
+    <div className="modal-backdrop family-view-backdrop">
+      <div className="modal family-view-modal">
+        {/* Hero Header */}
+        <div className="family-view-hero">
+          <div>
+            <span>Detail Reservasi Tamu</span>
+            <h2>{booking.clientName || '-'}</h2>
+            <p>{booking.bookingCode} / {booking.packageName || 'Package belum ada'}</p>
+          </div>
+          <div className="family-view-hero-actions">
+            <span className={`tag ${getStatusClass(booking.status)}`}>{booking.status}</span>
+            <span className={`tag ${getTypeClass(booking.packageType)}`}>{booking.packageType}</span>
+            <span className={`tag ${booking.signedByGuest ? 'tag-completed' : 'tag-pending'}`}>
+              {booking.signedByGuest ? '✓ Signed' : '⏱ Not Signed'}
+            </span>
+            <button className="modal-close" onClick={onClose} title="Tutup">x</button>
+          </div>
+        </div>
+
+        {/* Scrollable Body */}
+        <div className="modal-body family-view-body">
+          {/* Quick Info Grid 8 columns */}
+          <div className="family-view-grid">
+            <ViewItem label="Tanggal" value={booking.date} />
+            <ViewItem label="Jam" value={`${booking.timeStart} - ${booking.timeEnd}`} />
+            <ViewItem label="Room / Villa" value={booking.roomNumber} />
+            <ViewItem label="Nationality" value={booking.nationality} />
+            <ViewItem label="WhatsApp" value={booking.guestPhone || '-'} />
+            <ViewItem label="Dewasa" value={`${booking.adultCount} pax`} />
+            <ViewItem label="Anak" value={`${booking.childCount} pax`} />
+            <ViewItem label="Staff Owner" value={`${booking.staffRole} - ${booking.staffName}`} />
+          </div>
+
+          {/* Finance Breakdown */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10 }}>
+            <KpiMini label="Base Total" value={formatUsd(finance.baseTotalUsd)} />
+            <KpiMini label="Invoice (+Tax/Service)" value={formatUsd(finance.invoiceTotalUsd)} />
+            <KpiMini label="Resort Share (50%)" value={formatUsd(finance.operationShareUsd)} />
+            <KpiMini label="Komisi Staff" value={formatUsd(finance.staffCommissionUsd)} />
+          </div>
+
+          {/* Package Banner Card */}
+          <div className="family-view-section family-view-package-card">
+            <div>
+              <h3>Package Observasi Terpilih</h3>
+              <p style={{ fontWeight: 700, color: 'var(--text-primary)', fontSize: 14 }}>
+                {booking.packageName} ({booking.packageType} - {booking.experienceType})
+              </p>
+            </div>
+            <span className={`tag ${getStatusClass(booking.status)}`}>{booking.status}</span>
+          </div>
+
+          {/* Dynamic Guest & Family Cards (Name + Package Only) */}
+          <div className="family-view-family-grid">
+            <FamilyDetailCard
+              title="Tamu Utama (Lead Guest)"
+              name={leadName}
+              packageValue={packageLead}
+            />
+
+            {(Number(booking.adultCount) >= 2 || companionLine) && (
+              <FamilyDetailCard
+                title="Tamu 2 (Pasangan/Pendamping)"
+                name={companionName}
+                packageValue={packageCompanion}
+              />
+            )}
+
+            {childLines.length > 0 ? (
+              childLines.map((cLine, idx) => {
+                const childNum = idx + 1;
+                const cName = extractAdminChildName(cLine, childNum);
+                const rawChildPkg = packageLine(notes, `Package Anak ${childNum}`) !== '-'
+                  ? packageLine(notes, `Package Anak ${childNum}`)
+                  : (packageLine(notes, 'Package anak') !== '-' ? packageLine(notes, 'Package anak') : '');
+                const cPkg = rawChildPkg || mainPkgName;
+                return (
+                  <FamilyDetailCard
+                    key={idx}
+                    title={`Data Anak #${childNum}`}
+                    name={cName}
+                    packageValue={cPkg}
+                  />
+                );
+              })
+            ) : (
+              <FamilyDetailCard
+                title="Data Anak"
+                name={Number(booking.childCount) > 0 ? `${booking.childCount} anak` : 'Tidak membawa anak (Couple / Dewasa saja)'}
+                packageValue={Number(booking.childCount) > 0 ? mainPkgName : '-'}
+              />
+            )}
+          </div>
+
+          {/* Trigger Section for Catatan Lengkap Sub-Modal (Popup Overlay Niban) */}
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              padding: '16px 20px',
+              background: 'linear-gradient(135deg, rgba(124, 58, 237, 0.05) 0%, rgba(245, 158, 11, 0.05) 100%)',
+              border: '1px solid rgba(124, 58, 237, 0.25)',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <div style={{ width: 40, height: 40, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg-card)', border: '1px solid var(--border)', fontSize: 18 }}>
+                📋
+              </div>
+              <div>
+                <div style={{ fontSize: 13, fontWeight: 800, fontFamily: 'var(--font-heading)', color: 'var(--text-primary)' }}>
+                  Rincian Catatan Lengkap & Log Form
+                </div>
+                <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 2 }}>
+                  Klik tombol di kanan untuk membuka popup tampilan teks catatan lengkap di depan layar.
+                </div>
+              </div>
+            </div>
+            <button
+              type="button"
+              className="btn btn-secondary btn-sm"
+              style={{ borderColor: 'var(--violet)', color: 'var(--violet)', fontWeight: 700, padding: '8px 16px', display: 'flex', alignItems: 'center', gap: 6 }}
+              onClick={() => setShowNotesModal(true)}
+            >
+              <span>🔍 Buka Catatan Lengkap (Popup)</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Modal Footer with Actions */}
+        <div className="modal-footer" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div>
+            <button className="btn btn-secondary btn-sm" onClick={() => { onClose(); onDelete(booking.id); }} style={{ color: 'var(--accent)', borderColor: 'rgba(229,28,28,0.3)' }}>
+              Hapus
+            </button>
+          </div>
+          <div style={{ display: 'flex', gap: 10 }}>
+            {booking.rawStatus === 'pending_review' && onReview && (
+              <>
+                <button
+                  className="btn btn-secondary btn-sm"
+                  style={{ color: 'var(--accent)', borderColor: 'rgba(229,28,28,0.3)' }}
+                  disabled={reviewingId === booking.id}
+                  onClick={() => onReview(booking, 'rejected')}
+                >
+                  Tolak
+                </button>
+                <button
+                  className="btn btn-primary btn-sm"
+                  style={{ background: 'var(--emerald)', borderColor: 'var(--emerald)' }}
+                  disabled={reviewingId === booking.id}
+                  onClick={() => onReview(booking, 'accepted')}
+                >
+                  Terima Booking
+                </button>
+              </>
+            )}
+            <button className="btn btn-secondary btn-sm" onClick={onClose}>Tutup</button>
+            <button className="btn btn-primary btn-sm" onClick={() => { onClose(); onEdit(booking); }}>Edit</button>
+          </div>
+        </div>
+      </div>
+
+      {/* Sub-modal Pop-up Catatan Lengkap */}
+      {showNotesModal && (
+        <NotesPopupModal
+          title="Catatan Lengkap & Log Intake Form"
+          bookingCode={booking.bookingCode}
+          guestName={booking.clientName}
+          notes={notes}
+          onClose={() => setShowNotesModal(false)}
+        />
+      )}
+    </div>
+  );
+
+  if (typeof document === 'undefined') return null;
+  return createPortal(modal, document.body);
+}
+
+function ViewItem({ label, value }) {
   return (
-    <div className="admin-family-detail-card">
-      <h4>{title}</h4>
-      <p>{value || '-'}</p>
-      <strong>Package: {packageValue || '-'}</strong>
+    <div className="family-view-item">
+      <span>{label}</span>
+      <strong>{value || '-'}</strong>
+    </div>
+  );
+}
+
+function FamilyDetailCard({ title, name, packageValue }) {
+  return (
+    <div className="family-view-card">
+      <h3>{title}</h3>
+      <div style={{ fontSize: 16, fontWeight: 800, fontFamily: 'var(--font-heading)', color: 'var(--text-primary)', margin: '4px 0 10px', minHeight: 26, display: 'flex', alignItems: 'center' }}>
+        {name || '-'}
+      </div>
+      <div>
+        <span>Package</span>
+        <strong>{packageValue || '-'}</strong>
+      </div>
     </div>
   );
 }
@@ -655,7 +927,16 @@ export default function BookingsPage() {
       </div>
 
       {modalOpen && <BookingModal booking={editingBooking} onClose={() => { setModalOpen(false); setEditingBooking(null); }} onSave={handleSave} />}
-      {viewingBooking && <BookingDetail booking={viewingBooking} onClose={() => setViewingBooking(null)} onEdit={(b) => { setEditingBooking(b); setModalOpen(true); }} onDelete={handleDelete} />}
+      {viewingBooking && (
+        <BookingDetail
+          booking={viewingBooking}
+          onClose={() => setViewingBooking(null)}
+          onEdit={(b) => { setEditingBooking(b); setModalOpen(true); }}
+          onDelete={handleDelete}
+          onReview={handleReview}
+          reviewingId={reviewingId}
+        />
+      )}
 
       {toast && (
         <div className="toast-container">

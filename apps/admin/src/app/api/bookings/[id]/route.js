@@ -1,48 +1,25 @@
-import { assertSameOrigin, ApiError, jsonError, requireUser, writeAudit } from '@ephemeris/auth';
+import { assertSameOrigin, ApiError, jsonError, parseJsonBody, requireUser, writeAudit } from '@ephemeris/auth';
 import { transaction } from '@ephemeris/db';
+import { bookingSelectQuery, cleanText } from '@ephemeris/db/helpers';
+import { updateBookingSchema } from '@ephemeris/db/validators/booking';
+import { uuidSchema } from '@ephemeris/db/validators/common';
 import { calculateBookingTotals } from '@ephemeris/finance';
 
 const BOOKING_STATUSES = new Set(['pending_review', 'accepted', 'rejected', 'booked', 'finished_experience', 'cancelled']);
-const bookingSelect = `
-  SELECT
-    b.*,
-    p.name AS package_name,
-    p.package_type,
-    p.experience_type,
-    p.location,
-    u.name AS staff_name,
-    u.role AS staff_role,
-    r.name AS resort_name,
-    r.code AS resort_code,
-    r.location AS resort_location,
-    ft.token AS feedback_token,
-    ft.status AS feedback_status,
-    fs.rating,
-    fs.comment
-  FROM bookings b
-  JOIN packages p ON p.id = b.package_id
-  JOIN users u ON u.id = b.staff_id
-  LEFT JOIN resorts r ON r.id = b.resort_id
-  LEFT JOIN feedback_tokens ft ON ft.booking_id = b.id
-  LEFT JOIN feedback_submissions fs ON fs.booking_id = b.id
-`;
-
-function cleanText(value) {
-  const text = String(value || '').trim();
-  return text || null;
-}
-
-function cleanList(value) {
-  if (!Array.isArray(value)) return null;
-  return value.map((item) => String(item || '').trim()).filter(Boolean).slice(0, 12);
-}
 
 export async function PATCH(request, { params }) {
   try {
     await assertSameOrigin(request);
     const user = await requireUser(['admin']);
-    const { id } = await params;
-    const body = await request.json();
+    const { id: rawId } = await params;
+    const parseId = uuidSchema.safeParse(rawId);
+    if (!parseId.success) return Response.json({ error: 'ID tidak valid' }, { status: 400 });
+    const id = parseId.data;
+    const parsed = updateBookingSchema.safeParse(await parseJsonBody(request));
+    if (!parsed.success) {
+      return Response.json({ error: 'Data booking tidak valid', details: parsed.error.flatten() }, { status: 400 });
+    }
+    const body = parsed.data;
 
     const updated = await transaction(async (client) => {
       const beforeResult = await client.query('SELECT * FROM bookings WHERE id = $1', [id]);
@@ -58,8 +35,11 @@ export async function PATCH(request, { params }) {
       const staffResult = await client.query('SELECT role FROM users WHERE id = $1', [before.staff_id]);
       const staffRole = staffResult.rows[0]?.role || 'external';
 
-      const adultCount = Number(body.adultCount ?? before.adult_count);
-      const childCount = Number(body.childCount ?? before.child_count);
+      const adultCount = body.adultCount !== undefined ? Number(body.adultCount) : Number(before.adult_count);
+      const childCount = body.childCount !== undefined ? Number(body.childCount) : Number(before.child_count);
+      if (adultCount + childCount <= 0) {
+        throw new ApiError(400, 'Minimal harus ada 1 tamu (dewasa atau anak)');
+      }
       const childPriceUsd = pkg.rows[0].child_price_usd ?? (pkg.rows[0].package_type === 'kids' ? pkg.rows[0].adult_price_usd : pkg.rows[0].adult_price_usd * 0.5);
       const totals = calculateBookingTotals({
         adultCount,
@@ -73,7 +53,7 @@ export async function PATCH(request, { params }) {
       const signedByGuest = user.role === 'external'
         ? before.signed_by_guest
         : Boolean(body.signedByGuest ?? before.signed_by_guest);
-      const addOns = cleanList(body.addOns);
+      const addOns = body.addOns === undefined ? null : body.addOns;
       const guestEmail = body.guestEmail === undefined ? before.guest_email : cleanText(body.guestEmail);
 
       if (!BOOKING_STATUSES.has(nextStatus)) {
@@ -148,7 +128,7 @@ export async function PATCH(request, { params }) {
           body.nationality ?? before.nationality,
           adultCount,
           childCount,
-          body.childAges ?? before.child_ages,
+          body.childAges === undefined ? before.child_ages : cleanText(body.childAges, 120),
           body.specialOccasion === undefined ? before.special_occasion : cleanText(body.specialOccasion),
           body.guardianName === undefined ? before.guardian_name : cleanText(body.guardianName),
           body.guardianPhone === undefined ? before.guardian_phone : cleanText(body.guardianPhone),
@@ -164,7 +144,7 @@ export async function PATCH(request, { params }) {
           body.packageNotes === undefined ? before.package_notes : cleanText(body.packageNotes),
           nextStatus,
           signedByGuest,
-          body.notes ?? before.notes,
+          body.notes === undefined ? before.notes : cleanText(body.notes),
           body.paymentMethod === undefined ? before.payment_method : cleanText(body.paymentMethod),
           body.invoiceNumber === undefined ? before.invoice_number : cleanText(body.invoiceNumber),
           body.billingNotes === undefined ? before.billing_notes : cleanText(body.billingNotes),
@@ -197,7 +177,7 @@ export async function PATCH(request, { params }) {
         afterData: rows[0],
         request,
       });
-      const refreshed = await client.query(`${bookingSelect} WHERE b.id = $1`, [id]);
+      const refreshed = await client.query(`${bookingSelectQuery} WHERE b.id = $1`, [id]);
       return refreshed.rows[0];
     });
 

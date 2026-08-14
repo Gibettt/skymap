@@ -6,7 +6,17 @@ export function proxy(request) {
   const session = readSessionValue(request.cookies.get(SESSION_COOKIE)?.value);
 
   if (!session) {
+    if (pathname.startsWith('/api/')) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
     return NextResponse.redirect(new URL('/login', request.url));
+  }
+
+  if (pathname.startsWith('/api/')) {
+    if (!['internal', 'external'].includes(session.role)) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+    return NextResponse.next();
   }
 
   const routeRole = pathname.split('/')[2];
@@ -51,5 +61,8 @@ export function proxy(request) {
 }
 
 export const config = {
-  matcher: '/dashboard/:path*',
+  matcher: [
+    '/dashboard/:path*',
+    '/api/((?!auth/).+)',
+  ],
 };
