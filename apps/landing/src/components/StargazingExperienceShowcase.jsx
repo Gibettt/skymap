@@ -62,9 +62,36 @@ const experiences = [
 
 const whatsappLink = 'https://wa.me/6285179546466?text=Halo%2C%20saya%20ingin%20bertanya%20tentang%20Stargazing%20Experience%20di%20Le%20Meridien%20Maldives.';
 
-export default function StargazingExperienceShowcase() {
+function formatUsd(value) {
+  return `$${Number(value || 0).toFixed(2)}++`;
+}
+
+function packagePrice(pkg) {
+  const prices = [`Adult ${formatUsd(pkg.adult_price_usd)}`];
+  if (pkg.child_price_usd !== null) prices.push(`Child ${formatUsd(pkg.child_price_usd)}`);
+  return prices.join(' / ');
+}
+
+function packageToExperience(pkg) {
+  const staticExperience = experiences.find((item) => item.title === pkg.name);
+  const price = packagePrice(pkg);
+
+  return {
+    ...(staticExperience || {}),
+    title: pkg.name,
+    image: pkg.image_url || staticExperience?.image || '/stargazing-assets/experience-3.jpg',
+    schedule: staticExperience?.schedule || 'Upon request',
+    price,
+    venue: pkg.location,
+    includes: pkg.child_age_range || staticExperience?.includes || pkg.experience_type,
+    description: pkg.description || staticExperience?.description || `${pkg.name} package at ${pkg.location}.`,
+  };
+}
+
+export default function StargazingExperienceShowcase({ packages = [] }) {
+  const displayExperiences = packages.length ? packages.map(packageToExperience) : experiences;
   const [selectedIndex, setSelectedIndex] = useState(null);
-  const selected = selectedIndex === null ? null : experiences[selectedIndex];
+  const selected = selectedIndex === null ? null : displayExperiences[selectedIndex];
 
   if (selected) {
     return (
@@ -113,7 +140,7 @@ export default function StargazingExperienceShowcase() {
         </div>
 
         <div className="experience-picker" aria-label="Choose another experience">
-          {experiences.map((item, index) => (
+          {displayExperiences.map((item, index) => (
             <button
               className={index === selectedIndex ? 'active' : ''}
               key={item.title}
@@ -130,7 +157,7 @@ export default function StargazingExperienceShowcase() {
 
   return (
     <div className="experience-grid">
-      {experiences.map((item, index) => (
+      {displayExperiences.map((item, index) => (
         <button className="experience-card" key={item.title} type="button" onClick={() => setSelectedIndex(index)}>
           <span className="experience-image">
             <Image src={item.image} alt={item.title} fill sizes="(max-width: 900px) 100vw, 33vw" />

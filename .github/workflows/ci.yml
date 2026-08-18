@@ -1,0 +1,190 @@
+# =============================================================================
+# CI Pipeline — Ephemeris Monorepo
+# =============================================================================
+# Runs lint, test, and build on every push to main and on pull requests.
+# Uses Turborepo caching and pnpm store caching for fast, incremental builds.
+# Stale workflow runs are automatically cancelled via concurrency groups.
+# =============================================================================
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      # Only trigger when source code or config files change
+      - "apps/**"
+      - "packages/**"
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - "pnpm-workspace.yaml"
+      - "turbo.json"
+      - ".github/workflows/ci.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "apps/**"
+      - "packages/**"
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - "pnpm-workspace.yaml"
+      - "turbo.json"
+      - ".github/workflows/ci.yml"
+
+# Cancel in-progress runs for the same branch/PR to save resources
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # Turborepo telemetry opt-out (optional, keeps CI logs clean)
+  TURBO_TELEMETRY_DISABLED: 1
+
+jobs:
+  # ===========================================================================
+  # Job 1: Lint & Test
+  # ===========================================================================
+  # Runs ESLint across all workspaces and executes the test suite.
+  lint-and-test:
+    name: Lint & Test
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      # -----------------------------------------------------------------------
+      # 1. Checkout the repository
+      # -----------------------------------------------------------------------
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # -----------------------------------------------------------------------
+      # 2. Setup pnpm (must come before setup-node so caching works)
+      # -----------------------------------------------------------------------
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 11.21.0
+
+      # -----------------------------------------------------------------------
+      # 3. Setup Node.js with pnpm store cache
+      # -----------------------------------------------------------------------
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: "pnpm"
+
+      # -----------------------------------------------------------------------
+      # 4. Cache Turborepo local cache (.turbo) for incremental builds
+      # -----------------------------------------------------------------------
+      - name: Cache Turborepo
+        uses: actions/cache@v4
+        with:
+          path: .turbo
+          key: turbo-${{ runner.os }}-${{ github.sha }}
+          restore-keys: |
+            turbo-${{ runner.os }}-
+
+      # -----------------------------------------------------------------------
+      # 5. Install dependencies (frozen lockfile ensures reproducible builds)
+      # -----------------------------------------------------------------------
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # -----------------------------------------------------------------------
+      # 6. Run linting across all workspaces via Turborepo
+      # -----------------------------------------------------------------------
+      - name: Lint
+        run: pnpm lint
+
+      # -----------------------------------------------------------------------
+      # 7. Run tests across all workspaces via Turborepo
+      # -----------------------------------------------------------------------
+      - name: Test
+        run: pnpm test
+
+  # ===========================================================================
+  # Job 2: Build
+  # ===========================================================================
+  # Builds all apps and packages. Only runs after lint & test pass.
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    needs: lint-and-test
+
+    steps:
+      # -----------------------------------------------------------------------
+      # 1. Checkout the repository
+      # -----------------------------------------------------------------------
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # -----------------------------------------------------------------------
+      # 2. Setup pnpm
+      # -----------------------------------------------------------------------
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 11.21.0
+
+      # -----------------------------------------------------------------------
+      # 3. Setup Node.js with pnpm store cache
+      # -----------------------------------------------------------------------
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: "pnpm"
+
+      # -----------------------------------------------------------------------
+      # 4. Cache Turborepo local cache (.turbo) for incremental builds
+      # -----------------------------------------------------------------------
+      - name: Cache Turborepo
+        uses: actions/cache@v4
+        with:
+          path: .turbo
+          key: turbo-${{ runner.os }}-${{ github.sha }}
+          restore-keys: |
+            turbo-${{ runner.os }}-
+
+      # -----------------------------------------------------------------------
+      # 5. Install dependencies
+      # -----------------------------------------------------------------------
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # -----------------------------------------------------------------------
+      # 6. Build all workspaces via Turborepo
+      #    turbo.json "build" task depends on ^build, so packages build first
+      # -----------------------------------------------------------------------
+      - name: Build
+        run: pnpm build
+
+      # -----------------------------------------------------------------------
+      # 7. Upload build artifacts for inspection or downstream deployment
+      #    Uploads .next output from all three apps (landing, admin, staff)
+      # -----------------------------------------------------------------------
+      - name: Upload build artifacts (landing)
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-landing
+          path: apps/landing/.next
+          retention-days: 7
+          if-no-files-found: warn
+
+      - name: Upload build artifacts (admin)
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-admin
+          path: apps/admin/.next
+          retention-days: 7
+          if-no-files-found: warn
+
+      - name: Upload build artifacts (staff)
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-staff
+          path: apps/staff/.next
+          retention-days: 7
+          if-no-files-found: warn

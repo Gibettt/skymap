@@ -40,3 +40,21 @@ export async function transaction(work) {
     client.release();
   }
 }
+
+// CQRS Read Models re-export
+export {
+  getDashboardKPI,
+  getStaffPerformance,
+  getResortAnalytics,
+  getMonthlyRevenue,
+  getBookingPipeline,
+  refreshMaterializedViews,
+  refreshMaterializedView,
+} from './read-models.js';
+
+// CQRS Command Side Effects re-export
+export {
+  refreshAfterBookingChange,
+  refreshAfterPayoutChange,
+  refreshAfterResortChange,
+} from './commands.js';

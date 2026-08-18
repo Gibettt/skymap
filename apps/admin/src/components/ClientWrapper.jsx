@@ -1,7 +1,13 @@
 'use client';
 
 import { AdminLanguageProvider } from '@/context/AdminLanguageContext';
+import QueryProvider from '@/components/QueryProvider';
 
 export default function ClientWrapper({ children }) {
-  return <AdminLanguageProvider>{children}</AdminLanguageProvider>;
+  return (
+    <QueryProvider>
+      <AdminLanguageProvider>{children}</AdminLanguageProvider>
+    </QueryProvider>
+  );
 }
+

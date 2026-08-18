@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { calculateStarPoints } from '@ephemeris/finance';
 import { BOOKINGS } from '@/data/bookings';
@@ -131,7 +132,7 @@ export default function ExternalStaffPage() {
         <section className="card" style={{ gridColumn: '1 / -1' }}>
           <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <h2 className="card-title">{t('dashboard_history_title')}</h2>
-            <button className="btn btn-sm btn-secondary">{t('dashboard_see_all')}</button>
+            <Link href={isInternal ? '/dashboard/internal/bookings' : '/dashboard/external/bookings'} className="btn btn-sm btn-secondary">{t('dashboard_see_all')}</Link>
           </div>
           <div className="card-body">
             <div className="table-container">

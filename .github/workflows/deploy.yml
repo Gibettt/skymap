@@ -1,0 +1,179 @@
+# =============================================================================
+# Deploy Pipeline — Ephemeris Monorepo
+# =============================================================================
+# Triggers after CI passes on main, or manually via workflow_dispatch.
+# Deploys all three Next.js apps (landing, admin, staff) to Vercel.
+#
+# SETUP INSTRUCTIONS:
+#   1. Create a Vercel project for each app (landing, admin, staff).
+#   2. Add the following secrets to your GitHub repository:
+#      - VERCEL_TOKEN       : Vercel API token
+#      - VERCEL_ORG_ID      : Your Vercel organization/team ID
+#      - VERCEL_PROJECT_ID_LANDING : Project ID for the landing app
+#      - VERCEL_PROJECT_ID_ADMIN   : Project ID for the admin app
+#      - VERCEL_PROJECT_ID_STAFF   : Project ID for the staff app
+#   3. Create a "production" environment in GitHub repo settings with
+#      required reviewers if you want manual approval before deploys.
+# =============================================================================
+
+name: Deploy
+
+on:
+  # Automatically run after CI succeeds on main
+  workflow_run:
+    workflows: ["CI"]
+    types: [completed]
+    branches: [main]
+
+  # Allow manual deployment via GitHub Actions UI
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Deployment environment"
+        required: true
+        default: "production"
+        type: choice
+        options:
+          - production
+          - preview
+
+# Only one deployment at a time
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: false  # Don't cancel in-progress deploys
+
+env:
+  TURBO_TELEMETRY_DISABLED: 1
+
+jobs:
+  # ===========================================================================
+  # Pre-check: only deploy if CI succeeded (for workflow_run trigger)
+  # ===========================================================================
+  pre-check:
+    name: Pre-check
+    runs-on: ubuntu-latest
+    # Skip this job if manually triggered (workflow_dispatch always proceeds)
+    if: >
+      github.event_name == 'workflow_dispatch' ||
+      github.event.workflow_run.conclusion == 'success'
+
+    outputs:
+      should-deploy: ${{ steps.check.outputs.deploy }}
+
+    steps:
+      - name: Determine deploy eligibility
+        id: check
+        run: echo "deploy=true" >> "$GITHUB_OUTPUT"
+
+  # ===========================================================================
+  # Deploy to Vercel
+  # ===========================================================================
+  deploy:
+    name: Deploy to Vercel
+    runs-on: ubuntu-latest
+    needs: pre-check
+    if: needs.pre-check.outputs.should-deploy == 'true'
+    timeout-minutes: 30
+
+    # Environment protection — configure required reviewers in GitHub settings
+    environment:
+      name: ${{ github.event.inputs.environment || 'production' }}
+      url: ${{ steps.deploy-landing.outputs.url }}
+
+    steps:
+      # -----------------------------------------------------------------------
+      # 1. Checkout the repository
+      # -----------------------------------------------------------------------
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # -----------------------------------------------------------------------
+      # 2. Setup pnpm
+      # -----------------------------------------------------------------------
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 11.21.0
+
+      # -----------------------------------------------------------------------
+      # 3. Setup Node.js with pnpm store cache
+      # -----------------------------------------------------------------------
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: "pnpm"
+
+      # -----------------------------------------------------------------------
+      # 4. Install dependencies
+      # -----------------------------------------------------------------------
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # -----------------------------------------------------------------------
+      # 5. Install Vercel CLI
+      # -----------------------------------------------------------------------
+      - name: Install Vercel CLI
+        run: pnpm add -g vercel@latest
+
+      # -----------------------------------------------------------------------
+      # 6. Deploy Landing App
+      # -----------------------------------------------------------------------
+      # TODO: Uncomment and configure once Vercel projects are set up
+      #
+      # - name: Deploy Landing App
+      #   id: deploy-landing
+      #   working-directory: apps/landing
+      #   env:
+      #     VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      #     VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      #     VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID_LANDING }}
+      #   run: |
+      #     DEPLOYMENT_URL=$(vercel deploy --prod --token=$VERCEL_TOKEN --yes)
+      #     echo "url=$DEPLOYMENT_URL" >> "$GITHUB_OUTPUT"
+      #     echo "### 🚀 Landing deployed to $DEPLOYMENT_URL" >> "$GITHUB_STEP_SUMMARY"
+
+      # -----------------------------------------------------------------------
+      # 7. Deploy Admin App
+      # -----------------------------------------------------------------------
+      # - name: Deploy Admin App
+      #   id: deploy-admin
+      #   working-directory: apps/admin
+      #   env:
+      #     VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      #     VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      #     VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID_ADMIN }}
+      #   run: |
+      #     DEPLOYMENT_URL=$(vercel deploy --prod --token=$VERCEL_TOKEN --yes)
+      #     echo "url=$DEPLOYMENT_URL" >> "$GITHUB_OUTPUT"
+      #     echo "### 🚀 Admin deployed to $DEPLOYMENT_URL" >> "$GITHUB_STEP_SUMMARY"
+
+      # -----------------------------------------------------------------------
+      # 8. Deploy Staff App
+      # -----------------------------------------------------------------------
+      # - name: Deploy Staff App
+      #   id: deploy-staff
+      #   working-directory: apps/staff
+      #   env:
+      #     VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      #     VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      #     VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID_STAFF }}
+      #   run: |
+      #     DEPLOYMENT_URL=$(vercel deploy --prod --token=$VERCEL_TOKEN --yes)
+      #     echo "url=$DEPLOYMENT_URL" >> "$GITHUB_OUTPUT"
+      #     echo "### 🚀 Staff deployed to $DEPLOYMENT_URL" >> "$GITHUB_STEP_SUMMARY"
+
+      # -----------------------------------------------------------------------
+      # Placeholder: Print deployment summary
+      # -----------------------------------------------------------------------
+      - name: Deployment summary
+        run: |
+          echo "### 📋 Deployment Summary" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "| App      | Status       |" >> "$GITHUB_STEP_SUMMARY"
+          echo "|----------|-------------|" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Landing  | ⏳ Not configured |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Admin    | ⏳ Not configured |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Staff    | ⏳ Not configured |" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "> Uncomment the deploy steps and add the required secrets to enable deployment." >> "$GITHUB_STEP_SUMMARY"

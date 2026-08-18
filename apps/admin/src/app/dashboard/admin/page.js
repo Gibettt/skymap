@@ -1,10 +1,13 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { BOOKINGS } from '@/data/bookings';
 import { calculateBookingFinance } from '@/data/keuangan';
 import { ALERTS } from '@/data/alerts';
 import { STATION_DATA } from '@/data/stations';
+import { AnimatedNumber } from '@/components/motion/AnimatedNumber';
+import { useBookingsQuery, queryKeys } from '@/lib/apiQueries';
 
 /* ── helpers ────────────────────────────────────────────── */
 const fmt = (n) =>
@@ -16,11 +19,64 @@ const fmt = (n) =>
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agt', 'Sep', 'Okt', 'Nov', 'Des'];
 const MONTH_LABELS = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+
+function titleCase(value) {
+  return String(value || '')
+    .split('_')
+    .filter(Boolean)
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ');
+}
+
+function normalizeOverviewBooking(row) {
+  const rawStatus = row.status || '';
+  let status = rawStatus;
+  if (rawStatus === 'finished_experience' || rawStatus === 'Finished Experience') {
+    status = 'Finished Experience';
+  } else if (rawStatus === 'booked' || rawStatus === 'accepted' || rawStatus === 'pending_review' || rawStatus === 'Booked') {
+    status = 'Booked';
+  } else if (rawStatus === 'cancelled' || rawStatus === 'rejected' || rawStatus === 'Cancelled') {
+    status = 'Cancelled';
+  }
+
+  const pkgType = titleCase(row.package_type || row.packageType || 'Regular');
+  const pkgName = row.package_name || row.packageName || row.objectName || 'Stargazing Experience';
+  const staff = row.staff_name || row.staffName || row.observer || 'Staff';
+  const loc = row.location || row.station || '-';
+  const tStart = row.time_start || row.timeStart || '--:--';
+  const tEnd = row.time_end || row.timeEnd || '--:--';
+
+  return {
+    ...row,
+    id: row.id,
+    bookingCode: row.booking_code || row.bookingCode || '',
+    date: row.event_date ? String(row.event_date).slice(0, 10) : (row.date ? String(row.date).slice(0, 10) : ''),
+    createdAt: row.created_at || row.createdAt || row.booking_date || row.bookingDate || '',
+    clientName: row.guest_name || row.clientName || 'Guest',
+    packageName: pkgName,
+    packageType: pkgType,
+    objectType: pkgType,
+    objectName: pkgName,
+    observer: staff,
+    staffName: staff,
+    station: loc,
+    location: loc,
+    timeStart: tStart,
+    timeEnd: tEnd,
+    status,
+    signedByGuest: Boolean(row.signed_by_guest ?? row.signedByGuest),
+    adultCount: Number(row.adult_count ?? row.adultCount ?? 0),
+    childCount: Number(row.child_count ?? row.childCount ?? 0),
+    adultPriceUsd: Number(row.adult_price_usd ?? row.adultPriceUsd ?? 0),
+    childPriceUsd: Number(row.child_price_usd ?? row.childPriceUsd ?? 0),
+    invoiceTotalUsd: Number(row.invoice_total_usd ?? row.invoiceTotalUsd ?? 0),
+  };
+}
+
 const bookingMonth = (booking) => {
   const date = new Date(booking.date || booking.bookingDate || booking.createdAt);
   return Number.isNaN(date.getTime()) ? null : date.getMonth();
 };
-const CURRENT_MONTH = Math.max(0, ...BOOKINGS.map(bookingMonth).filter((month) => month !== null));
 
 const OBJ_TAG = {
   Regular: 'tag-planet',
@@ -54,44 +110,78 @@ const CHART_TOP = 28;
 const CHART_BOTTOM = 184;
 
 export default function AdminOverviewPage() {
+  const queryClient = useQueryClient();
+  const { data: rawBookings = [] } = useBookingsQuery();
   const [hoveredBar, setHoveredBar] = useState(null);
   const [activePackageName, setActivePackageName] = useState(null);
-  const [chartMonth, setChartMonth] = useState(CURRENT_MONTH);
+
+  // Sync across browser tabs via BroadcastChannel
+  useEffect(() => {
+    let channel = null;
+    try {
+      if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+        channel = new BroadcastChannel('ephemeris_sync_channel');
+        channel.onmessage = () => {
+          queryClient.invalidateQueries({ queryKey: queryKeys.bookings.all });
+        };
+      }
+    } catch {
+      // ignore
+    }
+    return () => {
+      if (channel) channel.close();
+    };
+  }, [queryClient]);
+
+  const allBookings = useMemo(() => {
+    if (Array.isArray(rawBookings) && rawBookings.length > 0) {
+      return rawBookings.map(normalizeOverviewBooking);
+    }
+    return BOOKINGS.map(normalizeOverviewBooking);
+  }, [rawBookings]);
+
+  const currentMonth = useMemo(() => {
+    const months = allBookings.map(bookingMonth).filter((m) => m !== null);
+    return months.length > 0 ? Math.max(0, ...months) : 7;
+  }, [allBookings]);
+
+  const [chartMonth, setChartMonth] = useState(currentMonth);
 
   /* ── derived stats ───────────────────────────────────── */
   const stats = useMemo(() => {
-    const total = BOOKINGS.length;
-    const confirmed = BOOKINGS.filter((b) => b.status === 'Booked').length;
-    const pending = BOOKINGS.filter((b) => b.status === 'Booked' && !b.signedByGuest).length;
-    const completed = BOOKINGS.filter((b) => b.status === 'Finished Experience').length;
-    const cancelled = BOOKINGS.filter((b) => b.status === 'Cancelled').length;
+    const total = allBookings.length;
+    const confirmed = allBookings.filter((b) => b.status === 'Booked').length;
+    const pending = allBookings.filter((b) => b.status === 'Booked' && !b.signedByGuest).length;
+    const completed = allBookings.filter((b) => b.status === 'Finished Experience').length;
+    const cancelled = allBookings.filter((b) => b.status === 'Cancelled').length;
 
-    const revenue = BOOKINGS.filter((b) => b.status === 'Finished Experience')
-      .reduce((acc, b) => acc + calculateBookingFinance(b).invoiceTotalUsd, 0);
+    const revenue = allBookings
+      .filter((b) => b.status === 'Finished Experience')
+      .reduce((acc, b) => acc + (b.invoiceTotalUsd || calculateBookingFinance(b).invoiceTotalUsd), 0);
 
     const openAlerts = ALERTS.filter((a) => a.isOpen).length;
     const criticalAlerts = ALERTS.filter((a) => a.severity === 'Kritis' && a.isOpen).length;
     const onlineStations = STATION_DATA.filter((s) => s.status === 'online').length;
 
     return { total, confirmed, pending, completed, cancelled, revenue, openAlerts, criticalAlerts, onlineStations };
-  }, []);
+  }, [allBookings]);
 
   /* ── tonight's priority bookings ─────────────────────── */
   const tonightBookings = useMemo(
     () =>
-      BOOKINGS.filter((b) => b.status === 'Booked').slice(0, 7),
-    []
+      allBookings.filter((b) => b.status === 'Booked').slice(0, 7),
+    [allBookings]
   );
 
   /* ── bar chart data (Jan–Jul real, rest future) ──────── */
   const barData = useMemo(() => {
     return MONTHS.map((month, i) => ({
       month,
-      value: BOOKINGS.filter((booking) => bookingMonth(booking) === i).length,
-      isCurrent: i === CURRENT_MONTH,
-      isFuture: i > CURRENT_MONTH,
+      value: allBookings.filter((booking) => bookingMonth(booking) === i).length,
+      isCurrent: i === currentMonth,
+      isFuture: i > currentMonth,
     }));
-  }, []);
+  }, [allBookings, currentMonth]);
 
   const chartData = useMemo(() => barData.map((d, i) => ({
     ...d,
@@ -115,22 +205,24 @@ export default function AdminOverviewPage() {
   const catalogDist = useMemo(() => {
     const types = ['Regular', 'Private', 'Kids'];
     return types.map((type) => {
-      const count = BOOKINGS.filter((b) => b.objectType === type).length;
-      return { type, count, pct: Math.round((count / BOOKINGS.length) * 100) };
+      const count = allBookings.filter((b) => b.objectType === type).length;
+      return { type, count, pct: Math.round((count / (allBookings.length || 1)) * 100) };
     });
-  }, []);
+  }, [allBookings]);
 
   const packageLeaders = useMemo(() => {
-    const selectedMonthBookings = BOOKINGS.filter((booking) => bookingMonth(booking) === chartMonth);
+    const selectedMonthBookings = allBookings.filter((booking) => bookingMonth(booking) === chartMonth);
     const totals = selectedMonthBookings.reduce((acc, booking) => {
       const key = booking.packageName || booking.objectName || 'Unknown Package';
       acc[key] = acc[key] || { name: key, count: 0, revenue: 0 };
       acc[key].count += 1;
-      acc[key].revenue += booking.status === 'Finished Experience' ? calculateBookingFinance(booking).invoiceTotalUsd : 0;
+      acc[key].revenue += booking.status === 'Finished Experience'
+        ? (booking.invoiceTotalUsd || calculateBookingFinance(booking).invoiceTotalUsd)
+        : 0;
       return acc;
     }, {});
     return Object.values(totals).sort((a, b) => b.count - a.count || b.revenue - a.revenue).slice(0, 4);
-  }, [chartMonth]);
+  }, [allBookings, chartMonth]);
   const packageTotal = packageLeaders.reduce((total, item) => total + item.count, 0);
   const packagePie = useMemo(() => {
     return packageLeaders.map((item, index) => {
@@ -149,10 +241,11 @@ export default function AdminOverviewPage() {
   /* ── bar chart summary stats ─────────────────────────── */
   const historicalBars = chartData.filter((d) => !d.isFuture);
   const barTotal = historicalBars.reduce((a, d) => a + d.value, 0);
-  const barAvg = Math.round(barTotal / historicalBars.length);
+  const barAvg = Math.round(barTotal / (historicalBars.length || 1));
   const barMax = Math.max(...historicalBars.map((d) => d.value));
   const barMaxMonth = historicalBars.find((d) => d.value === barMax)?.month || MONTHS[chartMonth];
   const activePackage = packagePie.find((item) => item.name === activePackageName) || packagePie[0];
+
 
   /* ── render ──────────────────────────────────────────── */
   return (
@@ -239,102 +332,89 @@ export default function AdminOverviewPage() {
         </div>
       </div>
 
-      {/* ── KPI Row 1: Booking Status ─────────────────────── */}
-      <div className="kpi-grid stagger">
-        <div className="kpi-card" style={{ borderTop: '3px solid var(--text-primary)' }}>
-          <div className="kpi-label">Total Booking</div>
-          <div className="kpi-value">{stats.total}</div>
-          <div className="kpi-note">Seluruh periode aktif</div>
-        </div>
+      {/* ── KPI Hero Grid: Booking Quadrant + Large Revenue Hero ── */}
+      <div className="admin-overview-hero-grid stagger">
+        {/* Left: 4 Booking Status KPIs (2x2 Quad) */}
+        <div className="admin-overview-kpi-quad">
+          <div className="kpi-card" style={{ borderTop: '3px solid var(--text-primary)' }}>
+            <div className="kpi-label">Total Booking</div>
+            <div className="kpi-value">
+              <AnimatedNumber value={stats.total} duration={1.0} resetOnChange={true} />
+            </div>
+            <div className="kpi-note">Seluruh periode aktif</div>
+          </div>
 
-        <div className="kpi-card" style={{ borderTop: '3px solid var(--emerald)' }}>
-          <div className="kpi-label">Booked</div>
-          <div className="kpi-value" style={{ color: 'var(--emerald)' }}>{stats.confirmed}</div>
-          <div className="kpi-note">
-            <span className="kpi-trend-up">▲ {Math.round((stats.confirmed / stats.total) * 100)}%</span>
-            <span style={{ color: 'var(--text-dim)' }}>&nbsp;dari total</span>
+          <div className="kpi-card" style={{ borderTop: '3px solid var(--emerald)' }}>
+            <div className="kpi-label">Booked</div>
+            <div className="kpi-value" style={{ color: 'var(--emerald)' }}>
+              <AnimatedNumber value={stats.confirmed} duration={1.0} resetOnChange={true} />
+            </div>
+            <div className="kpi-note">
+              <span className="kpi-trend-up">▲ {stats.total ? Math.round((stats.confirmed / stats.total) * 100) : 0}%</span>
+              <span style={{ color: 'var(--text-dim)' }}>&nbsp;dari total</span>
+            </div>
+          </div>
+
+          <div className="kpi-card" style={{ borderTop: '3px solid var(--amber)' }}>
+            <div className="kpi-label">Belum Signed</div>
+            <div className="kpi-value" style={{ color: 'var(--amber)' }}>
+              <AnimatedNumber value={stats.pending} duration={1.0} resetOnChange={true} />
+            </div>
+            <div className="kpi-note">
+              <span style={{ color: 'var(--amber)', fontWeight: 700 }}>● Perlu tindakan</span>
+            </div>
+          </div>
+
+          <div className="kpi-card" style={{ borderTop: '3px solid var(--cyan)' }}>
+            <div className="kpi-label">Finished</div>
+            <div className="kpi-value" style={{ color: 'var(--cyan)' }}>
+              <AnimatedNumber value={stats.completed} duration={1.0} resetOnChange={true} />
+            </div>
+            <div className="kpi-note">
+              <span className="kpi-trend-up">✓</span>
+              <span style={{ color: 'var(--text-dim)' }}>&nbsp;Tereksekusi sukses</span>
+            </div>
           </div>
         </div>
 
-        <div className="kpi-card" style={{ borderTop: '3px solid var(--amber)' }}>
-          <div className="kpi-label">Belum Signed</div>
-          <div className="kpi-value" style={{ color: 'var(--amber)' }}>{stats.pending}</div>
-          <div className="kpi-note">
-            <span style={{ color: 'var(--amber)', fontWeight: 700 }}>● Perlu tindakan</span>
-          </div>
-        </div>
-
-        <div className="kpi-card" style={{ borderTop: '3px solid var(--cyan)' }}>
-          <div className="kpi-label">Finished</div>
-          <div className="kpi-value" style={{ color: 'var(--cyan)' }}>{stats.completed}</div>
-          <div className="kpi-note">
-            <span className="kpi-trend-up">✓</span>
-            <span style={{ color: 'var(--text-dim)' }}>&nbsp;Tereksekusi sukses</span>
-          </div>
-        </div>
-      </div>
-
-      {/* ── KPI Row 2: Operational ────────────────────────── */}
-      <div className="kpi-grid stagger" style={{ marginBottom: 0 }}>
-        <div className="kpi-card" style={{ borderTop: '3px solid var(--accent)' }}>
-          <div className="kpi-label">Invoice Selesai</div>
-          <div
-            style={{
-              fontFamily: 'var(--font-heading)',
-              fontWeight: 800,
-              fontSize: 20,
-              letterSpacing: '-0.03em',
-              color: 'var(--accent)',
-              lineHeight: 1.1,
-              marginBottom: 10,
-            }}
-          >
-            {fmt(stats.revenue)}
-          </div>
-          <div className="kpi-note">
-            <span className="kpi-trend-up">▲ 12%</span>
-            <span style={{ color: 'var(--text-dim)' }}>&nbsp;vs. bulan lalu</span>
-          </div>
-        </div>
-
-        <div className="kpi-card" style={{ borderTop: '3px solid var(--emerald)' }}>
-          <div className="kpi-label">Stasiun Aktif</div>
-          <div className="kpi-value" style={{ color: 'var(--emerald)', fontSize: 40 }}>
-            {stats.onlineStations}
-            <span style={{ fontSize: 22, color: 'var(--text-dim)', fontWeight: 400 }}>
-              /{STATION_DATA.length}
+        {/* Right: Enlarged & Prominent Completed Invoices Card */}
+        <div className="admin-revenue-hero-card">
+          <div className="admin-revenue-hero-header">
+            <div>
+              <div className="kpi-label" style={{ marginBottom: 4 }}>Completed Invoices</div>
+              <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
+                Total validated revenue
+              </div>
+            </div>
+            <span className="admin-revenue-hero-badge">
+              ● Live Finance
             </span>
           </div>
-          <div className="kpi-note" style={{ color: 'var(--text-dim)' }}>1 offline: Siding Spring</div>
-        </div>
 
-        <div
-          className="kpi-card"
-          style={{ borderTop: `3px solid ${stats.openAlerts > 2 ? 'var(--accent)' : 'var(--amber)'}` }}
-        >
-          <div className="kpi-label">Peringatan Terbuka</div>
-          <div
-            className="kpi-value"
-            style={{ color: stats.openAlerts > 2 ? 'var(--accent)' : 'var(--amber)' }}
-          >
-            {stats.openAlerts}
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '8px 0 4px', marginTop: 4, marginBottom: 4 }}>
+            <div className="admin-revenue-hero-value" style={{ margin: '0 0 4px 0', textAlign: 'center' }}>
+              <AnimatedNumber
+                value={stats.revenue}
+                format={fmt}
+                duration={1.8}
+                resetOnChange={true}
+              />
+            </div>
+
+            <div className="kpi-note" style={{ marginTop: 0, justifyContent: 'center' }}>
+              <span className="kpi-trend-up">▲ 12%</span>
+              <span style={{ color: 'var(--text-dim)' }}>&nbsp;vs. last month</span>
+            </div>
           </div>
-          <div className="kpi-note">
-            <span style={{ color: 'var(--accent)', fontWeight: 700 }}>{stats.criticalAlerts} Kritis</span>
-            <span style={{ color: 'var(--text-dim)' }}>
-              &nbsp;· {stats.openAlerts - stats.criticalAlerts} Lainnya
+
+          <div className="admin-revenue-hero-footer">
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <span style={{ display: 'inline-block', width: 6, height: 6, borderRadius: '50%', background: 'var(--emerald)' }} />
+              <span>{stats.completed} paid completed packages</span>
+            </div>
+            <span style={{ color: 'var(--text-dim)', fontSize: 11, fontVariantNumeric: 'tabular-nums' }}>
+              USD Confirmed
             </span>
-          </div>
-        </div>
-
-        <div className="kpi-card" style={{ borderTop: '3px solid var(--cyan)' }}>
-          <div className="kpi-label">Finished Bulan Ini</div>
-          <div className="kpi-value" style={{ color: 'var(--cyan)', fontSize: 40 }}>
-            {stats.completed}
-          </div>
-          <div className="kpi-note">
-            <span className="kpi-trend-up">▲ 3</span>
-            <span style={{ color: 'var(--text-dim)' }}>&nbsp;vs. bulan lalu</span>
           </div>
         </div>
       </div>
@@ -348,7 +428,7 @@ export default function AdminOverviewPage() {
             <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 11, color: 'var(--text-muted)' }}>
               Sampai Bulan
               <select className="input" value={chartMonth} onChange={(event) => setChartMonth(Number(event.target.value))} style={{ height: 32, minHeight: 32, width: 112, padding: '0 28px 0 10px', fontSize: 12 }}>
-                {MONTHS.slice(0, CURRENT_MONTH + 1).map((month, index) => (
+                {MONTHS.slice(0, currentMonth + 1).map((month, index) => (
                   <option key={month} value={index}>{month}</option>
                 ))}
               </select>
@@ -559,7 +639,7 @@ export default function AdminOverviewPage() {
                       </span>
                     </td>
                     <td style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
-                      {b.observer.split(' ').slice(-1)[0]}
+                      {(b.observer || b.staffName || 'Staff').split(' ').slice(-1)[0]}
                     </td>
                     <td style={{ fontSize: 12, fontVariantNumeric: 'tabular-nums' }}>
                       <span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>{b.timeStart}</span>

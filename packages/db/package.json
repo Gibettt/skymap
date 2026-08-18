@@ -7,6 +7,8 @@
   "exports": {
     ".": "./index.js",
     "./helpers": "./helpers.js",
+    "./read-models": "./read-models.js",
+    "./commands": "./commands.js",
     "./validators/*": "./validators/*.js"
   },
   "dependencies": {

@@ -3,9 +3,20 @@ import { transaction } from '@ephemeris/db';
 import { uuidSchema } from '@ephemeris/db/validators/common';
 import { updatePackageSchema } from '@ephemeris/db/validators/package';
 
+const PACKAGE_SELECT = `
+  id, name, package_type, experience_type, location, description,
+  adult_price_usd, child_price_usd, child_age_range, is_active,
+  image_mime_type, image_file_name, image_data IS NOT NULL AS has_image,
+  CASE WHEN image_data IS NULL THEN NULL ELSE '/api/packages/' || id || '/image' END AS image_url,
+  created_at, updated_at
+`;
+
 async function ensurePackageMetadataColumns(client) {
   await client.query('ALTER TABLE packages ADD COLUMN IF NOT EXISTS description text');
   await client.query('ALTER TABLE packages ADD COLUMN IF NOT EXISTS child_age_range text');
+  await client.query('ALTER TABLE packages ADD COLUMN IF NOT EXISTS image_data bytea');
+  await client.query('ALTER TABLE packages ADD COLUMN IF NOT EXISTS image_mime_type text');
+  await client.query('ALTER TABLE packages ADD COLUMN IF NOT EXISTS image_file_name text');
 }
 
 export async function PATCH(request, { params }) {
@@ -24,7 +35,7 @@ export async function PATCH(request, { params }) {
 
     const updated = await transaction(async (client) => {
       await ensurePackageMetadataColumns(client);
-      const before = await client.query('SELECT * FROM packages WHERE id = $1', [id]);
+      const before = await client.query(`SELECT ${PACKAGE_SELECT} FROM packages WHERE id = $1`, [id]);
       if (!before.rows[0]) return null;
 
       const patch = {
@@ -51,7 +62,7 @@ export async function PATCH(request, { params }) {
           child_age_range = $9,
           is_active = $10
          WHERE id = $1
-         RETURNING *`,
+         RETURNING ${PACKAGE_SELECT}`,
         [id, patch.name, patch.package_type, patch.experience_type, patch.location, patch.description, patch.adult_price_usd, patch.child_price_usd, patch.child_age_range, patch.is_active]
       );
       await writeAudit(client, {

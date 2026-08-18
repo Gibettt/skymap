@@ -12,6 +12,11 @@
     "build:landing": "pnpm --filter @ephemeris/landing build",
     "build:admin": "pnpm --filter @ephemeris/admin build",
     "build:staff": "pnpm --filter @ephemeris/staff build",
+    "preview": "pnpm build && pnpm start",
+    "start": "turbo run start",
+    "start:landing": "pnpm --filter @ephemeris/landing start",
+    "start:admin": "pnpm --filter @ephemeris/admin start",
+    "start:staff": "pnpm --filter @ephemeris/staff start",
     "test": "turbo run test",
     "lint": "turbo run lint"
   },

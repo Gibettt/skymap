@@ -1,8 +1,9 @@
 import { assertSameOrigin, ApiError, jsonError, parseJsonBody, requireUser, writeAudit } from '@ephemeris/auth';
-import { transaction } from '@ephemeris/db';
+import { transaction, refreshAfterBookingChange } from '@ephemeris/db';
 import { bookingSelectQuery, cleanText } from '@ephemeris/db/helpers';
 import { updateBookingSchema } from '@ephemeris/db/validators/booking';
 import { uuidSchema } from '@ephemeris/db/validators/common';
+import { emit, EventTypes } from '@ephemeris/events';
 import { calculateBookingTotals } from '@ephemeris/finance';
 
 const BOOKING_STATUSES = new Set(['pending_review', 'accepted', 'rejected', 'booked', 'finished_experience', 'cancelled']);
@@ -177,6 +178,30 @@ export async function PATCH(request, { params }) {
         afterData: rows[0],
         request,
       });
+
+      // Emit domain event based on status transition
+      let eventType = EventTypes.BOOKING_UPDATED;
+      if (before.status !== nextStatus) {
+        if (nextStatus === 'accepted') eventType = EventTypes.BOOKING_ACCEPTED;
+        else if (nextStatus === 'finished_experience') eventType = EventTypes.BOOKING_FINISHED;
+        else if (nextStatus === 'cancelled') eventType = EventTypes.BOOKING_CANCELLED;
+        else if (nextStatus === 'rejected') eventType = EventTypes.BOOKING_REJECTED;
+        else if (nextStatus === 'booked') eventType = EventTypes.BOOKING_BOOKED;
+      }
+
+      await emit(eventType, {
+        bookingId: id,
+        bookingCode: rows[0].booking_code,
+        guestName: rows[0].guest_name,
+        staffId: rows[0].staff_id,
+        previousStatus: before.status,
+        status: nextStatus,
+        signedByGuest,
+      }, { client, actorId: user.id });
+
+      // Trigger CQRS read view refresh
+      await refreshAfterBookingChange(client);
+
       const refreshed = await client.query(`${bookingSelectQuery} WHERE b.id = $1`, [id]);
       return refreshed.rows[0];
     });

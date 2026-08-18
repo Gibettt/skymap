@@ -1,7 +1,10 @@
 import Image from 'next/image';
 import Link from 'next/link';
+import { query } from '@ephemeris/db';
 import StargazingExperienceShowcase from '@/components/StargazingExperienceShowcase';
 import WhatsAppChatWidget from '@/components/WhatsAppChatWidget';
+
+export const dynamic = 'force-dynamic';
 
 export const metadata = {
   title: 'Beach Stargazing | Le Meridien Maldives',
@@ -17,7 +20,32 @@ const masterclass = [
   ['Astro-portrait course', '90 min', 'USD 285++ per couple'],
 ];
 
-export default function LandingPage() {
+async function loadPackages() {
+  try {
+    await query('ALTER TABLE packages ADD COLUMN IF NOT EXISTS image_data bytea');
+    await query('ALTER TABLE packages ADD COLUMN IF NOT EXISTS image_mime_type text');
+    await query('ALTER TABLE packages ADD COLUMN IF NOT EXISTS image_file_name text');
+    const { rows } = await query(`
+      SELECT
+        id, name, package_type, experience_type, location, description,
+        adult_price_usd, child_price_usd, child_age_range,
+        image_data IS NOT NULL AS has_image
+      FROM packages
+      WHERE is_active = true
+      ORDER BY name
+    `);
+    return rows.map((pkg) => ({
+      ...pkg,
+      image_url: pkg.has_image ? `/api/packages/${pkg.id}/image` : null,
+    }));
+  } catch {
+    return [];
+  }
+}
+
+export default async function LandingPage() {
+  const packages = await loadPackages();
+
   return (
     <main className="stargazing-page">
       <nav className="stargazing-nav">
@@ -26,6 +54,7 @@ export default function LandingPage() {
           <small>Le Meridien Maldives</small>
         </Link>
         <div className="stargazing-nav-links">
+          <Link href="/sky" style={{ color: '#38bdf8', fontWeight: 700 }}>🌌 Sky Guide 3D</Link>
           <a href="#experiences">Experiences</a>
           <a href="#masterclass">Masterclass</a>
           <a href={whatsappLink} target="_blank" rel="noopener noreferrer">WhatsApp</a>
@@ -43,6 +72,9 @@ export default function LandingPage() {
             <a href={whatsappLink} target="_blank" rel="noopener noreferrer" className="stargazing-button">
               Chat via WhatsApp
             </a>
+            <Link href="/sky" className="stargazing-button" style={{ background: 'linear-gradient(135deg, #0284c7, #7c3aed)', border: 'none' }}>
+              🌌 Buka Peta Langit 3D
+            </Link>
             <a href="#experiences" className="stargazing-button secondary">View Experiences</a>
           </div>
         </div>
@@ -94,7 +126,7 @@ export default function LandingPage() {
           </p>
         </div>
 
-        <StargazingExperienceShowcase />
+        <StargazingExperienceShowcase packages={packages} />
       </section>
 
       <section id="masterclass" className="masterclass-section">

@@ -3,10 +3,19 @@
 import { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { findPackageForSlug, getExperienceForPackage } from '@/data/observations';
 import { useLanguage } from '@/context/LanguageContext';
 
 const DEFAULT_TIME_SLOT = '21:00 - 22:00';
+
+function titleCase(value) {
+  return String(value || '')
+    .split('_')
+    .filter(Boolean)
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ');
+}
 
 function createEmptyChild(index = 1) {
   return {
@@ -145,6 +154,7 @@ function bookingPackageText(booking) {
 }
 
 export default function FamilyBookingForm({ basePath, fixedSlug = null, staticExperience = null, listMode = false }) {
+  const router = useRouter();
   const { t, language } = useLanguage();
   const [packages, setPackages] = useState([]);
   const [packagesLoaded, setPackagesLoaded] = useState(false);
@@ -169,19 +179,38 @@ export default function FamilyBookingForm({ basePath, fixedSlug = null, staticEx
     ...form.children.flatMap((c) => c.packages),
   ], [form.leadGuestPackages, form.companionPackages, form.extraAdults, form.children, form.adultCount]);
 
-  const selectedPackageId = selectedPackageIds[0] || '';
-  const selectedPackage = fixedPackage || packages.find((pkg) => pkg.id === selectedPackageId);
-  const canSubmitPackage = Boolean(fixedPackage || selectedPackageIds.length);
-  const submitPackage = selectedPackage || packages.find((pkg) => selectedPackageIds.includes(pkg.id)) || packages[0];
-  const experience = staticExperience || getExperienceForPackage(selectedPackage);
-  const pageTitle = experience?.title || t('nav_booking_form', 'Form Booking');
-  const pageTagline = experience?.tagline || t('form_desc', 'Isi data tamu, paket observasi, dan preferensi reservasi.');
+  const selectedPackageId = selectedPackageIds[0] || (fixedPackage ? fixedPackage.id : '');
+  const selectedPackage = fixedPackage || (selectedPackageId ? packages.find((pkg) => pkg.id === selectedPackageId) : null);
+  const canSubmitPackage = Boolean(fixedPackage || selectedPackageIds.length > 0);
+  const submitPackage = selectedPackage || packages[0];
+  const experience = staticExperience || (fixedPackage ? getExperienceForPackage(fixedPackage) : null);
+
+  const pageTitle = fixedPackage
+    ? (experience?.title || fixedPackage.name)
+    : (language === 'en' ? 'Stargazing Booking Form' : 'Form Booking');
+
+  const pageTagline = fixedPackage
+    ? (experience?.tagline || `${titleCase(fixedPackage.package_type || 'Regular')} package at ${fixedPackage.location || 'Observatory'}.`)
+    : t('form_desc', 'Isi data tamu, pilih paket observasi, dan tentukan preferensi reservasi.');
+
   const selectedTimeSlot = form.timeSlot || experience?.schedule?.time || DEFAULT_TIME_SLOT;
 
   useEffect(() => {
     fetch('/api/packages')
       .then((res) => res.ok ? res.json() : Promise.reject(new Error(language === 'en' ? 'Failed to load active packages.' : 'Gagal memuat package aktif.')))
-      .then((data) => setPackages(data.packages || []))
+      .then((data) => {
+        const pkgs = data.packages || [];
+        setPackages(pkgs);
+        if (fixedSlug) {
+          const matched = findPackageForSlug(pkgs, fixedSlug, staticExperience);
+          if (matched) {
+            setForm((current) => ({
+              ...current,
+              leadGuestPackages: current.leadGuestPackages.length ? current.leadGuestPackages : [matched.id],
+            }));
+          }
+        }
+      })
       .catch((error) => {
         setToast({ type: 'error', msg: error.message });
         setTimeout(() => setToast(null), 3000);
@@ -189,7 +218,7 @@ export default function FamilyBookingForm({ basePath, fixedSlug = null, staticEx
       .finally(() => {
         setPackagesLoaded(true);
       });
-  }, [language]);
+  }, [language, fixedSlug, staticExperience]);
 
   const showToast = (type, msg) => {
     setToast({ type, msg });
@@ -493,15 +522,21 @@ export default function FamilyBookingForm({ basePath, fixedSlug = null, staticEx
     }
 
     showToast('success', t(editingBooking ? 'form_submit_success_updated' : 'form_submit_success_created').replace('{code}', data.booking.booking_code));
+    try {
+      if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+        const channel = new BroadcastChannel('ephemeris_sync_channel');
+        channel.postMessage({ type: 'BOOKING_CREATED', booking: data.booking });
+        channel.close();
+      }
+    } catch {
+      // ignore
+    }
     setForm(initialForm());
     setEditingBooking(null);
-    if (listMode) {
-      setBookings((current) => editingBooking
-        ? current.map((booking) => booking.id === data.booking.id ? data.booking : booking)
-        : [data.booking, ...current]);
-      setShowForm(false);
-      setBookingsLoaded(false);
-      loadBookings();
+    if (basePath) {
+      setTimeout(() => {
+        router.push(`${basePath}/bookings`);
+      }, 800);
     }
   };
 
@@ -689,6 +724,7 @@ export default function FamilyBookingForm({ basePath, fixedSlug = null, staticEx
         {viewingBooking && (
           <StaffBookingView
             booking={viewingBooking}
+            isInternal={basePath?.includes('/internal')}
             onClose={() => setViewingBooking(null)}
             onEdit={() => {
               const booking = viewingBooking;
@@ -711,13 +747,11 @@ export default function FamilyBookingForm({ basePath, fixedSlug = null, staticEx
           <p style={{ color: 'var(--text-secondary)', fontSize: '14px', marginTop: '6px' }}>{pageTagline}</p>
         </div>
         <div style={{ display: 'flex', gap: '10px' }}>
-          {listMode && (
-            <button type="button" className="btn btn-secondary btn-sm" onClick={() => setShowForm(false)}>
-              {t('btn_list')}
-            </button>
-          )}
+          <Link href={`${basePath}/bookings`} className="btn btn-secondary btn-sm">
+            {t('btn_list', 'View List')}
+          </Link>
           <Link href={`${basePath}/jadwal`} className="btn btn-secondary btn-sm">
-            View Calendar
+            {t('nav_calendar', 'View Calendar')}
           </Link>
         </div>
       </div>
@@ -729,8 +763,12 @@ export default function FamilyBookingForm({ basePath, fixedSlug = null, staticEx
         <form className="card-body family-intake-form" onSubmit={handleBook}>
           <div className="booking-intake-strip">
             <div>
-              <strong>{selectedPackage?.name || t('form_selected_package_empty')}</strong>
-              <span>{t('form_selected_package_desc')}</span>
+              <strong>{selectedPackage ? selectedPackage.name : (language === 'en' ? 'Select Observation Package' : 'Pilih Paket Observasi')}</strong>
+              <span>
+                {selectedPackage
+                  ? (selectedPackage.location ? `${titleCase(selectedPackage.package_type || 'Regular')} · ${selectedPackage.location}` : t('form_selected_package_desc'))
+                  : (language === 'en' ? 'Lead guest, companion, optional children, and package selection' : 'Tentukan paket observasi untuk tamu utama, pendamping, dan anak di bawah.')}
+              </span>
             </div>
             <b>{form.adultCount} {t('form_adults')}{form.children.length > 0 ? `, ${form.children.length} ${t('form_children')}` : ''}</b>
           </div>
@@ -1271,7 +1309,7 @@ function extractChildName(line, defaultIndex) {
   return cleaned || `Anak #${defaultIndex}`;
 }
 
-function StaffBookingView({ booking, onClose, onEdit }) {
+function StaffBookingView({ booking, onClose, onEdit, isInternal = false }) {
   const { language, t } = useLanguage();
   const [showNotesModal, setShowNotesModal] = useState(false);
   const notes = booking.package_notes || booking.notes || '';
@@ -1298,7 +1336,7 @@ function StaffBookingView({ booking, onClose, onEdit }) {
     booking.staff_commission_usd ??
     0
   );
-  const starPoints = 1 + (Number(booking.child_count || 0) * 0.5);
+  const starPoints = isInternal ? null : 1 + (Number(booking.child_count || 0) * 0.5);
 
   const modal = (
     <div className="modal-backdrop family-view-backdrop">
@@ -1330,7 +1368,9 @@ function StaffBookingView({ booking, onClose, onEdit }) {
             <ViewItem label={t('view_stat_whatsapp', 'WhatsApp Tamu')} value={booking.guest_phone || '-'} />
             <ViewItem label={t('view_stat_pax', 'Jumlah Tamu')} value={`${booking.adult_count} ${language === 'en' ? 'Adults' : 'Dewasa'} / ${booking.child_count} ${language === 'en' ? 'Children' : 'Anak'}`} />
             <ViewItem label={t('view_stat_commission', 'Estimasi Komisi Staf')} value={`$${staffComm.toFixed(2)}`} />
-            <ViewItem label={t('view_stat_star_reward', 'Reward Bintang')} value={`+${starPoints.toFixed(1)} ⭐`} />
+            {!isInternal && (
+              <ViewItem label={t('view_stat_star_reward', 'Reward Bintang')} value={`+${starPoints.toFixed(1)} ⭐`} />
+            )}
           </div>
 
           {/* Package Observasi Banner */}
@@ -1495,7 +1535,14 @@ function PackagePicker({ label, packages, selectedIds, onToggle }) {
         {packages.map((pkg) => (
           <label className="package-pick-row" key={pkg.id}>
             <input type="checkbox" checked={selectedIds.includes(pkg.id)} onChange={() => onToggle(pkg.id)} />
-            <span>{pkg.name}</span>
+            <span>
+              <strong>{pkg.name}</strong>
+              {pkg.adult_price_usd !== undefined && (
+                <span style={{ color: 'var(--text-dim)', fontSize: 11, marginLeft: 6 }}>
+                  (${Number(pkg.adult_price_usd)} / pax{pkg.location ? ` · ${pkg.location}` : ''})
+                </span>
+              )}
+            </span>
           </label>
         ))}
       </div>

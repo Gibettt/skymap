@@ -366,7 +366,7 @@ export function getExperienceForPackage(pkg) {
     title: pkg.name,
     icon: pkg.package_type === 'kids' ? '+' : pkg.package_type === 'private' ? '*' : 'o',
     kind: pkg.experience_type || 'resort',
-    image: pkg.package_type === 'private' ? '/stargazing-assets/experience-5.jpg' : '/stargazing-assets/experience-3.jpg',
+    image: pkg.image_url || (pkg.package_type === 'private' ? '/stargazing-assets/experience-5.jpg' : '/stargazing-assets/experience-3.jpg'),
     tagline: `${typeLabel} package at ${pkg.location}.`,
     tip: {
       icon: 'i',

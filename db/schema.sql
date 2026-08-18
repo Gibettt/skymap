@@ -70,12 +70,16 @@ CREATE TABLE IF NOT EXISTS packages (
   experience_type experience_type NOT NULL,
   location text NOT NULL,
   description text,
+  image_data bytea,
+  image_mime_type text CHECK (image_mime_type IS NULL OR image_mime_type IN ('image/jpeg', 'image/png', 'image/webp')),
+  image_file_name text,
   adult_price_usd numeric(10,2) NOT NULL DEFAULT 0 CHECK (adult_price_usd >= 0),
   child_price_usd numeric(10,2) CHECK (child_price_usd IS NULL OR child_price_usd >= 0),
   child_age_range text,
   is_active boolean NOT NULL DEFAULT true,
   created_at timestamptz NOT NULL DEFAULT now(),
-  updated_at timestamptz NOT NULL DEFAULT now()
+  updated_at timestamptz NOT NULL DEFAULT now(),
+  CHECK (image_data IS NULL OR octet_length(image_data) <= 2097152)
 );
 
 CREATE TABLE IF NOT EXISTS bookings (

@@ -1,11 +1,12 @@
 import { assertSameOrigin, ApiError, jsonError, parseJsonBody, requireUser, writeAudit } from '@ephemeris/auth';
-import { transaction } from '@ephemeris/db';
+import { transaction, refreshAfterBookingChange } from '@ephemeris/db';
 import { bookingSelectQuery, cleanText } from '@ephemeris/db/helpers';
 import { updateBookingSchema } from '@ephemeris/db/validators/booking';
 import { uuidSchema } from '@ephemeris/db/validators/common';
+import { emit, EventTypes } from '@ephemeris/events';
 import { calculateBookingTotals } from '@ephemeris/finance';
 
-const INTERNAL_STATUS_UPDATES = new Set(['finished_experience', 'cancelled']);
+const INTERNAL_STATUS_UPDATES = new Set(['accepted', 'rejected', 'booked', 'finished_experience', 'cancelled']);
 
 export async function PATCH(request, { params }) {
   try {
@@ -60,7 +61,7 @@ export async function PATCH(request, { params }) {
         throw new ApiError(403, 'External staff cannot change operational status');
       }
       if (body.status !== undefined && user.role === 'internal' && !INTERNAL_STATUS_UPDATES.has(body.status)) {
-        throw new ApiError(403, 'Internal staff cannot approve or reject bookings');
+        throw new ApiError(403, 'Internal staff status update not permitted');
       }
       if (body.status === 'finished_experience' && !['accepted', 'booked'].includes(before.status)) {
         throw new ApiError(403, 'Booking must be accepted before it can be finished');
@@ -177,6 +178,30 @@ export async function PATCH(request, { params }) {
         ]
       );
 
+      // Jika status berubah dari pending_review ke accepted atau rejected, kirim notifikasi balik ke staff pembuat booking jika bukan dirinya sendiri
+      if (before.status === 'pending_review' && (nextStatus === 'accepted' || nextStatus === 'rejected') && before.staff_id !== user.id) {
+        const isAccepted = nextStatus === 'accepted';
+        await client.query(
+          `INSERT INTO notifications (
+            recipient_user_id, type, source_table, source_id, title, message, meta, link, created_at
+          )
+          VALUES ($1, 'booking', 'bookings', $2, $3, $4, $5, '/dashboard/external/bookings', now())
+          ON CONFLICT (recipient_user_id, type, source_id) DO UPDATE SET
+            title = EXCLUDED.title,
+            message = EXCLUDED.message,
+            meta = EXCLUDED.meta,
+            read_at = NULL,
+            updated_at = now()`,
+          [
+            before.staff_id,
+            id,
+            isAccepted ? 'Booking Disetujui' : 'Booking Ditolak',
+            `Booking ${before.booking_code} (${before.guest_name}) telah ${isAccepted ? 'diterima' : 'ditolak'} oleh tim operasional.`,
+            `Staff Internal - ${new Date().toLocaleDateString('id-ID', { day: '2-digit', month: 'short' })}`,
+          ]
+        );
+      }
+
       await writeAudit(client, {
         actorId: user.id,
         action: 'booking.update',
@@ -186,6 +211,30 @@ export async function PATCH(request, { params }) {
         afterData: rows[0],
         request,
       });
+
+      // Emit domain event for state transition
+      let eventType = EventTypes.BOOKING_UPDATED;
+      if (before.status !== nextStatus) {
+        if (nextStatus === 'accepted') eventType = EventTypes.BOOKING_ACCEPTED;
+        else if (nextStatus === 'finished_experience') eventType = EventTypes.BOOKING_FINISHED;
+        else if (nextStatus === 'cancelled') eventType = EventTypes.BOOKING_CANCELLED;
+        else if (nextStatus === 'rejected') eventType = EventTypes.BOOKING_REJECTED;
+        else if (nextStatus === 'booked') eventType = EventTypes.BOOKING_BOOKED;
+      }
+
+      await emit(eventType, {
+        bookingId: id,
+        bookingCode: rows[0].booking_code,
+        guestName: rows[0].guest_name,
+        staffId: rows[0].staff_id,
+        previousStatus: before.status,
+        status: nextStatus,
+        signedByGuest,
+      }, { client, actorId: user.id });
+
+      // Refresh CQRS read views
+      await refreshAfterBookingChange(client);
+
       const refreshed = await client.query(`${bookingSelectQuery} WHERE b.id = $1`, [id]);
       return refreshed.rows[0];
     });

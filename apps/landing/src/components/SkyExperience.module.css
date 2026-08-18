@@ -1,11 +1,1287 @@
-.page { min-height: 100vh; background: #f4f5f2; color: #13232b; padding: 20px; }
-.header { max-width: 1120px; margin: 0 auto 16px; display: flex; justify-content: space-between; gap: 16px; align-items: end; }
-.header h1, .sectionHeading h2, .dialog h2 { margin: 0; font-family: Arial, sans-serif; letter-spacing: 0; }
-.header h1 { font-size: 30px; }.eyebrow { color: #55707a; font-size: 11px; font-weight: 700; letter-spacing: 0.12em; }.location { font-size: 13px; font-weight: 700; color: #315864; text-align: right; }
-.skySection { position: relative; overflow: hidden; max-width: 1120px; height: min(62vh, 640px); min-height: 420px; margin: 0 auto; background: #03070c; border: 1px solid #183a45; }.dome { width: 100%; height: 100%; touch-action: none; cursor: grab; }.dome:active { cursor: grabbing; }
-.readout, .targetList { position: absolute; color: #eef7f5; pointer-events: none; }.readout { top: 18px; left: 18px; display: grid; gap: 2px; }.readout span { color: #f0bf7a; font-family: monospace; font-size: 28px; font-weight: 700; }.readout strong { font-size: 12px; letter-spacing: 0.12em; }.readout small, .targetList span { color: #a8c1c7; font-size: 11px; }.targetList { bottom: 18px; left: 18px; display: grid; gap: 4px; }.targetList strong { max-width: 76vw; font-size: 12px; font-weight: 600; }
-.controls { max-width: 1120px; margin: 12px auto 0; display: flex; gap: 8px; flex-wrap: wrap; }.segmented { display: flex; background: #dce6e2; padding: 3px; }.segmented button, .command { min-height: 38px; border: 1px solid #aebfc1; background: #ffffff; color: #18353e; font-size: 13px; font-weight: 700; padding: 0 14px; cursor: pointer; }.segmented button { border: 0; background: transparent; }.segmented .selected { background: #183e48; color: #ffffff; }.command:hover { background: #e7f1ee; }
-.status { max-width: 1120px; min-height: 20px; margin: 10px auto 26px; color: #4b6570; font-size: 13px; }.calendarSection { max-width: 1120px; margin: 0 auto; padding: 22px 0 40px; }.sectionHeading { display: flex; align-items: end; justify-content: space-between; gap: 16px; margin-bottom: 12px; }.sectionHeading h2 { font-size: 21px; }.sectionHeading > span { color: #627981; font-size: 12px; }.eventList { border-top: 1px solid #bccdca; }
-.eventItem { width: 100%; display: grid; grid-template-columns: 140px 90px minmax(160px, 1fr) 120px; align-items: center; gap: 12px; text-align: left; padding: 15px 0; border: 0; border-bottom: 1px solid #d4dfdc; background: transparent; color: #18353e; cursor: pointer; }.eventItem:hover strong { color: #12606b; }.eventItem time, .eventItem small { color: #61757d; font-size: 12px; }.eventType { color: #8a5e1f; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; }.empty { padding: 24px 0; color: #61757d; }
-.dialogBackdrop { position: fixed; inset: 0; z-index: 20; display: grid; place-items: center; padding: 20px; background: rgba(3, 7, 12, 0.68); }.dialog { position: relative; width: min(480px, 100%); border: 1px solid #b8c7c5; background: #f8faf8; padding: 28px; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.28); }.dialog h2 { margin-top: 8px; font-size: 24px; }.dialog p { color: #455e67; line-height: 1.5; }.dialog a { color: #12606b; font-weight: 700; font-size: 13px; }.close { position: absolute; right: 12px; top: 10px; width: 32px; height: 32px; border: 0; background: transparent; color: #24434b; font-size: 24px; cursor: pointer; }
-@media (max-width: 640px) { .page { padding: 14px; }.header { align-items: start; }.location { padding-top: 4px; max-width: 130px; }.skySection { min-height: 410px; height: 62vh; }.eventItem { grid-template-columns: 1fr auto; gap: 5px 12px; }.eventItem time { grid-column: 1; }.eventItem .eventType { grid-column: 2; grid-row: 1; }.eventItem strong, .eventItem small { grid-column: 1 / -1; } }
+/* ====================================================================
+   Ephemeris Sky Guide — Ultra-Realistic Stellarium Planetarium
+   Premium immersive dark-sky observatory experience
+   ==================================================================== */
+
+/* Root Container */
+.page {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  background: #000000;
+  color: #e2e8f0;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* Red Night Vision Mode */
+.page.nightMode {
+  filter: sepia(100%) hue-rotate(-50deg) saturate(600%) brightness(85%) contrast(120%);
+}
+
+/* 3D WebGL Canvas Viewport */
+.viewport {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  touch-action: none;
+  cursor: grab;
+  z-index: 1;
+}
+
+.viewport:active {
+  cursor: grabbing;
+}
+
+/* ====================================================================
+   Top Navigation Bar
+   ==================================================================== */
+.topBar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  z-index: 10;
+  pointer-events: none;
+  padding: 12px 16px;
+  background: linear-gradient(to bottom, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0.3) 60%, transparent 100%);
+}
+
+.brandGroup {
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.brandLogo {
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  color: rgba(255,255,255,0.85);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+  text-decoration: none;
+  transition: color 0.2s;
+}
+
+.brandLogo:hover {
+  color: #ffffff;
+}
+
+.brandLogo span {
+  color: #7dd3fc;
+}
+
+.brandDivider {
+  width: 1px;
+  height: 14px;
+  background: rgba(255, 255, 255, 0.15);
+}
+
+/* Location Badge */
+.locationBadge {
+  font-size: 11px;
+  color: rgba(255,255,255,0.6);
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 4px 10px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.locationBadge:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: rgba(255,255,255,0.9);
+}
+
+.locationBadge strong {
+  color: rgba(255,255,255,0.85);
+  max-width: 160px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: inline-block;
+  vertical-align: middle;
+}
+
+.gpsPulse {
+  width: 5px;
+  height: 5px;
+  background: #4ade80;
+  border-radius: 50%;
+  box-shadow: 0 0 4px #4ade80;
+  animation: pulseGps 2s infinite ease-in-out;
+  flex-shrink: 0;
+}
+
+@keyframes pulseGps {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.5); opacity: 0.4; }
+}
+
+.topActions {
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.actionBtn {
+  background: rgba(255, 255, 255, 0.06);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  color: rgba(255,255,255,0.65);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  padding: 5px 10px;
+  border-radius: 6px;
+  font-size: 10.5px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.actionBtn:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: rgba(255,255,255,0.95);
+}
+
+.actionBtn.active {
+  background: rgba(125, 211, 252, 0.15);
+  border-color: rgba(125, 211, 252, 0.3);
+  color: #7dd3fc;
+}
+
+/* ====================================================================
+   Location Permission Banner
+   ==================================================================== */
+.locationPromptBanner {
+  position: absolute;
+  top: 56px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 25;
+  background: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 10px 16px;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.8);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  animation: dropIn 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+  max-width: min(520px, calc(100vw - 32px));
+}
+
+@keyframes dropIn {
+  from { opacity: 0; transform: translate(-50%, -12px); }
+  to { opacity: 1; transform: translate(-50%, 0); }
+}
+
+.promptContent {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+}
+
+.promptTitle {
+  font-size: 12px;
+  font-weight: 700;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.promptSubtitle {
+  font-size: 10.5px;
+  color: rgba(255,255,255,0.5);
+  line-height: 1.3;
+}
+
+.promptActions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.enableGpsBtn {
+  background: rgba(255,255,255,0.12);
+  border: 1px solid rgba(255,255,255,0.2);
+  color: #ffffff;
+  font-weight: 700;
+  font-size: 11px;
+  padding: 6px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+
+.enableGpsBtn:hover {
+  background: rgba(255,255,255,0.2);
+}
+
+.dismissPromptBtn {
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: rgba(255,255,255,0.5);
+  font-size: 11px;
+  padding: 5px 9px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.dismissPromptBtn:hover {
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+/* Calibration Toast */
+.calibrationToast {
+  position: absolute;
+  top: 56px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 25;
+  background: rgba(0, 0, 0, 0.8);
+  border: 1px solid rgba(74, 222, 128, 0.3);
+  backdrop-filter: blur(12px);
+  color: #4ade80;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 7px 16px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+  animation: fadeInOut 3.5s forwards ease-in-out;
+  white-space: nowrap;
+}
+
+@keyframes fadeInOut {
+  0% { opacity: 0; transform: translate(-50%, -8px); }
+  12% { opacity: 1; transform: translate(-50%, 0); }
+  80% { opacity: 1; transform: translate(-50%, 0); }
+  100% { opacity: 0; transform: translate(-50%, -8px); }
+}
+
+/* ====================================================================
+   Location Picker Modal
+   ==================================================================== */
+.modalBackdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.8);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+
+.locationModal {
+  width: min(440px, 100%);
+  background: rgba(10, 10, 15, 0.97);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+  box-shadow: 0 40px 80px rgba(0, 0, 0, 0.9);
+  overflow: hidden;
+  padding: 20px;
+  animation: popModal 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.locationModalHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 14px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.locationModalTitle {
+  font-size: 16px;
+  font-weight: 700;
+  color: #ffffff;
+  margin: 0;
+}
+
+.locationGpsTrigger {
+  width: 100%;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.12);
+  color: rgba(255,255,255,0.85);
+  padding: 11px 16px;
+  border-radius: 10px;
+  font-size: 12px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  margin-bottom: 14px;
+}
+
+.locationGpsTrigger:hover {
+  background: rgba(255,255,255,0.12);
+  color: #ffffff;
+}
+
+.locationPresetGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.locationPresetCard {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 10px;
+  padding: 10px 12px;
+  cursor: pointer;
+  transition: all 0.15s;
+  text-align: left;
+}
+
+.locationPresetCard:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
+.locationPresetCard.active {
+  background: rgba(125, 211, 252, 0.08);
+  border-color: rgba(125, 211, 252, 0.3);
+}
+
+.locationPresetName {
+  font-size: 12px;
+  font-weight: 700;
+  color: rgba(255,255,255,0.9);
+}
+
+.locationPresetCoords {
+  font-size: 10px;
+  color: rgba(255,255,255,0.35);
+  font-family: 'JetBrains Mono', 'SF Mono', monospace;
+  margin-top: 3px;
+}
+
+/* ====================================================================
+   Compass HUD
+   ==================================================================== */
+.hudOverlay {
+  position: absolute;
+  top: 56px;
+  left: 16px;
+  z-index: 5;
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.hudCard {
+  background: rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(6px);
+  padding: 5px 10px;
+  border-radius: 6px;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.hudAzimuth {
+  font-family: 'JetBrains Mono', 'SF Mono', monospace;
+  font-size: 16px;
+  font-weight: 700;
+  color: rgba(255,255,255,0.8);
+  letter-spacing: -0.02em;
+}
+
+.hudCardinal {
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  color: rgba(255,255,255,0.5);
+  text-transform: uppercase;
+}
+
+.hudPitch {
+  font-size: 9px;
+  color: rgba(255,255,255,0.35);
+  font-family: 'JetBrains Mono', 'SF Mono', monospace;
+}
+
+/* FOV indicator */
+.fovIndicator {
+  font-size: 9px;
+  color: rgba(255,255,255,0.35);
+  font-family: 'JetBrains Mono', 'SF Mono', monospace;
+  background: rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(6px);
+  padding: 3px 8px;
+  border-radius: 4px;
+}
+
+/* ====================================================================
+   Object Inspector Panel (LEFT SIDE — Stellarium Style)
+   ==================================================================== */
+.inspectorDrawer {
+  position: absolute;
+  top: 56px;
+  left: 16px;
+  width: min(340px, calc(100vw - 32px));
+  max-height: calc(100vh - 160px);
+  background: rgba(0, 0, 0, 0.82);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 0;
+  z-index: 15;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.7);
+  overflow: hidden;
+  animation: slideInDrawer 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes slideInDrawer {
+  from { opacity: 0; transform: translateX(-20px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+.inspectorInner {
+  padding: 16px;
+  overflow-y: auto;
+  max-height: calc(100vh - 160px);
+}
+
+.inspectorHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.inspectorTitle {
+  font-size: 20px;
+  font-weight: 800;
+  color: #ffffff;
+  margin: 0;
+  line-height: 1.15;
+  letter-spacing: -0.01em;
+}
+
+.inspectorSubtitle {
+  font-size: 11px;
+  color: rgba(255,255,255,0.45);
+  font-weight: 500;
+  margin-top: 3px;
+  letter-spacing: 0.02em;
+}
+
+.closeDrawerBtn {
+  background: rgba(255, 255, 255, 0.06);
+  border: 0;
+  color: rgba(255,255,255,0.5);
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.15s;
+  flex-shrink: 0;
+}
+
+.closeDrawerBtn:hover {
+  background: rgba(255, 255, 255, 0.15);
+  color: #ffffff;
+}
+
+/* Color swatch for stars */
+.inspectorColorSwatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  display: inline-block;
+  vertical-align: middle;
+  margin-right: 4px;
+  box-shadow: 0 0 6px currentColor;
+}
+
+/* Coordinate Grid */
+.inspectorGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  margin-bottom: 14px;
+}
+
+.inspectorItem {
+  background: rgba(255, 255, 255, 0.03);
+  padding: 8px 10px;
+  border-radius: 8px;
+}
+
+.inspectorLabel {
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: rgba(255,255,255,0.35);
+  font-weight: 600;
+  margin-bottom: 2px;
+}
+
+.inspectorValue {
+  font-size: 13px;
+  font-weight: 700;
+  color: rgba(255,255,255,0.9);
+  font-family: 'JetBrains Mono', 'SF Mono', monospace;
+}
+
+/* Description block */
+.inspectorDesc {
+  font-size: 12px;
+  line-height: 1.55;
+  color: rgba(255,255,255,0.7);
+  padding: 12px 14px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.03);
+  margin-bottom: 10px;
+}
+
+/* Telescope Tip */
+.inspectorTip {
+  font-size: 11px;
+  color: rgba(250, 204, 21, 0.9);
+  background: rgba(250, 204, 21, 0.06);
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(250, 204, 21, 0.12);
+  line-height: 1.45;
+  margin-bottom: 10px;
+}
+
+/* Inspector Action Buttons (Stellarium Telescope Bidik) */
+.inspectorActions {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.telescopeZoomBtn {
+  flex: 1;
+  background: linear-gradient(135deg, rgba(2, 132, 199, 0.35), rgba(56, 189, 248, 0.25));
+  border: 1px solid rgba(56, 189, 248, 0.5);
+  color: #7dd3fc;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 11.5px;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 14px rgba(2, 132, 199, 0.25);
+}
+
+.telescopeZoomBtn:hover {
+  background: linear-gradient(135deg, #0284c7, #0ea5e9);
+  color: #ffffff;
+  border-color: #38bdf8;
+  transform: translateY(-1px);
+}
+
+.wideViewBtn {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: rgba(255, 255, 255, 0.75);
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 11.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.wideViewBtn:hover {
+  background: rgba(255, 255, 255, 0.14);
+  color: #ffffff;
+}
+
+/* Prominent Distance Badge */
+.distanceBadge {
+  background: linear-gradient(135deg, rgba(14, 165, 233, 0.15), rgba(99, 102, 241, 0.15));
+  border: 1px solid rgba(56, 189, 248, 0.35);
+  border-radius: 10px;
+  padding: 10px 14px;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.distanceBadgeLabel {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #7dd3fc;
+}
+
+.distanceBadgeValue {
+  font-family: 'JetBrains Mono', 'SF Mono', monospace;
+  font-size: 14px;
+  font-weight: 800;
+  color: #ffffff;
+  letter-spacing: -0.01em;
+}
+
+/* Inspector Section Headings */
+.inspectorSectionTitle {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: rgba(255, 255, 255, 0.4);
+  margin-top: 14px;
+  margin-bottom: 6px;
+}
+
+/* Floating 3D/2D Object Labels on Sky */
+.floatingLabelsLayer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 6;
+  overflow: hidden;
+}
+
+.objectLabel {
+  position: absolute;
+  pointer-events: auto;
+  transform: translate(-50%, -100%);
+  margin-top: -10px;
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: rgba(255, 255, 255, 0.85);
+  background: rgba(4, 8, 16, 0.72);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  padding: 2px 7px;
+  border-radius: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  white-space: nowrap;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  user-select: none;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+}
+
+.objectLabel:hover {
+  background: rgba(14, 165, 233, 0.4);
+  border-color: #38bdf8;
+  color: #ffffff;
+  transform: translate(-50%, -100%) scale(1.08);
+  box-shadow: 0 0 14px rgba(56, 189, 248, 0.5);
+  z-index: 10;
+}
+
+.objectLabel.active {
+  background: rgba(14, 165, 233, 0.6);
+  border-color: #38bdf8;
+  color: #ffffff;
+  box-shadow: 0 0 16px rgba(56, 189, 248, 0.65);
+  font-weight: 700;
+}
+
+.objectLabelPlanet {
+  border-color: rgba(250, 204, 21, 0.4);
+  color: #fef08a;
+}
+
+.objectLabelPlanet:hover {
+  background: rgba(234, 179, 8, 0.35);
+  border-color: #facc15;
+  color: #ffffff;
+}
+
+.objectLabelDso {
+  border-color: rgba(244, 114, 182, 0.4);
+  color: #f472b6;
+}
+
+
+/* Target Tracking Reticle (Stellarium Lock Brackets) */
+.targetReticle {
+  position: absolute;
+  pointer-events: none;
+  z-index: 8;
+  transform: translate(-50%, -50%);
+  width: 54px;
+  height: 54px;
+  border: 1.5px solid rgba(56, 189, 248, 0.65);
+  border-radius: 50%;
+  box-shadow: 0 0 16px rgba(56, 189, 248, 0.35);
+  animation: reticlePulse 2s infinite ease-in-out;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+@keyframes reticlePulse {
+  0%, 100% {
+    transform: translate(-50%, -50%) scale(1);
+    border-color: rgba(56, 189, 248, 0.65);
+  }
+  50% {
+    transform: translate(-50%, -50%) scale(1.08);
+    border-color: rgba(125, 211, 252, 0.95);
+  }
+}
+
+.reticleCornerTL, .reticleCornerTR, .reticleCornerBL, .reticleCornerBR {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  border-color: #38bdf8;
+}
+
+.reticleCornerTL {
+  top: -2px;
+  left: -2px;
+  border-top: 2px solid #38bdf8;
+  border-left: 2px solid #38bdf8;
+}
+
+.reticleCornerTR {
+  top: -2px;
+  right: -2px;
+  border-top: 2px solid #38bdf8;
+  border-right: 2px solid #38bdf8;
+}
+
+.reticleCornerBL {
+  bottom: -2px;
+  left: -2px;
+  border-bottom: 2px solid #38bdf8;
+  border-left: 2px solid #38bdf8;
+}
+
+.reticleCornerBR {
+  bottom: -2px;
+  right: -2px;
+  border-bottom: 2px solid #38bdf8;
+  border-right: 2px solid #38bdf8;
+}
+
+.reticleLabel {
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  margin-top: 6px;
+  font-size: 10px;
+  font-weight: 700;
+  color: #7dd3fc;
+  background: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(8px);
+  padding: 2px 7px;
+  border-radius: 4px;
+  border: 1px solid rgba(56, 189, 248, 0.3);
+  white-space: nowrap;
+  letter-spacing: 0.02em;
+}
+
+/* Telescope Close-Up Mode Badge */
+.telescopeModeBadge {
+  position: absolute;
+  top: 56px;
+  right: 16px;
+  z-index: 9;
+  background: rgba(2, 132, 199, 0.25);
+  border: 1px solid rgba(56, 189, 248, 0.45);
+  backdrop-filter: blur(12px);
+  padding: 6px 12px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #7dd3fc;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+}
+
+.closeTelescopeBtn {
+  background: rgba(255, 255, 255, 0.15);
+  border: 0;
+  color: #ffffff;
+  border-radius: 4px;
+  padding: 2px 6px;
+  font-size: 10px;
+  cursor: pointer;
+}
+
+.closeTelescopeBtn:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+
+/* Separator */
+.inspectorSeparator {
+  width: 100%;
+  height: 1px;
+  background: rgba(255,255,255,0.06);
+  margin: 12px 0;
+}
+
+/* Extra Facts Section */
+.inspectorFacts {
+  margin-top: 4px;
+}
+
+.inspectorFactItem {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 0;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+}
+
+.inspectorFactItem:last-child {
+  border-bottom: none;
+}
+
+.inspectorFactLabel {
+  font-size: 10px;
+  color: rgba(255,255,255,0.4);
+  font-weight: 500;
+}
+
+.inspectorFactValue {
+  font-size: 11px;
+  color: rgba(255,255,255,0.8);
+  font-weight: 600;
+  font-family: 'JetBrains Mono', 'SF Mono', monospace;
+}
+
+/* ====================================================================
+   Bottom Dock
+   ==================================================================== */
+.bottomDock {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  z-index: 10;
+  pointer-events: none;
+  padding: 0 16px 12px;
+  background: linear-gradient(to top, rgba(0,0,0,0.6) 0%, rgba(0,0,0,0.2) 60%, transparent 100%);
+}
+
+/* Toggle Bar */
+.toggleBar {
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  padding: 3px 6px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  overflow-x: auto;
+  max-width: 100%;
+}
+
+.toggleBtn {
+  background: transparent;
+  border: 1px solid transparent;
+  color: rgba(255,255,255,0.45);
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 10px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.18s ease;
+}
+
+.toggleBtn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255,255,255,0.85);
+}
+
+.toggleBtn.active {
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(255,255,255,0.9);
+}
+
+/* Time Machine Bar */
+.timeMachineBar {
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  padding: 5px 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.timeDisplay {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-family: 'JetBrains Mono', 'SF Mono', monospace;
+  font-size: 11px;
+  font-weight: 600;
+  color: rgba(255,255,255,0.7);
+}
+
+.timeSliderGroup {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.timeSlider {
+  -webkit-appearance: none;
+  appearance: none;
+  width: min(160px, 25vw);
+  height: 3px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.12);
+  outline: none;
+  cursor: pointer;
+}
+
+.timeSlider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.8);
+  cursor: pointer;
+  box-shadow: 0 0 6px rgba(255,255,255,0.3);
+}
+
+.timeControls {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.timeControlBtn {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  color: rgba(255,255,255,0.65);
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.timeControlBtn:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: rgba(255,255,255,0.95);
+}
+
+.timeControlBtn.active {
+  background: rgba(255,255,255,0.15);
+  color: #ffffff;
+}
+
+.nowBtn {
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.1);
+  color: rgba(255,255,255,0.7);
+  padding: 0 8px;
+  height: 26px;
+  border-radius: 6px;
+  font-size: 10px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.nowBtn:hover {
+  background: rgba(255,255,255,0.15);
+  color: #ffffff;
+}
+
+/* ====================================================================
+   Search Modal
+   ==================================================================== */
+.searchModal {
+  width: min(460px, 100%);
+  background: rgba(10, 10, 15, 0.97);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  box-shadow: 0 40px 80px rgba(0, 0, 0, 0.9);
+  overflow: hidden;
+  animation: popModal 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes popModal {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.searchHeader {
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.searchInput {
+  flex: 1;
+  background: transparent;
+  border: 0;
+  outline: none;
+  font-size: 14px;
+  color: #ffffff;
+}
+
+.searchInput::placeholder {
+  color: rgba(255,255,255,0.3);
+}
+
+.searchResultsList {
+  max-height: 320px;
+  overflow-y: auto;
+  padding: 6px;
+}
+
+.searchItem {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.searchItem:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.searchItemTitle {
+  font-size: 13px;
+  font-weight: 700;
+  color: rgba(255,255,255,0.9);
+}
+
+.searchItemCategory {
+  font-size: 10px;
+  color: rgba(255,255,255,0.4);
+}
+
+.searchItemMeta {
+  font-size: 11px;
+  font-family: 'JetBrains Mono', 'SF Mono', monospace;
+  color: rgba(255,255,255,0.5);
+  font-weight: 600;
+}
+
+/* ====================================================================
+   Events Drawer (Right)
+   ==================================================================== */
+.eventsDrawer {
+  position: absolute;
+  top: 56px;
+  right: 16px;
+  width: min(320px, calc(100vw - 32px));
+  max-height: calc(100vh - 160px);
+  background: rgba(0, 0, 0, 0.82);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 16px;
+  z-index: 15;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.7);
+  overflow-y: auto;
+  animation: slideInRight 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes slideInRight {
+  from { opacity: 0; transform: translateX(20px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+.eventCard {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  padding: 10px 12px;
+  margin-bottom: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.eventCard:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.eventCardHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 6px;
+  margin-bottom: 3px;
+}
+
+.eventCardTitle {
+  font-size: 12px;
+  font-weight: 700;
+  color: rgba(255,255,255,0.9);
+}
+
+.eventCardDate {
+  font-size: 10px;
+  color: rgba(255,255,255,0.45);
+  font-family: 'JetBrains Mono', 'SF Mono', monospace;
+}
+
+.eventCardDesc {
+  font-size: 10px;
+  color: rgba(255,255,255,0.45);
+  line-height: 1.4;
+  margin-top: 3px;
+}
+
+/* ====================================================================
+   Zoom Indicator (Center Crosshair)
+   ==================================================================== */
+.crosshair {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 4;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+.crosshair.visible {
+  opacity: 1;
+}
+
+.crosshairSvg {
+  width: 32px;
+  height: 32px;
+}
+
+/* ====================================================================
+   Responsive
+   ==================================================================== */
+@media (max-width: 768px) {
+  .topBar {
+    padding: 8px 10px;
+    flex-wrap: wrap;
+  }
+  .brandLogo {
+    font-size: 12px;
+  }
+  .locationBadge strong {
+    max-width: 80px;
+  }
+  .locationPromptBanner {
+    top: 90px;
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .promptActions {
+    width: 100%;
+    justify-content: flex-end;
+  }
+  .bottomDock {
+    padding: 0 10px 8px;
+  }
+  .timeMachineBar {
+    padding: 4px 8px;
+    gap: 4px;
+  }
+  .timeSlider {
+    width: 80px;
+  }
+  .inspectorDrawer {
+    top: auto;
+    bottom: 110px;
+    left: 10px;
+    right: 10px;
+    width: auto;
+    max-height: 50vh;
+  }
+  .eventsDrawer {
+    top: auto;
+    bottom: 110px;
+    left: 10px;
+    right: 10px;
+    width: auto;
+    max-height: 50vh;
+  }
+}

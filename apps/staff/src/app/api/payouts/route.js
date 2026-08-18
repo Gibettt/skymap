@@ -1,6 +1,7 @@
 import { assertSameOrigin, jsonError, parseJsonBody, requireUser, writeAudit } from '@ephemeris/auth';
 import { query, transaction } from '@ephemeris/db';
 import { createPayoutRequestSchema } from '@ephemeris/db/validators/payout';
+import { emit, EventTypes } from '@ephemeris/events';
 import { calculatePayoutSummary } from '@ephemeris/finance';
 
 const bookingSelect = `
@@ -108,6 +109,17 @@ export async function POST(request) {
         afterData: rows[0],
         request,
       });
+
+      // Emit domain event for new payout request
+      await emit(EventTypes.PAYOUT_REQUESTED, {
+        payoutId: rows[0].id,
+        requesterId: user.id,
+        requesterName: user.name,
+        requesterRole: user.role,
+        amountUsd: rows[0].amount_usd,
+        resortName: user.resort?.name || null,
+      }, { client, actorId: user.id });
+
       return { payout: rows[0] };
     });
 

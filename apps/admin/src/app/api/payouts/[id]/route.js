@@ -1,7 +1,8 @@
 import { assertSameOrigin, jsonError, parseJsonBody, requireUser, writeAudit } from '@ephemeris/auth';
-import { transaction } from '@ephemeris/db';
+import { transaction, refreshAfterPayoutChange } from '@ephemeris/db';
 import { uuidSchema } from '@ephemeris/db/validators/common';
 import { reviewPayoutSchema } from '@ephemeris/db/validators/payout';
+import { emit, EventTypes } from '@ephemeris/events';
 
 export async function PATCH(request, { params }) {
   try {
@@ -18,7 +19,13 @@ export async function PATCH(request, { params }) {
     const { status, adminNotes } = parsed.data;
 
     const updated = await transaction(async (client) => {
-      const before = await client.query('SELECT * FROM payout_requests WHERE id = $1', [id]);
+      const before = await client.query(
+        `SELECT pr.*, u.role AS requester_role
+         FROM payout_requests pr
+         JOIN users u ON u.id = pr.requester_id
+         WHERE pr.id = $1`,
+        [id]
+      );
       if (!before.rows[0]) return null;
 
       const current = before.rows[0];
@@ -53,6 +60,23 @@ export async function PATCH(request, { params }) {
         afterData: rows[0],
         request,
       });
+
+      // Emit domain event for payout review
+      const eventType = status === 'paid'
+        ? EventTypes.PAYOUT_PAID
+        : (status === 'approved' ? EventTypes.PAYOUT_APPROVED : EventTypes.PAYOUT_REJECTED);
+
+      await emit(eventType, {
+        payoutId: id,
+        requesterId: current.requester_id,
+        requesterRole: current.requester_role,
+        status,
+        amountUsd: rows[0].amount_usd,
+      }, { client, actorId: user.id });
+
+      // Refresh CQRS staff performance and KPI views
+      await refreshAfterPayoutChange(client);
+
       return { payout: rows[0] };
     });
 

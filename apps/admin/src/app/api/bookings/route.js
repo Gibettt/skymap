@@ -1,5 +1,5 @@
 import { assertSameOrigin, jsonError, parseJsonBody, requireUser, writeAudit } from '@ephemeris/auth';
-import { query, transaction } from '@ephemeris/db';
+import { query, transaction, refreshAfterBookingChange } from '@ephemeris/db';
 import {
   bookingSelectQuery,
   generateBookingCode,
@@ -8,6 +8,7 @@ import {
   paginationMeta,
 } from '@ephemeris/db/helpers';
 import { createBookingSchema } from '@ephemeris/db/validators/booking';
+import { emit, EventTypes } from '@ephemeris/events';
 import { calculateBookingTotals } from '@ephemeris/finance';
 
 export async function GET(request) {
@@ -15,7 +16,7 @@ export async function GET(request) {
     await requireUser(['admin']);
     const pagination = paginationFromRequest(request);
     const { rows } = await query(
-      `${bookingSelectQuery} ORDER BY b.event_date DESC, b.created_at DESC LIMIT $1 OFFSET $2`,
+      `${bookingSelectQuery} ORDER BY b.created_at DESC, b.event_date DESC LIMIT $1 OFFSET $2`,
       [pagination.limit, pagination.offset]
     );
     const { rows: countRows } = await query('SELECT COUNT(*) FROM bookings');
@@ -44,7 +45,7 @@ export async function POST(request) {
       const pkg = await client.query('SELECT * FROM packages WHERE id = $1 AND is_active = true', [packageId]);
       if (!pkg.rows[0]) throw new Error('Package not found');
 
-      const staff = await client.query('SELECT id, role, resort_id FROM users WHERE id = $1 AND status = $2', [staffId, 'active']);
+      const staff = await client.query('SELECT id, role, resort_id, name FROM users WHERE id = $1 AND status = $2', [staffId, 'active']);
       const staffRow = staff.rows[0];
       if (!staffRow) throw new Error('Staff not found');
       const resortId = staffRow.role === 'external' ? staffRow.resort_id : data.resortId;
@@ -153,6 +154,22 @@ export async function POST(request) {
         afterData: booking,
         request,
       });
+
+      // Emit domain event & refresh CQRS views
+      await emit(EventTypes.BOOKING_CREATED, {
+        bookingId: booking.id,
+        bookingCode: booking.booking_code,
+        guestName: booking.guest_name,
+        packageName: pkg.rows[0]?.name,
+        eventDate: booking.event_date,
+        creatorId: user.id,
+        creatorRole: user.role,
+        creatorName: user.name,
+        resortId: booking.resort_id,
+      }, { client, actorId: user.id });
+
+      await refreshAfterBookingChange(client);
+
       return booking;
     });
 

@@ -29,7 +29,7 @@ async function syncAdminNotifications(client) {
     JOIN packages p ON p.id = b.package_id
     JOIN users staff ON staff.id = b.staff_id
     JOIN users admin_user ON admin_user.role = 'admin' AND admin_user.status = 'active'
-    WHERE b.status = 'pending_review'
+    WHERE b.created_at >= now() - interval '30 days'
     ON CONFLICT (recipient_user_id, type, source_id) DO UPDATE SET
       title = EXCLUDED.title,
       message = EXCLUDED.message,
@@ -94,18 +94,19 @@ export async function GET() {
           AND (
             (n.type = 'booking' AND EXISTS (
               SELECT 1 FROM bookings b
-              WHERE b.id = n.source_id AND b.status = 'pending_review'
+              WHERE b.id = n.source_id
             ))
             OR
             (n.type = 'payout' AND EXISTS (
               SELECT 1 FROM payout_requests pr
               WHERE pr.id = n.source_id AND pr.status = 'requested'
             ))
+            OR n.read_at IS NULL
           )
         ORDER BY
           CASE WHEN n.read_at IS NULL THEN 0 ELSE 1 END,
           n.created_at DESC
-        LIMIT 30`,
+        LIMIT 50`,
         [user.id]
       );
       return rows;
@@ -122,6 +123,19 @@ export async function PATCH(request) {
     await assertSameOrigin(request);
     const user = await requireUser(['admin']);
     const body = await parseJsonBody(request);
+
+    if (body.markAll || body.all) {
+      const { rows } = await transaction(async (client) => client.query(
+        `UPDATE notifications
+         SET read_at = COALESCE(read_at, now())
+         WHERE recipient_user_id = $1
+           AND read_at IS NULL
+         RETURNING id, read_at`,
+        [user.id]
+      ));
+      return Response.json({ notifications: rows, markedAll: true });
+    }
+
     const ids = Array.isArray(body.ids) ? body.ids : [body.id];
     const cleanIds = ids
       .map((id) => String(id || '').trim())

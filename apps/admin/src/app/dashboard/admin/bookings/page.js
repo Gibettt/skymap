@@ -2,10 +2,13 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { useQueryClient } from '@tanstack/react-query';
 import { OBJECT_TYPES, PACKAGE_CATALOG, STATIONS } from '@/data/bookings';
 import { calculateBookingFinance, formatUsd } from '@/data/keuangan';
+import { useBookingsQuery, useUpdateBookingMutation, queryKeys, fetchApi } from '@/lib/apiQueries';
 
 const STATUS_FILTERS = ['Semua', 'Menunggu Admin', 'Diterima', 'Ditolak', 'Booked', 'Finished Experience', 'Cancelled'];
+
 
 const STAFF_OPTIONS = [
   { staffId: 'INT-001', staffName: 'Ahmad Fauzi', staffRole: 'Internal' },
@@ -115,6 +118,7 @@ function mapApiBooking(row) {
     rawStatus: row.status,
     bookingCode: row.booking_code,
     bookingDate: dateValue(row.booking_date),
+    createdAt: row.created_at,
     date: dateValue(row.event_date),
     timeStart: timeValue(row.time_start),
     timeEnd: timeValue(row.time_end),
@@ -131,6 +135,8 @@ function mapApiBooking(row) {
     staffId: row.staff_id,
     staffName: row.staff_name,
     staffRole: titleCase(row.staff_role),
+    resortName: row.resort_name,
+    resortCode: row.resort_code,
     status,
     signedByGuest: Boolean(row.signed_by_guest),
     tipIncentiveUsd: Number(row.field_tip_incentive_usd || 0),
@@ -727,10 +733,225 @@ function FamilyDetailCard({ title, name, packageValue }) {
   );
 }
 
+function AdminConfirmReviewModal({ modalData, onClose, onConfirm, loading }) {
+  if (!modalData) return null;
+  const isAccept = modalData.type === 'accepted';
+  const { booking } = modalData;
+
+  const content = (
+    <div
+      className="modal-backdrop"
+      style={{
+        position: 'fixed',
+        inset: 0,
+        background: 'rgba(15, 23, 42, 0.75)',
+        backdropFilter: 'blur(8px)',
+        WebkitBackdropFilter: 'blur(8px)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        zIndex: 9999,
+        padding: 16,
+        animation: 'fadeIn 0.2s ease-out',
+      }}
+      onClick={(e) => {
+        if (e.target === e.currentTarget && !loading) onClose();
+      }}
+    >
+      <div
+        className="modal"
+        style={{
+          background: 'var(--bg-card, #ffffff)',
+          border: `1px solid ${isAccept ? 'rgba(5, 150, 105, 0.35)' : 'rgba(220, 38, 38, 0.35)'}`,
+          borderRadius: 12,
+          width: 520,
+          maxWidth: '94vw',
+          boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.2), 0 10px 10px -5px rgba(0, 0, 0, 0.1)',
+          overflow: 'hidden',
+          animation: 'slideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1)',
+        }}
+      >
+        {/* Modal Header */}
+        <div
+          style={{
+            padding: '20px 24px',
+            borderBottom: '1px solid var(--border)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 14,
+            background: isAccept ? 'rgba(5, 150, 105, 0.08)' : 'rgba(220, 38, 38, 0.08)',
+          }}
+        >
+          <div
+            style={{
+              width: 44,
+              height: 44,
+              borderRadius: '50%',
+              background: isAccept ? '#059669' : '#dc2626',
+              color: 'white',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: 22,
+              fontWeight: 800,
+              flexShrink: 0,
+              boxShadow: isAccept ? '0 0 14px rgba(5, 150, 105, 0.4)' : '0 0 14px rgba(220, 38, 38, 0.4)',
+            }}
+          >
+            {isAccept ? '✓' : '✕'}
+          </div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <h3 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: 'var(--text-primary)' }}>
+              {isAccept ? 'Konfirmasi Persetujuan Booking' : 'Konfirmasi Penolakan Booking'}
+            </h3>
+            <p style={{ margin: '3px 0 0', fontSize: 13, color: 'var(--text-secondary)' }}>
+              {isAccept
+                ? 'Booking ini akan disetujui (Accepted) dan otomatis masuk ke jadwal operasional.'
+                : 'Booking ini akan ditolak (Rejected) dan staf pembuat booking akan menerima notifikasi status.'}
+            </p>
+          </div>
+          <button
+            type="button"
+            className="modal-close"
+            onClick={() => !loading && onClose()}
+            disabled={loading}
+            style={{
+              background: 'none',
+              border: 'none',
+              fontSize: 18,
+              cursor: 'pointer',
+              color: 'var(--text-muted)',
+            }}
+          >
+            ✕
+          </button>
+        </div>
+
+        {/* Modal Body: Booking Details Summary */}
+        <div style={{ padding: '20px 24px', background: 'var(--bg-card)' }}>
+          <div
+            style={{
+              background: 'var(--bg-elevated, rgba(0, 0, 0, 0.03))',
+              border: '1px solid var(--border)',
+              borderRadius: 8,
+              padding: 16,
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 10,
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border)', paddingBottom: 8 }}>
+              <div>
+                <span style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-dim)' }}>
+                  Booking Code
+                </span>
+                <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--text-primary)' }}>
+                  {booking.bookingCode}
+                </div>
+              </div>
+              {booking.staffName && (
+                <span
+                  style={{
+                    fontSize: 11,
+                    fontWeight: 700,
+                    padding: '3px 8px',
+                    borderRadius: 4,
+                    background: booking.staffRole === 'External' ? '#7c3aed18' : '#0891b218',
+                    color: booking.staffRole === 'External' ? '#7c3aed' : '#0891b2',
+                    border: `1px solid ${booking.staffRole === 'External' ? '#7c3aed40' : '#0891b240'}`,
+                  }}
+                >
+                  {booking.staffRole === 'External' ? `External: ${booking.staffName}` : `Internal: ${booking.staffName}`}
+                </span>
+              )}
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 12, fontSize: 13 }}>
+              <div>
+                <span style={{ color: 'var(--text-dim)', fontSize: 11, display: 'block' }}>Tamu / Guest</span>
+                <strong style={{ color: 'var(--text-primary)' }}>{booking.clientName}</strong>
+                <div style={{ fontSize: 11, color: 'var(--text-dim)' }}>
+                  Room {booking.roomNumber || '-'}
+                </div>
+              </div>
+              <div>
+                <span style={{ color: 'var(--text-dim)', fontSize: 11, display: 'block' }}>Paket / Package</span>
+                <strong style={{ color: 'var(--text-primary)' }}>{booking.packageName}</strong>
+              </div>
+              <div>
+                <span style={{ color: 'var(--text-dim)', fontSize: 11, display: 'block' }}>Jadwal / Schedule</span>
+                <strong style={{ color: 'var(--text-primary)' }}>{String(booking.date || '').slice(0, 10)}</strong>
+                <div style={{ fontSize: 11, color: 'var(--text-dim)' }}>{booking.timeStart} - {booking.timeEnd}</div>
+              </div>
+              <div>
+                <span style={{ color: 'var(--text-dim)', fontSize: 11, display: 'block' }}>Pax</span>
+                <strong style={{ color: 'var(--text-primary)' }}>
+                  {booking.adultCount} Dewasa / {booking.childCount} Anak
+                </strong>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Modal Footer */}
+        <div
+          style={{
+            padding: '16px 24px',
+            borderTop: '1px solid var(--border)',
+            display: 'flex',
+            justifyContent: 'flex-end',
+            alignItems: 'center',
+            gap: 12,
+            background: 'var(--bg-elevated, rgba(0, 0, 0, 0.02))',
+          }}
+        >
+          <button
+            type="button"
+            className="btn btn-secondary"
+            onClick={onClose}
+            disabled={loading}
+            style={{ padding: '8px 16px', fontWeight: 600 }}
+          >
+            Batal
+          </button>
+          <button
+            type="button"
+            className="btn"
+            onClick={() => onConfirm(booking, modalData.type)}
+            disabled={loading}
+            style={{
+              background: isAccept ? '#059669' : '#dc2626',
+              color: 'white',
+              border: 'none',
+              padding: '8px 20px',
+              fontWeight: 700,
+              boxShadow: isAccept ? '0 2px 10px rgba(5, 150, 105, 0.35)' : '0 2px 10px rgba(220, 38, 38, 0.35)',
+              opacity: loading ? 0.7 : 1,
+              cursor: loading ? 'not-allowed' : 'pointer',
+            }}
+          >
+            {loading
+              ? 'Memproses...'
+              : isAccept
+              ? '✓ Ya, Setujui Booking'
+              : '✕ Ya, Tolak Booking'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+
+  if (typeof document === 'undefined') return null;
+  return createPortal(content, document.body);
+}
+
 const PER_PAGE = 10;
 
 export default function BookingsPage() {
-  const [bookings, setBookings] = useState([]);
+  const queryClient = useQueryClient();
+  const { data: rawBookings = [], isLoading: loading, error: queryError } = useBookingsQuery();
+  const updateMutation = useUpdateBookingMutation();
+
   const [search, setSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState('Semua');
   const [statusFilter, setStatusFilter] = useState('Semua');
@@ -738,52 +959,55 @@ export default function BookingsPage() {
   const [modalOpen, setModalOpen] = useState(false);
   const [editingBooking, setEditingBooking] = useState(null);
   const [viewingBooking, setViewingBooking] = useState(null);
+  const [confirmReviewModal, setConfirmReviewModal] = useState(null);
   const [toast, setToast] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
   const [reviewingId, setReviewingId] = useState(null);
+
+  const bookings = useMemo(() => (rawBookings || []).map(mapApiBooking), [rawBookings]);
+  const error = queryError?.message || '';
 
   const showToast = useCallback((msg, type = 'success') => {
     setToast({ msg, type });
     setTimeout(() => setToast(null), 3000);
   }, []);
 
-  const loadBookings = useCallback(async () => {
-    setError('');
-    const response = await fetch('/api/bookings');
-    const data = await response.json();
-    if (!response.ok) {
-      throw new Error(data.error || 'Gagal memuat booking.');
-    }
-    setBookings((data.bookings || []).map(mapApiBooking));
-  }, []);
-
   useEffect(() => {
-    const timer = setTimeout(() => {
-      loadBookings()
-        .catch((err) => {
-          setError(err.message);
-          showToast(err.message, 'error');
-        })
-        .finally(() => setLoading(false));
-    }, 0);
-    return () => clearTimeout(timer);
-  }, [loadBookings, showToast]);
+    let channel = null;
+    try {
+      if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+        channel = new BroadcastChannel('ephemeris_sync_channel');
+        channel.onmessage = () => {
+          queryClient.invalidateQueries({ queryKey: queryKeys.bookings.all });
+        };
+      }
+    } catch {
+      // ignore
+    }
+
+    return () => {
+      if (channel) channel.close();
+    };
+  }, [queryClient]);
 
   const filtered = useMemo(() => {
     let list = [...bookings];
     if (search) {
-      const q = search.toLowerCase();
+      const q = search.toLowerCase().trim();
       list = list.filter((b) =>
-        b.clientName.toLowerCase().includes(q) ||
-        b.packageName.toLowerCase().includes(q) ||
-        b.roomNumber.toLowerCase().includes(q) ||
-        b.staffName.toLowerCase().includes(q)
+        (b.bookingCode && b.bookingCode.toLowerCase().includes(q)) ||
+        (b.packageName && b.packageName.toLowerCase().includes(q)) ||
+        (b.clientName && b.clientName.toLowerCase().includes(q)) ||
+        (b.roomNumber && String(b.roomNumber).toLowerCase().includes(q)) ||
+        (b.staffName && b.staffName.toLowerCase().includes(q))
       );
     }
     if (typeFilter !== 'Semua') list = list.filter((b) => b.packageType === typeFilter);
     if (statusFilter !== 'Semua') list = list.filter((b) => b.status === statusFilter);
-    return list.sort((a, b) => new Date(a.date) - new Date(b.date));
+    return list.sort((a, b) => {
+      const timeA = new Date(a.createdAt || a.date).getTime();
+      const timeB = new Date(b.createdAt || b.date).getTime();
+      return timeB - timeA;
+    });
   }, [bookings, search, typeFilter, statusFilter]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PER_PAGE));
@@ -792,40 +1016,44 @@ export default function BookingsPage() {
   const handleSave = (data) => {
     if (editingBooking) {
       const normalized = normalizeBooking(data, editingBooking.id);
-      setBookings((prev) => prev.map((b) => b.id === editingBooking.id ? normalized : b));
       showToast(`Booking ${normalized.bookingCode} diperbarui.`);
     } else {
       const newId = crypto.randomUUID?.() || String(Date.now());
       const normalized = normalizeBooking(data, newId);
-      setBookings((prev) => [normalized, ...prev]);
       showToast(`Booking ${normalized.bookingCode} dibuat.`);
     }
+    queryClient.invalidateQueries({ queryKey: queryKeys.bookings.all });
+    try {
+      if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+        const channel = new BroadcastChannel('ephemeris_sync_channel');
+        channel.postMessage({ type: 'ADMIN_SAVED_BOOKING' });
+        channel.close();
+      }
+    } catch {}
     setModalOpen(false);
     setEditingBooking(null);
   };
 
   const handleDelete = (id) => {
     const b = bookings.find((item) => item.id === id);
-    setBookings((prev) => prev.filter((item) => item.id !== id));
+    queryClient.invalidateQueries({ queryKey: queryKeys.bookings.all });
     showToast(`Booking ${b?.bookingCode || id} dihapus.`, 'error');
   };
 
   const handleReview = async (booking, nextStatus) => {
     try {
       setReviewingId(booking.id);
-      const response = await fetch(`/api/bookings/${booking.id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: nextStatus }),
-      });
-      const data = await response.json();
-      if (!response.ok) {
-        showToast(data.error || 'Review booking gagal.', 'error');
-        return;
-      }
+      const data = await updateMutation.mutateAsync({ id: booking.id, status: nextStatus });
       const updated = mapApiBooking(data.booking);
-      setBookings((prev) => prev.map((item) => item.id === booking.id ? updated : item));
       if (viewingBooking?.id === booking.id) setViewingBooking(updated);
+      setConfirmReviewModal(null);
+      try {
+        if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+          const channel = new BroadcastChannel('ephemeris_sync_channel');
+          channel.postMessage({ type: 'BOOKING_REVIEWED', bookingId: booking.id, status: nextStatus });
+          channel.close();
+        }
+      } catch {}
       showToast(`Booking ${booking.bookingCode} ${nextStatus === 'accepted' ? 'diterima' : 'ditolak'}.`);
     } catch (err) {
       showToast(err.message || 'Review booking gagal.', 'error');
@@ -834,11 +1062,12 @@ export default function BookingsPage() {
     }
   };
 
+
   return (
     <div className="fade-in-up">
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', padding: '16px 20px', marginBottom: 20, background: 'var(--bg-card)', border: '1px solid var(--border)' }}>
-        <div className="search-bar" style={{ maxWidth: 320 }}>
-          <input placeholder="Cari tamu, paket, kamar, staff..." value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }} />
+        <div className="search-bar" style={{ maxWidth: 360, flex: '1 1 260px' }}>
+          <input placeholder="Cari kode booking, nama paket, tamu, kamar, staf..." value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }} />
         </div>
         <div className="filter-bar">
           {OBJECT_TYPES.map((type) => (
@@ -886,7 +1115,17 @@ export default function BookingsPage() {
                 return (
                   <tr key={b.id}>
                     <td className="name-cell" onClick={() => setViewingBooking(b)}>{b.bookingCode}</td>
-                    <td>{b.clientName}</td>
+                    <td>
+                      <strong>{b.clientName}</strong><br />
+                      <span style={{ fontSize: 11, color: 'var(--text-dim)' }}>Room {b.roomNumber || '-'}</span>
+                      {b.resortName && (
+                        <div style={{ marginTop: 2 }}>
+                          <span style={{ fontSize: 10, fontWeight: 700, color: '#0891b2', background: 'rgba(8, 145, 178, 0.08)', padding: '2px 6px', borderRadius: 4, border: '1px solid rgba(8, 145, 178, 0.25)', display: 'inline-block' }}>
+                            🏝️ {b.resortName}
+                          </span>
+                        </div>
+                      )}
+                    </td>
                     <td><span className={`tag ${getTypeClass(b.packageType)}`}>{b.packageName}</span></td>
                     <td>{b.adultCount} adult / {b.childCount} child</td>
                     <td><span className="tag tag-info">{b.staffRole}</span><br /><span style={{ fontSize: 11, color: 'var(--text-dim)' }}>{b.staffName}</span></td>
@@ -896,8 +1135,24 @@ export default function BookingsPage() {
                       <div style={{ display: 'flex', gap: 4, justifyContent: 'center', flexWrap: 'wrap' }}>
                         {b.rawStatus === 'pending_review' && (
                           <>
-                            <button className="btn-icon" style={{ width: 'auto', padding: '0 8px', fontSize: 12, color: 'var(--emerald)' }} title="Terima booking" disabled={reviewingId === b.id} onClick={() => handleReview(b, 'accepted')}>Terima</button>
-                            <button className="btn-icon" style={{ width: 'auto', padding: '0 8px', fontSize: 12, color: 'var(--accent)' }} title="Tolak booking" disabled={reviewingId === b.id} onClick={() => handleReview(b, 'rejected')}>Tolak</button>
+                            <button
+                              className="btn btn-sm"
+                              style={{ background: 'var(--emerald, #059669)', color: 'white', border: 'none', fontWeight: 700, padding: '4px 8px', fontSize: 11 }}
+                              title="Terima booking"
+                              disabled={reviewingId === b.id}
+                              onClick={() => setConfirmReviewModal({ type: 'accepted', booking: b })}
+                            >
+                              ✓ Terima
+                            </button>
+                            <button
+                              className="btn btn-sm"
+                              style={{ background: 'var(--accent, #dc2626)', color: 'white', border: 'none', fontWeight: 700, padding: '4px 8px', fontSize: 11 }}
+                              title="Tolak booking"
+                              disabled={reviewingId === b.id}
+                              onClick={() => setConfirmReviewModal({ type: 'rejected', booking: b })}
+                            >
+                              ✕ Tolak
+                            </button>
                           </>
                         )}
                         <button className="btn-icon" style={{ fontSize: 12 }} title="Lihat" onClick={() => setViewingBooking(b)}>View</button>
@@ -933,8 +1188,17 @@ export default function BookingsPage() {
           onClose={() => setViewingBooking(null)}
           onEdit={(b) => { setEditingBooking(b); setModalOpen(true); }}
           onDelete={handleDelete}
-          onReview={handleReview}
+          onReview={(b, type) => setConfirmReviewModal({ type, booking: b })}
           reviewingId={reviewingId}
+        />
+      )}
+
+      {confirmReviewModal && (
+        <AdminConfirmReviewModal
+          modalData={confirmReviewModal}
+          onClose={() => setConfirmReviewModal(null)}
+          onConfirm={handleReview}
+          loading={Boolean(reviewingId)}
         />
       )}
 

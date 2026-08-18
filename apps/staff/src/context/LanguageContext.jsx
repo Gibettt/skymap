@@ -6,6 +6,7 @@ export const translations = {
   id: {
     // Navigation & Sidebar
     nav_dashboard: 'Dasbor',
+    nav_bookings: 'Daftar Booking',
     nav_booking_form: 'Form Booking',
     nav_package: 'Paket Observasi',
     nav_payout: 'Pencairan Komisi',
@@ -55,8 +56,8 @@ export const translations = {
     btn_add_child: '+ Tambah Data Anak',
     btn_remove: 'Hapus',
 
-    // Status Badges
-    status_pending_review: 'Menunggu Admin',
+    // Status Badges & Review
+    status_pending_review: 'Menunggu Review',
     status_accepted: 'Diterima',
     status_rejected: 'Ditolak',
     status_booked: 'Booked',
@@ -64,6 +65,30 @@ export const translations = {
     status_cancelled: 'Dibatalkan',
     tag_signed: '✓ Signed',
     tag_not_signed: '⏱ Not Signed',
+    btn_accept_booking: 'Terima',
+    btn_reject_booking: 'Tolak',
+    btn_confirm_accept: 'Setujui booking ini?',
+    btn_confirm_reject: 'Tolak booking ini?',
+    confirm_accept_title: 'Konfirmasi Persetujuan Booking',
+    confirm_reject_title: 'Konfirmasi Penolakan Booking',
+    confirm_accept_desc: 'Booking ini akan disetujui (Accepted) dan otomatis masuk ke jadwal operasional & kalender staf internal.',
+    confirm_reject_desc: 'Booking ini akan ditolak (Rejected) dan staf external pembuat booking akan menerima notifikasi status.',
+    btn_yes_accept: '✓ Ya, Setujui Booking',
+    btn_yes_reject: '✕ Ya, Tolak Booking',
+    btn_cancel_action: 'Batal',
+    modal_booking_details: 'Detail Reservasi',
+    notifications: 'Notifikasi',
+    loading_notifications: 'Mengambil data notifikasi...',
+    no_notifications: 'Belum ada notifikasi baru.',
+    open_notifications: 'Buka notifikasi',
+    notification_new_count: '{count} baru',
+    mark_all_read: 'Tandai Semua Dibaca',
+    filter_all: 'Semua Booking',
+    filter_pending_review: 'Perlu Review',
+    filter_internal: 'Booking Internal',
+    filter_external: 'Booking External',
+    search_booking_placeholder: 'Cari kode booking, nama package, tamu, kamar...',
+    clear_search: 'Reset',
 
     // Booking View Modal
     view_title: 'Detail Reservasi Staf Operasional',
@@ -261,6 +286,7 @@ export const translations = {
   en: {
     // Navigation & Sidebar
     nav_dashboard: 'Dashboard',
+    nav_bookings: 'Bookings',
     nav_booking_form: 'Booking Form',
     nav_package: 'Observation Packages',
     nav_payout: 'Commission Payout',
@@ -310,7 +336,7 @@ export const translations = {
     btn_add_child: '+ Add Child Data',
     btn_remove: 'Remove',
 
-    // Status Badges
+    // Status Badges & Review
     status_pending_review: 'Pending Review',
     status_accepted: 'Accepted',
     status_rejected: 'Rejected',
@@ -319,6 +345,30 @@ export const translations = {
     status_cancelled: 'Cancelled',
     tag_signed: '✓ Signed',
     tag_not_signed: '⏱ Not Signed',
+    btn_accept_booking: 'Accept',
+    btn_reject_booking: 'Reject',
+    btn_confirm_accept: 'Approve this booking?',
+    btn_confirm_reject: 'Reject this booking?',
+    confirm_accept_title: 'Confirm Booking Approval',
+    confirm_reject_title: 'Confirm Booking Rejection',
+    confirm_accept_desc: 'This booking will be confirmed (Accepted) and added to active operational schedules.',
+    confirm_reject_desc: 'This booking will be marked as rejected and the external staff will be notified.',
+    btn_yes_accept: '✓ Yes, Approve Booking',
+    btn_yes_reject: '✕ Yes, Reject Booking',
+    btn_cancel_action: 'Cancel',
+    modal_booking_details: 'Reservation Details',
+    notifications: 'Notifications',
+    loading_notifications: 'Loading notifications...',
+    no_notifications: 'No new notifications.',
+    open_notifications: 'Open notifications',
+    notification_new_count: '{count} new',
+    mark_all_read: 'Mark all as read',
+    filter_all: 'All Bookings',
+    filter_pending_review: 'Needs Review',
+    filter_internal: 'Internal Bookings',
+    filter_external: 'External Bookings',
+    search_booking_placeholder: 'Search booking code, package name, guest, room...',
+    clear_search: 'Reset',
 
     // Booking View Modal
     view_title: 'Operational Staff Reservation Detail',

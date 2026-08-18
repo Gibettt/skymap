@@ -1,0 +1,51 @@
+# =============================================================================
+# Dependabot Configuration — Ephemeris Monorepo
+# =============================================================================
+# Automatically opens PRs to keep dependencies up-to-date.
+# Covers both npm packages and GitHub Actions versions.
+# =============================================================================
+
+version: 2
+
+updates:
+  # ---------------------------------------------------------------------------
+  # npm ecosystem — monitors pnpm-lock.yaml for outdated packages
+  # ---------------------------------------------------------------------------
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:00"
+      timezone: "Asia/Jakarta"
+    # Group minor and patch updates into a single PR to reduce noise
+    groups:
+      minor-and-patch:
+        update-types:
+          - "minor"
+          - "patch"
+    # Limit the number of open PRs to keep the review queue manageable
+    open-pull-requests-limit: 10
+    # Prefix commit messages for easier identification
+    commit-message:
+      prefix: "deps"
+    labels:
+      - "dependencies"
+      - "npm"
+
+  # ---------------------------------------------------------------------------
+  # GitHub Actions — keeps workflow action versions current
+  # ---------------------------------------------------------------------------
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:00"
+      timezone: "Asia/Jakarta"
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "ci"
+    labels:
+      - "dependencies"
+      - "github-actions"

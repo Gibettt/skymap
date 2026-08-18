@@ -1,8 +1,7 @@
 import { assertSameOrigin, jsonError, parseJsonBody, requireUser, writeAudit } from '@ephemeris/auth';
 import { query, transaction } from '@ephemeris/db';
 import { createSkyEventSchema } from '@ephemeris/db/validators/sky-event';
-import { calculatedSkyEvents } from '@ephemeris/sky';
-import { filterPublicEvents, normalizeSkyEventInput } from '@ephemeris/sky';
+import { calculatedSkyEvents, filterPublicEvents, normalizeSkyEventInput, getOfficialPresets } from '@ephemeris/sky';
 
 const FALLBACK_LOCATION = { latitude: -6.2088, longitude: 106.8456 };
 
@@ -81,7 +80,62 @@ export async function POST(request) {
   try {
     await assertSameOrigin(request);
     const user = await requireUser(['admin']);
-    const parsed = createSkyEventSchema.safeParse(await parseJsonBody(request));
+    const body = await parseJsonBody(request);
+
+    // 1-Click Official Sync from NASA / IAU / IMO / ESA Presets
+    if (body.action === 'sync_official_calendar') {
+      const year = Number(body.year) || new Date().getFullYear();
+      const presets = getOfficialPresets(year);
+      let insertedCount = 0;
+
+      await transaction(async (client) => {
+        for (const preset of presets) {
+          const normalized = normalizeSkyEventInput(preset);
+          // Check if already exists by title
+          const existing = await client.query(
+            'SELECT id FROM sky_events WHERE title = $1 AND starts_at = $2::timestamptz LIMIT 1',
+            [normalized.title, normalized.startsAt]
+          );
+          if (existing.rows.length === 0) {
+            await client.query(
+              `INSERT INTO sky_events
+                (title, event_type, starts_at, ends_at, description, source_name, source_url, visibility, is_published, created_by, updated_by)
+               VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $10)`,
+              [
+                normalized.title,
+                normalized.eventType,
+                normalized.startsAt,
+                normalized.endsAt,
+                normalized.description,
+                normalized.sourceName,
+                normalized.sourceUrl,
+                normalized.visibility,
+                normalized.isPublished,
+                user.id,
+              ]
+            );
+            insertedCount++;
+          }
+        }
+
+        await writeAudit(client, {
+          actorId: user.id,
+          action: 'sky_event.sync_official',
+          entityType: 'sky_events',
+          entityId: null,
+          afterData: { year, insertedCount },
+          request,
+        });
+      });
+
+      return Response.json({
+        success: true,
+        message: `Berhasil menyinkronkan ${insertedCount} event astronomi resmi NASA, IAU, & IMO untuk tahun ${year}.`,
+        insertedCount,
+      });
+    }
+
+    const parsed = createSkyEventSchema.safeParse(body);
     if (!parsed.success) {
       return Response.json({ error: 'Data sky event tidak valid', details: parsed.error.flatten() }, { status: 400 });
     }

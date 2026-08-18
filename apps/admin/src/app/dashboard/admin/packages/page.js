@@ -1,6 +1,10 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import Image from 'next/image';
+import { useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
+import { AttachmentUpload } from '@/components/motion/AttachmentUpload';
+import { usePackagesQuery, useCreatePackageMutation, queryKeys, fetchApi } from '@/lib/apiQueries';
 
 const EMPTY = {
   name: '',
@@ -14,51 +18,53 @@ const EMPTY = {
   isActive: true,
 };
 
+const MAX_IMAGE_SIZE = 2 * 1024 * 1024;
+
 export default function AdminPackagesPage() {
-  const [packages, setPackages] = useState([]);
+  const queryClient = useQueryClient();
+  const { data: packages = [], isLoading, error } = usePackagesQuery();
+  const createMutation = useCreatePackageMutation();
+
   const [form, setForm] = useState(EMPTY);
+  const [imageItems, setImageItems] = useState([]);
   const [showForm, setShowForm] = useState(false);
   const [message, setMessage] = useState('');
 
-  const loadPackages = async () => {
-    const res = await fetch('/api/packages');
-    const data = await res.json();
-    if (res.ok) setPackages(data.packages || []);
-    else setMessage(data.error || 'Gagal memuat package.');
-  };
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      loadPackages();
-    }, 0);
-    return () => clearTimeout(timer);
-  }, []);
+  // Derived: the actual File object from the first (and only) attachment
+  const imageFile = imageItems[0]?.file ?? null;
 
   const createPackage = async (event) => {
     event.preventDefault();
-    const res = await fetch('/api/packages', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(form),
-    });
-    const data = await res.json();
-    if (!res.ok) {
-      setMessage(data.error || 'Package gagal dibuat.');
+    if (imageFile && imageFile.size > MAX_IMAGE_SIZE) {
+      setMessage('Gambar maksimal 2MB.');
       return;
     }
-    setForm(EMPTY);
-    setShowForm(false);
-    setMessage('Package dibuat.');
-    await loadPackages();
+    const payload = new FormData();
+    Object.entries(form).forEach(([key, value]) => payload.append(key, String(value ?? '')));
+    if (imageFile) payload.append('image', imageFile);
+
+    try {
+      await createMutation.mutateAsync(payload);
+      setForm(EMPTY);
+      setImageItems([]);
+      setShowForm(false);
+      setMessage('Package berhasil dibuat.');
+    } catch (err) {
+      setMessage(err.message || 'Package gagal dibuat.');
+    }
   };
 
   const toggleActive = async (pkg) => {
-    const res = await fetch(`/api/packages/${pkg.id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ isActive: !pkg.is_active }),
-    });
-    if (res.ok) await loadPackages();
+    try {
+      await fetchApi(`/api/packages/${pkg.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ isActive: !pkg.is_active }),
+      });
+      queryClient.invalidateQueries({ queryKey: queryKeys.packages.all });
+    } catch (err) {
+      setMessage(err.message || 'Gagal mengubah status package.');
+    }
   };
 
   return (
@@ -73,6 +79,8 @@ export default function AdminPackagesPage() {
         </button>
       </div>
       {message && <div className="external-booking-note" style={{ marginBottom: 16 }}>{message}</div>}
+      {error && <div className="external-booking-note" style={{ marginBottom: 16, borderColor: 'var(--accent)' }}>{error.message}</div>}
+
 
       {showForm && (
       <div className="card" style={{ marginBottom: 24 }}>
@@ -88,6 +96,24 @@ export default function AdminPackagesPage() {
             <Input label="Adult Price USD" type="number" min="0" value={form.adultPriceUsd} onChange={(value) => setForm({ ...form, adultPriceUsd: value })} required />
             <Input label="Child Price USD" type="number" min="0" value={form.childPriceUsd} onChange={(value) => setForm({ ...form, childPriceUsd: value })} />
             <Input label="Estimasi Umur Anak" value={form.childAgeRange} onChange={(value) => setForm({ ...form, childAgeRange: value })} placeholder="Contoh: 6 - 15 tahun" />
+            <div className="input-group">
+              <span className="input-label">Gambar Package</span>
+              <AttachmentUpload
+                value={imageItems}
+                onValueChange={setImageItems}
+                onFilesRejected={(files, reason) => {
+                  if (reason === 'too-large') setMessage('Gambar maksimal 2MB.');
+                  else setMessage('Hanya 1 gambar yang diperbolehkan.');
+                }}
+                multiple={false}
+                maxFiles={1}
+                maxFileSize={MAX_IMAGE_SIZE}
+                accept="image/jpeg,image/png,image/webp"
+                title="Drag & drop atau pilih gambar"
+                description="JPEG, PNG, WebP — maks 2MB"
+                attachmentsLabel="Gambar dipilih"
+              />
+            </div>
             <label className="input-group" style={{ gridColumn: 'span 2' }}>
               <span className="input-label">Deskripsi Singkat</span>
               <textarea className="input" rows="2" maxLength="240" value={form.description} onChange={(event) => setForm({ ...form, description: event.target.value })} placeholder="Ringkasan singkat isi package untuk staff." />
@@ -114,6 +140,7 @@ export default function AdminPackagesPage() {
             <thead>
               <tr>
                 <th>Name</th>
+                <th>Image</th>
                 <th>Type</th>
                 <th>Experience</th>
                 <th>Location</th>
@@ -128,6 +155,7 @@ export default function AdminPackagesPage() {
               {packages.map((pkg) => (
                 <tr key={pkg.id}>
                   <td className="name-cell">{pkg.name}</td>
+                  <td>{pkg.image_url ? <Image src={pkg.image_url} alt={pkg.name} width={54} height={36} unoptimized style={{ objectFit: 'cover', border: '1px solid var(--border)' }} /> : '-'}</td>
                   <td>{pkg.package_type}</td>
                   <td>{pkg.experience_type}</td>
                   <td>{pkg.location}</td>

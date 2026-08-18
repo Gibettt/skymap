@@ -3,5 +3,5 @@
 import FamilyBookingForm from '@/components/FamilyBookingForm';
 
 export default function ExternalFormBookingPage() {
-  return <FamilyBookingForm basePath="/dashboard/external" listMode />;
+  return <FamilyBookingForm basePath="/dashboard/external" />;
 }
