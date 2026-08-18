@@ -166,7 +166,7 @@ jobs:
       #    Uploads .next output from all three apps (landing, admin, staff)
       # -----------------------------------------------------------------------
       - name: Upload build artifacts (landing)
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: build-landing
           path: apps/landing/.next
@@ -174,7 +174,7 @@ jobs:
           if-no-files-found: warn
 
       - name: Upload build artifacts (admin)
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: build-admin
           path: apps/admin/.next
@@ -182,7 +182,7 @@ jobs:
           if-no-files-found: warn
 
       - name: Upload build artifacts (staff)
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: build-staff
           path: apps/staff/.next
