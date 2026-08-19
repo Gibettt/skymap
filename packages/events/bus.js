@@ -49,9 +49,10 @@ class EventBus {
     const db = client || { query: defaultQuery };
     let eventRecordId = null;
 
-    // 1. Durability / Event Outbox: log to domain_events table
     if (!skipLogging) {
+      const sp = `sp_event_log_${Date.now()}_${Math.floor(Math.random()*1000)}`;
       try {
+        await db.query(`SAVEPOINT ${sp}`);
         const { rows } = await db.query(
           `INSERT INTO domain_events (event_type, payload, actor_id, created_at)
            VALUES ($1, $2::jsonb, $3, now())
@@ -61,8 +62,9 @@ class EventBus {
         if (rows && rows[0]) {
           eventRecordId = rows[0].id;
         }
+        await db.query(`RELEASE SAVEPOINT ${sp}`);
       } catch (logError) {
-        // Logging error should not halt execution, but should be reported
+        await db.query(`ROLLBACK TO SAVEPOINT ${sp}`);
         console.error(`[event-bus] Failed to persist domain_event '${eventType}':`, logError.message);
       }
     }
@@ -81,22 +83,28 @@ class EventBus {
     const allHandlers = [...specificHandlers, ...wildcardHandlers];
 
     for (const handler of allHandlers) {
+      const spHandler = `sp_handler_${Date.now()}_${Math.floor(Math.random()*1000)}`;
       try {
+        await db.query(`SAVEPOINT ${spHandler}`);
         await handler(payload, context);
+        await db.query(`RELEASE SAVEPOINT ${spHandler}`);
       } catch (handlerError) {
+        await db.query(`ROLLBACK TO SAVEPOINT ${spHandler}`);
         console.error(`[event-bus] Error in handler for '${eventType}':`, handlerError);
       }
     }
 
-    // 3. Mark processed in domain_events if recorded
     if (eventRecordId) {
+      const sp2 = `sp_event_proc_${Date.now()}_${Math.floor(Math.random()*1000)}`;
       try {
+        await db.query(`SAVEPOINT ${sp2}`);
         await db.query(
           `UPDATE domain_events SET processed_at = now() WHERE id = $1`,
           [eventRecordId]
         );
+        await db.query(`RELEASE SAVEPOINT ${sp2}`);
       } catch (_) {
-        // Ignored non-critical update
+        await db.query(`ROLLBACK TO SAVEPOINT ${sp2}`);
       }
     }
 

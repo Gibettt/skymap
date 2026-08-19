@@ -1075,9 +1075,24 @@ export default function BookingsPage() {
           ))}
         </div>
         <div style={{ marginLeft: 'auto', display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-          {STATUS_FILTERS.filter((status) => status !== 'Semua').map((status) => (
-            <button key={status} className={`chip ${statusFilter === status ? 'active' : ''}`} onClick={() => { setStatusFilter(statusFilter === status ? 'Semua' : status); setPage(1); }}>{status}</button>
-          ))}
+          {STATUS_FILTERS.filter((status) => status !== 'Semua').map((status) => {
+            const isPending = status === 'Menunggu Admin';
+            const count = isPending ? bookings.filter((b) => b.status === 'Menunggu Admin' || b.status === 'pending_review' || b.status === 'Pending Review').length : 0;
+            return (
+              <button 
+                key={status} 
+                className={`chip ${statusFilter === status ? 'active' : ''}`} 
+                onClick={() => { setStatusFilter(statusFilter === status ? 'Semua' : status); setPage(1); }}
+              >
+                {status}
+                {isPending && count > 0 && (
+                  <span style={{ marginLeft: 6, background: '#ef4444', color: '#fff', borderRadius: '12px', padding: '2px 6px', fontSize: '10px', fontWeight: 'bold' }}>
+                    {count}
+                  </span>
+                )}
+              </button>
+            );
+          })}
         </div>
         <button className="btn btn-primary btn-sm" onClick={() => { setEditingBooking(null); setModalOpen(true); }}>+ Booking Baru</button>
       </div>

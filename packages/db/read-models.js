@@ -167,7 +167,13 @@ export async function getBookingPipeline(clientOrPool) {
 export async function refreshMaterializedViews(clientOrPool) {
   const db = clientOrPool || { query: defaultQuery };
   try {
-    await db.query(`SELECT refresh_all_materialized_views()`);
+    await db.query(`
+      REFRESH MATERIALIZED VIEW mv_dashboard_kpi;
+      REFRESH MATERIALIZED VIEW mv_booking_pipeline;
+      REFRESH MATERIALIZED VIEW mv_monthly_revenue;
+      REFRESH MATERIALIZED VIEW mv_staff_performance;
+      REFRESH MATERIALIZED VIEW mv_resort_analytics;
+    `);
     return true;
   } catch (error) {
     console.error('[cqrs:read-models] Failed to refresh materialized views:', error);
@@ -180,11 +186,15 @@ export async function refreshMaterializedViews(clientOrPool) {
  */
 export async function refreshMaterializedView(viewName, clientOrPool) {
   const db = clientOrPool || { query: defaultQuery };
+  const savepoint = `sp_refresh_${viewName}`;
   try {
-    await db.query(`SELECT refresh_materialized_view($1)`, [viewName]);
+    await db.query(`SAVEPOINT ${savepoint}`);
+    await db.query(`REFRESH MATERIALIZED VIEW ${viewName}`);
+    await db.query(`RELEASE SAVEPOINT ${savepoint}`);
     return true;
   } catch (error) {
-    console.error(`[cqrs:read-models] Failed to refresh view ${viewName}:`, error);
+    await db.query(`ROLLBACK TO SAVEPOINT ${savepoint}`);
+    console.error(`[cqrs:read-models] Failed to refresh view ${viewName}:`, error.message);
     return false;
   }
 }

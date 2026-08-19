@@ -45,7 +45,7 @@ export function useCurrentUserQuery(options = {}) {
   return useQuery({
     queryKey: queryKeys.me.current(),
     queryFn: async () => {
-      const data = await fetchApi('/api/me');
+      const data = await fetchApi('/api/me', { cache: 'no-store' });
       return data.user || null;
     },
     staleTime: 10 * 60 * 1000,
@@ -58,9 +58,10 @@ export function useStaffBookingsQuery(options = {}) {
   return useQuery({
     queryKey: queryKeys.bookings.all,
     queryFn: async () => {
-      const data = await fetchApi('/api/bookings');
+      const data = await fetchApi('/api/bookings', { cache: 'no-store' });
       return data.bookings || [];
     },
+    refetchInterval: 4000,
     ...options,
   });
 }
@@ -112,7 +113,7 @@ export function useStaffPayoutsQuery(options = {}) {
   return useQuery({
     queryKey: queryKeys.payouts.all,
     queryFn: async () => {
-      const data = await fetchApi('/api/payouts');
+      const data = await fetchApi('/api/payouts', { cache: 'no-store' });
       return data.payouts || [];
     },
     ...options,

@@ -181,6 +181,20 @@ export default function StaffBookingsClient({ role }) {
     });
   }, [bookings, role, filterTab, search]);
 
+  const PER_PAGE = 10;
+  const [page, setPage] = useState(1);
+  const totalPages = Math.max(1, Math.ceil(filteredBookings.length / PER_PAGE));
+
+  useEffect(() => {
+    setPage(1);
+  }, [filterTab, search]);
+
+  const paginatedBookings = useMemo(() => {
+    const p = Math.min(Math.max(1, page), totalPages);
+    return filteredBookings.slice((p - 1) * PER_PAGE, p * PER_PAGE);
+  }, [filteredBookings, page, totalPages]);
+
+
   const updateBooking = async (booking, patch) => {
     try {
       await updateMutation.mutateAsync({ id: booking.id, ...patch });
@@ -327,7 +341,7 @@ export default function StaffBookingsClient({ role }) {
             </thead>
             <tbody>
               {loading && <tr><td colSpan={role === 'internal' ? 9 : 8} style={{ textAlign: 'center', padding: 36 }}>{language === 'en' ? 'Loading...' : 'Memuat...'}</td></tr>}
-              {!loading && filteredBookings.map((booking) => (
+              {!loading && paginatedBookings.map((booking) => (
                 <tr key={booking.id}>
                   <td className="name-cell">
                     <strong>{booking.booking_code}</strong>
@@ -409,6 +423,18 @@ export default function StaffBookingsClient({ role }) {
               )}
             </tbody>
           </table>
+        </div>
+        <div className="pagination" style={{ padding: '16px 20px' }}>
+          <span className="pagination-info">
+            {language === 'en' ? 'Showing ' : 'Menampilkan '}{filteredBookings.length > 0 ? Math.min((page - 1) * PER_PAGE + 1, filteredBookings.length) : 0}-{Math.min(page * PER_PAGE, filteredBookings.length)}{language === 'en' ? ' of ' : ' dari '}{filteredBookings.length}
+          </span>
+          <div className="pagination-controls">
+            <button className="page-btn" disabled={page === 1} onClick={() => setPage(1)}>First</button>
+            <button className="page-btn" disabled={page === 1} onClick={() => setPage((p) => p - 1)}>Prev</button>
+            <button className="page-btn active">{page}</button>
+            <button className="page-btn" disabled={page === totalPages || totalPages === 0} onClick={() => setPage((p) => p + 1)}>Next</button>
+            <button className="page-btn" disabled={page === totalPages || totalPages === 0} onClick={() => setPage(totalPages)}>Last</button>
+          </div>
         </div>
       </div>
 

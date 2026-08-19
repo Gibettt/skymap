@@ -1,0 +1,1 @@
+import pg from 'pg'; const p = new pg.Pool({connectionString: 'postgres://postgres:postgres@localhost:5432/ephemeris'}); p.query('SELECT COUNT(*) FROM bookings').then(c => console.log('Total:', c.rows[0].count)); p.query('SELECT id, booking_code, guest_name, created_at, status FROM bookings ORDER BY created_at DESC LIMIT 5').then(r => { console.table(r.rows); p.end(); });

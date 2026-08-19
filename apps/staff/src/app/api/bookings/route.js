@@ -69,8 +69,10 @@ export async function POST(request) {
   try {
     await assertSameOrigin(request);
     const user = await requireUser();
+    console.log('[POST /api/bookings] user:', user?.id, user?.role, 'resort_id:', user?.resort_id);
     const parsed = createBookingSchema.safeParse(await parseJsonBody(request));
     if (!parsed.success) {
+      console.error('[POST /api/bookings] validation error:', JSON.stringify(parsed.error.flatten()));
       return Response.json({ error: 'Data booking tidak valid', details: parsed.error.flatten() }, { status: 400 });
     }
     const data = parsed.data;
@@ -262,8 +264,8 @@ export async function POST(request) {
         request,
       });
 
-      // Emit domain event and refresh CQRS views
-      await emit(EventTypes.BOOKING_CREATED, {
+      // Emit domain event and refresh CQRS views (run outside transaction to prevent silent aborts on failure)
+      emit(EventTypes.BOOKING_CREATED, {
         bookingId: booking.id,
         bookingCode: booking.booking_code,
         guestName: booking.guest_name,
@@ -274,15 +276,16 @@ export async function POST(request) {
         creatorName: staff.rows[0]?.name || user.name,
         resortName,
         resortId,
-      }, { client, actorId: user.id });
+      }, { actorId: user.id, skipLogging: true }).catch(console.error);
 
-      await refreshAfterBookingChange(client);
+      refreshAfterBookingChange().catch(console.error);
 
       return booking;
     });
 
     return Response.json({ booking: created }, { status: 201 });
   } catch (error) {
+    console.error('[POST /api/bookings] error:', error?.message || error);
     return jsonError(error);
   }
 }

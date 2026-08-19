@@ -209,6 +209,13 @@ export default function FamilyBookingForm({ basePath, fixedSlug = null, staticEx
               leadGuestPackages: current.leadGuestPackages.length ? current.leadGuestPackages : [matched.id],
             }));
           }
+        } else if (pkgs.length > 0) {
+          // Jika tidak ada fixedSlug, auto-pilih package pertama sebagai default
+          // agar user tidak perlu manual mencentang sebelum submit
+          setForm((current) => ({
+            ...current,
+            leadGuestPackages: current.leadGuestPackages.length ? current.leadGuestPackages : [pkgs[0].id],
+          }));
         }
       })
       .catch((error) => {
@@ -475,40 +482,52 @@ export default function FamilyBookingForm({ basePath, fixedSlug = null, staticEx
 
     setSubmitting(true);
     const { start, end } = splitTimeSlot(selectedTimeSlot);
-    const response = await fetch(editingBooking ? `/api/bookings/${editingBooking.id}` : '/api/bookings', {
-      method: editingBooking ? 'PATCH' : 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        packageId: submitPackage.id,
-        eventDate: form.eventDate,
-        timeStart: start,
-        timeEnd: end,
-        guestName: form.leadGuestName,
-        guestPhone: form.leadGuestPhone,
-        guestEmail: form.leadGuestEmail || null,
-        preferredLanguage: form.preferredLanguage,
-        roomNumber: form.roomNumber,
-        nationality: form.nationality,
-        adultCount: Number(form.adultCount),
-        childCount: Number(form.children.length),
-        childAges: childAgesSummary,
-        specialOccasion: form.specialOccasion,
-        guardianName: form.leadGuestName,
-        guardianPhone: form.leadGuestPhone,
-        seatingSetup: form.seatingSetup,
-        photoRequest: form.photoRequest,
-        privacyPreference: form.privacyPreference,
-        dietaryRestrictions: form.dietaryRestrictions,
-        rescheduleConsent: form.rescheduleConsent,
-        slotStatus: form.slotStatus,
-        bookingSource: 'WhatsApp',
-        paymentMethod: form.paymentMethod,
-        addOns,
-        packageNotes: buildFamilyNotes(),
-        notes: form.notes,
-      }),
-    });
-    const data = await response.json();
+    let response, data;
+    try {
+      response = await fetch(editingBooking ? `/api/bookings/${editingBooking.id}` : '/api/bookings', {
+        method: editingBooking ? 'PATCH' : 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          packageId: submitPackage.id,
+          eventDate: form.eventDate,
+          timeStart: start,
+          timeEnd: end,
+          guestName: form.leadGuestName,
+          guestPhone: form.leadGuestPhone,
+          guestEmail: form.leadGuestEmail || null,
+          preferredLanguage: form.preferredLanguage,
+          roomNumber: form.roomNumber,
+          nationality: form.nationality,
+          adultCount: Number(form.adultCount),
+          childCount: Number(form.children.length),
+          childAges: childAgesSummary,
+          specialOccasion: form.specialOccasion,
+          guardianName: form.leadGuestName,
+          guardianPhone: form.leadGuestPhone,
+          seatingSetup: form.seatingSetup,
+          photoRequest: form.photoRequest,
+          privacyPreference: form.privacyPreference,
+          dietaryRestrictions: form.dietaryRestrictions,
+          rescheduleConsent: form.rescheduleConsent,
+          slotStatus: form.slotStatus,
+          bookingSource: 'WhatsApp',
+          paymentMethod: form.paymentMethod,
+          addOns,
+          packageNotes: buildFamilyNotes(),
+          notes: form.notes,
+        }),
+      });
+      data = await response.json();
+    } catch (fetchErr) {
+      setSubmitting(false);
+      const errMsg = language === 'en'
+        ? `Network error: ${fetchErr.message}. Check your connection.`
+        : `Gagal mengirim data: ${fetchErr.message}. Periksa koneksi Anda.`;
+      console.error('[FamilyBookingForm] fetch error:', fetchErr);
+      setToast({ type: 'error', msg: errMsg });
+      setTimeout(() => setToast(null), 8000);
+      return;
+    }
     setSubmitting(false);
 
     if (!response.ok) {
@@ -517,7 +536,10 @@ export default function FamilyBookingForm({ basePath, fixedSlug = null, staticEx
             .map(([f, errs]) => `${f}: ${Array.isArray(errs) ? errs.join(', ') : errs}`)
             .join(' | ')
         : '';
-      showToast('error', detailsMsg ? `${data.error}: ${detailsMsg}` : data.error || t('form_submit_error'));
+      const errorMsg = detailsMsg ? `${data.error}: ${detailsMsg}` : data.error || t('form_submit_error');
+      console.error('[FamilyBookingForm] POST error:', response.status, errorMsg, data);
+      setToast({ type: 'error', msg: errorMsg });
+      setTimeout(() => setToast(null), 8000);
       return;
     }
 
@@ -531,7 +553,11 @@ export default function FamilyBookingForm({ basePath, fixedSlug = null, staticEx
     } catch {
       // ignore
     }
-    setForm(initialForm());
+    const defaultPackageId = !fixedSlug && packages.length > 0 ? packages[0].id : undefined;
+    setForm({
+      ...initialForm(),
+      leadGuestPackages: defaultPackageId ? [defaultPackageId] : [],
+    });
     setEditingBooking(null);
     if (basePath) {
       setTimeout(() => {
@@ -542,7 +568,11 @@ export default function FamilyBookingForm({ basePath, fixedSlug = null, staticEx
 
   const startCreate = () => {
     setEditingBooking(null);
-    setForm(initialForm());
+    const defaultPackageId = !fixedSlug && packages.length > 0 ? packages[0].id : undefined;
+    setForm({
+      ...initialForm(),
+      leadGuestPackages: defaultPackageId ? [defaultPackageId] : [],
+    });
     setShowForm(true);
   };
 
@@ -1203,7 +1233,7 @@ export default function FamilyBookingForm({ basePath, fixedSlug = null, staticEx
           )}
 
           <div className="booking-submit-row">
-            <button type="submit" className="btn btn-primary" style={{ background: '#7c3aed' }} disabled={submitting}>
+            <button type="submit" className="btn btn-primary" style={{ background: '#7c3aed', opacity: (!canSubmitPackage || submitting) ? 0.5 : 1 }} disabled={submitting || !canSubmitPackage}>
               {submitting ? t('btn_saving') : editingBooking ? t('btn_update_booking') : t('btn_submit')}
             </button>
             <button type="button" className="btn btn-secondary" onClick={handleCheckAvailability}>

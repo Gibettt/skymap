@@ -10,13 +10,10 @@ import { refreshMaterializedView, refreshMaterializedViews } from './read-models
  */
 export async function refreshAfterBookingChange(clientOrPool) {
   try {
-    // Non-blocking refresh of key booking views
-    await Promise.allSettled([
-      refreshMaterializedView('mv_dashboard_kpi', clientOrPool),
-      refreshMaterializedView('mv_booking_pipeline', clientOrPool),
-      refreshMaterializedView('mv_monthly_revenue', clientOrPool),
-      refreshMaterializedView('mv_staff_performance', clientOrPool),
-    ]);
+    await refreshMaterializedView('mv_dashboard_kpi', clientOrPool);
+    await refreshMaterializedView('mv_booking_pipeline', clientOrPool);
+    await refreshMaterializedView('mv_monthly_revenue', clientOrPool);
+    await refreshMaterializedView('mv_staff_performance', clientOrPool);
   } catch (error) {
     console.error('[cqrs:commands] Failed to refresh views after booking change:', error);
   }
@@ -27,10 +24,8 @@ export async function refreshAfterBookingChange(clientOrPool) {
  */
 export async function refreshAfterPayoutChange(clientOrPool) {
   try {
-    await Promise.allSettled([
-      refreshMaterializedView('mv_staff_performance', clientOrPool),
-      refreshMaterializedView('mv_dashboard_kpi', clientOrPool),
-    ]);
+    await refreshMaterializedView('mv_staff_performance', clientOrPool);
+    await refreshMaterializedView('mv_dashboard_kpi', clientOrPool);
   } catch (error) {
     console.error('[cqrs:commands] Failed to refresh views after payout change:', error);
   }
@@ -41,10 +36,8 @@ export async function refreshAfterPayoutChange(clientOrPool) {
  */
 export async function refreshAfterResortChange(clientOrPool) {
   try {
-    await Promise.allSettled([
-      refreshMaterializedView('mv_resort_analytics', clientOrPool),
-      refreshMaterializedView('mv_dashboard_kpi', clientOrPool),
-    ]);
+    await refreshMaterializedView('mv_resort_analytics', clientOrPool);
+    await refreshMaterializedView('mv_dashboard_kpi', clientOrPool);
   } catch (error) {
     console.error('[cqrs:commands] Failed to refresh views after resort change:', error);
   }
