@@ -49,22 +49,35 @@ class EventBus {
     const db = client || { query: defaultQuery };
     let eventRecordId = null;
 
-    if (!skipLogging) {
-      const sp = `sp_event_log_${Date.now()}_${Math.floor(Math.random()*1000)}`;
+    const useSavepoints = Boolean(client);
+
+    const isolated = async (label, work) => {
+      if (!useSavepoints) return work();
+      const savepoint = `sp_${label}_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
+      await db.query(`SAVEPOINT ${savepoint}`);
       try {
-        await db.query(`SAVEPOINT ${sp}`);
-        const { rows } = await db.query(
-          `INSERT INTO domain_events (event_type, payload, actor_id, created_at)
-           VALUES ($1, $2::jsonb, $3, now())
-           RETURNING id`,
-          [eventType, JSON.stringify(payload), actorId]
-        );
-        if (rows && rows[0]) {
-          eventRecordId = rows[0].id;
-        }
-        await db.query(`RELEASE SAVEPOINT ${sp}`);
+        const result = await work();
+        await db.query(`RELEASE SAVEPOINT ${savepoint}`);
+        return result;
+      } catch (error) {
+        await db.query(`ROLLBACK TO SAVEPOINT ${savepoint}`);
+        await db.query(`RELEASE SAVEPOINT ${savepoint}`);
+        throw error;
+      }
+    };
+
+    if (!skipLogging) {
+      try {
+        await isolated('event_log', async () => {
+          const { rows } = await db.query(
+            `INSERT INTO domain_events (event_type, payload, actor_id, created_at)
+             VALUES ($1, $2::jsonb, $3, now())
+             RETURNING id`,
+            [eventType, JSON.stringify(payload), actorId]
+          );
+          eventRecordId = rows?.[0]?.id || null;
+        });
       } catch (logError) {
-        await db.query(`ROLLBACK TO SAVEPOINT ${sp}`);
         console.error(`[event-bus] Failed to persist domain_event '${eventType}':`, logError.message);
       }
     }
@@ -83,29 +96,20 @@ class EventBus {
     const allHandlers = [...specificHandlers, ...wildcardHandlers];
 
     for (const handler of allHandlers) {
-      const spHandler = `sp_handler_${Date.now()}_${Math.floor(Math.random()*1000)}`;
       try {
-        await db.query(`SAVEPOINT ${spHandler}`);
-        await handler(payload, context);
-        await db.query(`RELEASE SAVEPOINT ${spHandler}`);
+        await isolated('handler', () => handler(payload, context));
       } catch (handlerError) {
-        await db.query(`ROLLBACK TO SAVEPOINT ${spHandler}`);
         console.error(`[event-bus] Error in handler for '${eventType}':`, handlerError);
       }
     }
 
     if (eventRecordId) {
-      const sp2 = `sp_event_proc_${Date.now()}_${Math.floor(Math.random()*1000)}`;
       try {
-        await db.query(`SAVEPOINT ${sp2}`);
-        await db.query(
-          `UPDATE domain_events SET processed_at = now() WHERE id = $1`,
+        await isolated('event_processed', () => db.query(
+          'UPDATE domain_events SET processed_at = now() WHERE id = $1',
           [eventRecordId]
-        );
-        await db.query(`RELEASE SAVEPOINT ${sp2}`);
-      } catch (_) {
-        await db.query(`ROLLBACK TO SAVEPOINT ${sp2}`);
-      }
+        ));
+      } catch {}
     }
 
     return {

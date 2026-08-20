@@ -3,11 +3,25 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import StaffSidebar from '@/components/StaffSidebar';
 import StaffHeader from '@/components/StaffHeader';
-import { BOOKINGS } from '@/data/bookings';
 
 export default function InternalLayout({ children }) {
-  const bookingCount = BOOKINGS.length;
+  const [bookingCount, setBookingCount] = useState(0);
   const [sidebarOpen, setSidebarOpen] = useState(true);
+
+  useEffect(() => {
+    let alive = true;
+    fetch('/api/bookings')
+      .then((response) => response.ok ? response.json() : Promise.reject(new Error('Failed to load booking count.')))
+      .then((data) => {
+        if (alive) setBookingCount(Array.isArray(data.bookings) ? data.bookings.length : 0);
+      })
+      .catch(() => {
+        if (alive) setBookingCount(0);
+      });
+    return () => {
+      alive = false;
+    };
+  }, []);
 
   // Close sidebar by default on mobile screens
   useEffect(() => {

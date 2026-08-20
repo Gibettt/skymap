@@ -1,4 +1,5 @@
 import { STATION_DATA } from './stations';
+import { formatPackageInclusions, normalizePackageInclusions } from '@ephemeris/db/package-content';
 
 const bosscha = STATION_DATA.find((s) => s.short === 'LBG');
 const paranal = STATION_DATA.find((s) => s.short === 'PRN');
@@ -319,14 +320,7 @@ export function getPackageSlug(pkg) {
 }
 
 export function getPackageNavItems(packages) {
-  if (!packages.length) {
-    return OBSERVATION_EXPERIENCES.map((exp) => ({
-      slug: exp.slug,
-      title: exp.title,
-      icon: exp.icon,
-      price: exp.price,
-    }));
-  }
+  if (!packages.length) return [];
 
   return packages.map((pkg) => {
     const exp = getObservationBySlug(getPackageSlug(pkg));
@@ -340,6 +334,7 @@ export function getPackageNavItems(packages) {
       title: exp?.title || pkg.name,
       icon: exp?.icon || (pkg.package_type === 'kids' ? '+' : pkg.package_type === 'private' ? '*' : 'o'),
       price,
+      inclusions: formatPackageInclusions(pkg.inclusions),
     };
   });
 }
@@ -353,27 +348,29 @@ export function getExperienceForPackage(pkg) {
   if (!pkg) return null;
 
   const staticExperience = getObservationBySlug(getPackageSlug(pkg));
-  if (staticExperience) return staticExperience;
-
   const typeLabel = formatPackageType(pkg.package_type);
-  const price = [
-    `Adult ${formatUsd(pkg.adult_price_usd)}`,
-    pkg.child_price_usd === null ? null : `Child ${formatUsd(pkg.child_price_usd)}`,
-  ].filter(Boolean).join(' / ');
+  const price = pkg.is_chargeable === false
+    ? 'Complimentary'
+    : [
+        `Adult ${formatUsd(pkg.adult_price_usd)}`,
+        pkg.child_price_usd === null ? null : `Child ${formatUsd(pkg.child_price_usd)}`,
+      ].filter(Boolean).join(' / ');
+  const inclusions = normalizePackageInclusions(pkg.inclusions);
 
   return {
-    slug: pkg.id,
+    ...(staticExperience || {}),
+    slug: getPackageSlug(pkg),
     title: pkg.name,
-    icon: pkg.package_type === 'kids' ? '+' : pkg.package_type === 'private' ? '*' : 'o',
+    icon: staticExperience?.icon || (pkg.package_type === 'kids' ? '+' : pkg.package_type === 'private' ? '*' : 'o'),
     kind: pkg.experience_type || 'resort',
-    image: pkg.image_url || (pkg.package_type === 'private' ? '/stargazing-assets/experience-5.jpg' : '/stargazing-assets/experience-3.jpg'),
-    tagline: `${typeLabel} package at ${pkg.location}.`,
-    tip: {
+    image: pkg.image_url || staticExperience?.image || (pkg.package_type === 'private' ? '/stargazing-assets/experience-5.jpg' : '/stargazing-assets/experience-3.jpg'),
+    tagline: staticExperience?.tagline || `${typeLabel} package at ${pkg.location}.`,
+    tip: staticExperience?.tip || {
       icon: 'i',
       title: 'Package Baru',
       body: 'Package ini dibuat dari admin dan sudah aktif untuk staff internal dan external.',
     },
-    schedule: {
+    schedule: staticExperience?.schedule || {
       days: ['Upon request'],
       time: '21:00 - 22:00',
       display: 'Upon request, 21:00 - 22:00',
@@ -383,13 +380,14 @@ export function getExperienceForPackage(pkg) {
       { icon: '$', label: 'Type', value: typeLabel },
       { icon: '@', label: 'Location', value: pkg.location },
       { icon: '#', label: 'Experience', value: formatPackageType(pkg.experience_type) },
+      ...(inclusions.length ? [{ icon: '+', label: 'Includes', value: inclusions.join(', ') }] : []),
       { icon: '$', label: 'Price', value: price },
     ],
     price,
     ageLimit: pkg.child_age_range || (pkg.package_type === 'kids' ? 'Kids package' : null),
     description: pkg.description || `${pkg.name} adalah package aktif yang dibuat oleh admin untuk proses booking staff.`,
-    highlights: [typeLabel, formatPackageType(pkg.experience_type), 'Admin Package'],
-    whatYouSee: [
+    highlights: inclusions.length ? inclusions : (staticExperience?.highlights || [typeLabel, formatPackageType(pkg.experience_type), 'Admin Package']),
+    whatYouSee: staticExperience?.whatYouSee || [
       { icon: 'o', label: 'Moon' },
       { icon: '*', label: 'Stars' },
       { icon: '+', label: 'Constellations' },

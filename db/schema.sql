@@ -23,7 +23,7 @@ EXCEPTION WHEN duplicate_object THEN NULL;
 END $$;
 
 DO $$ BEGIN
-  CREATE TYPE booking_status AS ENUM ('pending_review', 'accepted', 'rejected', 'booked', 'finished_experience', 'cancelled');
+  CREATE TYPE booking_status AS ENUM ('pending', 'active', 'completed', 'cancelled_by_guest', 'cancelled_weather', 'rescheduled');
 EXCEPTION WHEN duplicate_object THEN NULL;
 END $$;
 
@@ -45,6 +45,9 @@ CREATE TABLE IF NOT EXISTS resorts (
   timezone text NOT NULL DEFAULT 'Indian/Maldives',
   contact_name text,
   contact_phone text,
+  contact_email varchar(254),
+  whatsapp_number varchar(32),
+  slug varchar(120) UNIQUE,
   status user_status NOT NULL DEFAULT 'active',
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz NOT NULL DEFAULT now()
@@ -65,11 +68,14 @@ CREATE TABLE IF NOT EXISTS users (
 
 CREATE TABLE IF NOT EXISTS packages (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  name text NOT NULL UNIQUE,
+  name text NOT NULL,
   package_type package_type NOT NULL,
   experience_type experience_type NOT NULL,
   location text NOT NULL,
   description text,
+  schedule text NOT NULL DEFAULT 'Upon request' CHECK (char_length(btrim(schedule)) BETWEEN 1 AND 120),
+  resort_id uuid REFERENCES resorts(id),
+  is_chargeable boolean NOT NULL DEFAULT true,
   image_data bytea,
   image_mime_type text CHECK (image_mime_type IS NULL OR image_mime_type IN ('image/jpeg', 'image/png', 'image/webp')),
   image_file_name text,
@@ -80,6 +86,17 @@ CREATE TABLE IF NOT EXISTS packages (
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz NOT NULL DEFAULT now(),
   CHECK (image_data IS NULL OR octet_length(image_data) <= 2097152)
+);
+
+CREATE TABLE IF NOT EXISTS package_inclusions (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  package_id uuid NOT NULL REFERENCES packages(id) ON DELETE CASCADE,
+  label varchar(120) NOT NULL CHECK (char_length(btrim(label)) BETWEEN 1 AND 120),
+  sort_order integer NOT NULL CHECK (sort_order >= 0),
+  is_active boolean NOT NULL DEFAULT true,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now(),
+  UNIQUE (package_id, sort_order)
 );
 
 CREATE TABLE IF NOT EXISTS bookings (
@@ -109,11 +126,13 @@ CREATE TABLE IF NOT EXISTS bookings (
   slot_status text NOT NULL DEFAULT 'available',
   booking_source text,
   package_id uuid NOT NULL REFERENCES packages(id),
+  booked_adult_price_usd numeric(10,2) NOT NULL DEFAULT 0,
+  booked_child_price_usd numeric(10,2) NOT NULL DEFAULT 0,
   add_ons jsonb NOT NULL DEFAULT '[]'::jsonb,
   package_notes text,
   staff_id uuid NOT NULL REFERENCES users(id),
   resort_id uuid REFERENCES resorts(id),
-  status booking_status NOT NULL DEFAULT 'booked',
+  status booking_status NOT NULL DEFAULT 'active',
   signed_by_guest boolean NOT NULL DEFAULT false,
   notes text,
   payment_method text,
@@ -190,12 +209,12 @@ CREATE TABLE IF NOT EXISTS payout_requests (
   star_bonus_usd numeric(10,2) NOT NULL DEFAULT 0 CHECK (star_bonus_usd >= 0),
   star_points numeric(10,2) NOT NULL DEFAULT 0 CHECK (star_points >= 0),
   full_stars integer NOT NULL DEFAULT 0 CHECK (full_stars BETWEEN 0 AND 5),
-  payment_method text NOT NULL,
-  account_name text NOT NULL,
+  bank_name varchar(120) NOT NULL,
+  account_holder_name varchar(120) NOT NULL,
   account_number text NOT NULL,
   notes text,
   admin_notes text,
-  status text NOT NULL DEFAULT 'requested' CHECK (status IN ('requested', 'approved', 'paid', 'rejected')),
+  status text NOT NULL DEFAULT 'requested' CHECK (status IN ('requested', 'processed', 'completed', 'rejected')),
   reviewed_by uuid REFERENCES users(id),
   reviewed_at timestamptz,
   paid_at timestamptz,
@@ -237,6 +256,11 @@ CREATE TRIGGER packages_set_updated_at
 BEFORE UPDATE ON packages
 FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 
+DROP TRIGGER IF EXISTS package_inclusions_set_updated_at ON package_inclusions;
+CREATE TRIGGER package_inclusions_set_updated_at
+BEFORE UPDATE ON package_inclusions
+FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+
 DROP TRIGGER IF EXISTS resorts_set_updated_at ON resorts;
 CREATE TRIGGER resorts_set_updated_at
 BEFORE UPDATE ON resorts
@@ -260,6 +284,8 @@ FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 CREATE INDEX IF NOT EXISTS idx_users_role ON users(role);
 CREATE INDEX IF NOT EXISTS idx_users_resort_id ON users(resort_id);
 CREATE INDEX IF NOT EXISTS idx_packages_active ON packages(is_active);
+CREATE INDEX IF NOT EXISTS idx_package_inclusions_package_active
+  ON package_inclusions(package_id, is_active, sort_order);
 CREATE INDEX IF NOT EXISTS idx_bookings_staff_id ON bookings(staff_id);
 CREATE INDEX IF NOT EXISTS idx_bookings_resort_id ON bookings(resort_id);
 CREATE INDEX IF NOT EXISTS idx_bookings_status ON bookings(status);
@@ -282,6 +308,32 @@ CREATE TABLE IF NOT EXISTS sky_app_settings (
   longitude numeric(8,5) NOT NULL CHECK (longitude BETWEEN -180 AND 180),
   timezone text NOT NULL,
   updated_at timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS sky_settings (
+  id boolean PRIMARY KEY DEFAULT true CHECK (id = true),
+  star_adult_unit numeric(8,2) NOT NULL DEFAULT 1 CHECK (star_adult_unit >= 0),
+  star_child_unit numeric(8,2) NOT NULL DEFAULT 0.5 CHECK (star_child_unit >= 0),
+  star_threshold numeric(8,2) NOT NULL DEFAULT 10 CHECK (star_threshold > 0),
+  star_bonus_usd numeric(10,2) NOT NULL DEFAULT 10.00 CHECK (star_bonus_usd >= 0),
+  updated_by uuid REFERENCES users(id),
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
+
+INSERT INTO sky_settings (id) VALUES (true) ON CONFLICT (id) DO NOTHING;
+
+CREATE TABLE IF NOT EXISTS booking_reschedule_history (
+  id bigserial PRIMARY KEY,
+  booking_id uuid NOT NULL REFERENCES bookings(id) ON DELETE CASCADE,
+  previous_event_date date NOT NULL,
+  previous_time_start time NOT NULL,
+  previous_time_end time NOT NULL,
+  new_event_date date NOT NULL,
+  new_time_start time NOT NULL,
+  new_time_end time NOT NULL,
+  reason text,
+  changed_by uuid NOT NULL REFERENCES users(id),
+  created_at timestamptz NOT NULL DEFAULT now()
 );
 
 CREATE TABLE IF NOT EXISTS sky_events (
@@ -307,6 +359,9 @@ CREATE TRIGGER sky_app_settings_set_updated_at BEFORE UPDATE ON sky_app_settings
 DROP TRIGGER IF EXISTS sky_events_set_updated_at ON sky_events;
 CREATE TRIGGER sky_events_set_updated_at BEFORE UPDATE ON sky_events FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 CREATE INDEX IF NOT EXISTS idx_sky_events_public_starts ON sky_events(is_published, starts_at);
+CREATE INDEX IF NOT EXISTS idx_packages_resort_active ON packages(resort_id, is_active);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_packages_resort_name ON packages(resort_id, name);
+CREATE INDEX IF NOT EXISTS idx_booking_reschedule_history_booking ON booking_reschedule_history(booking_id, created_at DESC);
 
 CREATE OR REPLACE VIEW booking_finance_report AS
 SELECT

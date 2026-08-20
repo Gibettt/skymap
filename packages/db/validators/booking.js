@@ -5,7 +5,7 @@ const optionalEmailSchema = z
   .preprocess((value) => (value === '' ? null : value), emailSchema.optional().nullable())
   .transform((value) => value || null);
 
-const bookingStatusSchema = z.enum(['pending_review', 'accepted', 'rejected', 'booked', 'finished_experience', 'cancelled']);
+const bookingStatusSchema = z.enum(['pending', 'active', 'completed', 'cancelled_by_guest', 'cancelled_weather', 'rescheduled']);
 const payoutStatusSchema = z.enum(['commission_pending', 'commission_approved', 'commission_paid']);
 const countSchema = z.coerce.number().int().min(0);
 
@@ -66,4 +66,14 @@ export const updateBookingSchema = z.object({
   status: bookingStatusSchema.optional(),
   signedByGuest: z.boolean().optional(),
   payoutStatus: payoutStatusSchema.optional(),
+});
+
+export const rescheduleBookingSchema = z.object({
+  eventDate: dateSchema,
+  timeStart: timeSchema,
+  timeEnd: timeSchema,
+  reason: cleanTextSchema(500),
+}).refine((data) => data.timeEnd > data.timeStart, {
+  message: 'Waktu selesai harus setelah waktu mulai',
+  path: ['timeEnd'],
 });

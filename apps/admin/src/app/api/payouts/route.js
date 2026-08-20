@@ -22,8 +22,8 @@ export async function GET(request) {
        ORDER BY
         CASE pr.status
           WHEN 'requested' THEN 0
-          WHEN 'approved' THEN 1
-          WHEN 'paid' THEN 2
+          WHEN 'processed' THEN 1
+          WHEN 'completed' THEN 2
           ELSE 3
         END,
         pr.created_at DESC

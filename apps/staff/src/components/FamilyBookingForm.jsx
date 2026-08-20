@@ -124,19 +124,19 @@ function timeValue(value) {
 function statusLabel(status, lang = 'id') {
   const isEn = lang === 'en';
   const labels = {
-    pending_review: isEn ? 'Pending Review' : 'Menunggu Admin',
-    accepted: isEn ? 'Accepted' : 'Diterima',
-    rejected: isEn ? 'Rejected' : 'Ditolak',
-    booked: 'Booked',
-    finished_experience: isEn ? 'Finished' : 'Selesai',
-    cancelled: isEn ? 'Cancelled' : 'Dibatalkan',
+    pending: isEn ? 'Pending' : 'Menunggu',
+    active: isEn ? 'Active' : 'Aktif',
+    completed: isEn ? 'Completed' : 'Selesai',
+    rescheduled: isEn ? 'Rescheduled' : 'Dijadwalkan ulang',
+    cancelled_by_guest: isEn ? 'Cancelled by guest' : 'Dibatalkan tamu',
+    cancelled_weather: isEn ? 'Cancelled by weather' : 'Dibatalkan karena cuaca',
   };
   return labels[status] || status;
 }
 
 function statusClass(status) {
-  if (['accepted', 'booked', 'finished_experience'].includes(status)) return 'tag-confirmed';
-  if (['rejected', 'cancelled'].includes(status)) return 'tag-cancelled';
+  if (['active', 'completed', 'rescheduled'].includes(status)) return 'tag-confirmed';
+  if (status?.startsWith('cancelled_')) return 'tag-cancelled';
   return 'tag-pending';
 }
 
@@ -155,7 +155,7 @@ function bookingPackageText(booking) {
 
 export default function FamilyBookingForm({ basePath, fixedSlug = null, staticExperience = null, listMode = false }) {
   const router = useRouter();
-  const { t, language } = useLanguage();
+  const { t, language, localizeApiError } = useLanguage();
   const [packages, setPackages] = useState([]);
   const [packagesLoaded, setPackagesLoaded] = useState(false);
   const [bookings, setBookings] = useState([]);
@@ -183,14 +183,20 @@ export default function FamilyBookingForm({ basePath, fixedSlug = null, staticEx
   const selectedPackage = fixedPackage || (selectedPackageId ? packages.find((pkg) => pkg.id === selectedPackageId) : null);
   const canSubmitPackage = Boolean(fixedPackage || selectedPackageIds.length > 0);
   const submitPackage = selectedPackage || packages[0];
-  const experience = staticExperience || (fixedPackage ? getExperienceForPackage(fixedPackage) : null);
+  const experience = fixedPackage ? getExperienceForPackage(fixedPackage) : null;
 
   const pageTitle = fixedPackage
     ? (experience?.title || fixedPackage.name)
     : (language === 'en' ? 'Stargazing Booking Form' : 'Form Booking');
 
+  const experienceTaglineKey = fixedSlug
+    ? `experience_${fixedSlug.replaceAll('-', '_')}_tagline`
+    : '';
   const pageTagline = fixedPackage
-    ? (experience?.tagline || `${titleCase(fixedPackage.package_type || 'Regular')} package at ${fixedPackage.location || 'Observatory'}.`)
+    ? t(
+        experienceTaglineKey,
+        experience?.tagline || `${titleCase(fixedPackage.package_type || 'Regular')} package at ${fixedPackage.location || 'Observatory'}.`
+      ).replace('{location}', fixedPackage.location || 'Observatory')
     : t('form_desc', 'Isi data tamu, pilih paket observasi, dan tentukan preferensi reservasi.');
 
   const selectedTimeSlot = form.timeSlot || experience?.schedule?.time || DEFAULT_TIME_SLOT;
@@ -531,12 +537,7 @@ export default function FamilyBookingForm({ basePath, fixedSlug = null, staticEx
     setSubmitting(false);
 
     if (!response.ok) {
-      const detailsMsg = data.details?.fieldErrors
-        ? Object.entries(data.details.fieldErrors)
-            .map(([f, errs]) => `${f}: ${Array.isArray(errs) ? errs.join(', ') : errs}`)
-            .join(' | ')
-        : '';
-      const errorMsg = detailsMsg ? `${data.error}: ${detailsMsg}` : data.error || t('form_submit_error');
+      const errorMsg = localizeApiError(data.error, t('form_submit_error'));
       console.error('[FamilyBookingForm] POST error:', response.status, errorMsg, data);
       setToast({ type: 'error', msg: errorMsg });
       setTimeout(() => setToast(null), 8000);
@@ -682,6 +683,10 @@ export default function FamilyBookingForm({ basePath, fixedSlug = null, staticEx
     return <div className="external-booking-note">{language === 'en' ? 'Loading packages...' : 'Memuat package...'}</div>;
   }
 
+  if (fixedSlug && !fixedPackage) {
+    return <div className="external-booking-note">{language === 'en' ? 'This package is no longer active.' : 'Package ini sudah tidak aktif.'}</div>;
+  }
+
   if (listMode && !showForm) {
     return (
       <div className="fade-in-up">
@@ -704,13 +709,13 @@ export default function FamilyBookingForm({ basePath, fixedSlug = null, staticEx
             <table>
               <thead>
                 <tr>
-                  <th>Booking</th>
-                  <th>Guest</th>
-                  <th>Package</th>
-                  <th>Event</th>
-                  <th>Room</th>
-                  <th>Status</th>
-                  <th style={{ textAlign: 'center' }}>{language === 'en' ? 'Actions' : 'Aksi'}</th>
+                  <th>{t('common_booking')}</th>
+                  <th>{t('common_guest')}</th>
+                  <th>{t('common_package')}</th>
+                  <th>{t('common_event')}</th>
+                  <th>{t('common_room')}</th>
+                  <th>{t('common_status')}</th>
+                  <th style={{ textAlign: 'center' }}>{t('common_action')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -769,14 +774,14 @@ export default function FamilyBookingForm({ basePath, fixedSlug = null, staticEx
 
   return (
     <div className="fade-in-up stagger">
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px', gap: '16px', flexWrap: 'wrap' }}>
+      <div className="form-booking-toolbar">
         <div>
           <h1 style={{ fontSize: '26px', fontFamily: 'var(--font-heading)', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '10px' }}>
             {editingBooking ? `Edit ${editingBooking.booking_code}` : pageTitle}
           </h1>
           <p style={{ color: 'var(--text-secondary)', fontSize: '14px', marginTop: '6px' }}>{pageTagline}</p>
         </div>
-        <div style={{ display: 'flex', gap: '10px' }}>
+        <div className="form-booking-actions">
           <Link href={`${basePath}/bookings`} className="btn btn-secondary btn-sm">
             {t('btn_list', 'View List')}
           </Link>
@@ -820,7 +825,7 @@ export default function FamilyBookingForm({ basePath, fixedSlug = null, staticEx
               </Field>
 
               <Field label="Nationality">
-                <input className="input" value={form.nationality} onChange={(e) => setField('nationality', e.target.value)} placeholder="Nationality (e.g. Indonesia, Japan)" required />
+                <input className="input" value={form.nationality} onChange={(e) => setField('nationality', e.target.value)} placeholder={t('form_placeholder_nationality')} required />
               </Field>
 
               <Field label="Preferred Language">
@@ -829,10 +834,10 @@ export default function FamilyBookingForm({ basePath, fixedSlug = null, staticEx
 
               <Field label="Billing Method">
                 <select className="input" value={form.paymentMethod} onChange={(e) => setField('paymentMethod', e.target.value)}>
-                  <option>Room charge</option>
-                  <option>Cash</option>
-                  <option>Card</option>
-                  <option>Resort billing</option>
+                  <option value="Room charge">{t('form_payment_room')}</option>
+                  <option value="Cash">{t('form_payment_cash')}</option>
+                  <option value="Card">{t('form_payment_card')}</option>
+                  <option value="Resort billing">{t('form_payment_resort')}</option>
                 </select>
               </Field>
 
@@ -1185,29 +1190,29 @@ export default function FamilyBookingForm({ basePath, fixedSlug = null, staticEx
             <div className="booking-form-grid">
               <Field label={t('form_label_photo_consent')}>
                 <select className="input" value={form.photoRequest} onChange={(e) => setField('photoRequest', e.target.value)}>
-                  <option>Ask guest first</option>
-                  <option>Allowed</option>
-                  <option>Not allowed</option>
+                  <option value="Ask guest first">{t('form_photo_ask')}</option>
+                  <option value="Allowed">{t('form_photo_allowed')}</option>
+                  <option value="Not allowed">{t('form_photo_not_allowed')}</option>
                 </select>
               </Field>
 
               <Field label={t('form_label_weather_reschedule')}>
                 <select className="input" value={form.rescheduleConsent} onChange={(e) => setField('rescheduleConsent', e.target.value)}>
-                  <option>Yes</option>
-                  <option>No</option>
-                  <option>Ask guest first</option>
+                  <option value="Yes">{t('common_yes')}</option>
+                  <option value="No">{t('common_no')}</option>
+                  <option value="Ask guest first">{t('form_photo_ask')}</option>
                 </select>
               </Field>
 
               <Field label={t('form_label_seating_setup')}>
-                <input className="input" value={form.seatingSetup} onChange={(e) => setField('seatingSetup', e.target.value)} placeholder="Couple, family nearby, private setup..." />
+                <input className="input" value={form.seatingSetup} onChange={(e) => setField('seatingSetup', e.target.value)} placeholder={t('form_placeholder_seating')} />
               </Field>
 
               <Field label={t('form_label_slot_status')}>
                 <select className="input" value={form.slotStatus} onChange={(e) => setField('slotStatus', e.target.value)}>
-                  <option value="available">Available</option>
-                  <option value="needs_check">Needs check</option>
-                  <option value="confirmed">Confirmed</option>
+                  <option value="available">{t('form_slot_available')}</option>
+                  <option value="needs_check">{t('form_slot_check')}</option>
+                  <option value="confirmed">{t('form_slot_confirmed')}</option>
                 </select>
               </Field>
 
@@ -1525,6 +1530,7 @@ function StaffBookingView({ booking, onClose, onEdit, isInternal = false }) {
 }
 
 function FamilyViewCard({ title, name, packageText }) {
+  const { t } = useLanguage();
   return (
     <div className="family-view-card">
       <h3>{title}</h3>
@@ -1532,7 +1538,7 @@ function FamilyViewCard({ title, name, packageText }) {
         {name || '-'}
       </div>
       <div>
-        <span>Package</span>
+        <span>{t('common_package')}</span>
         <strong>{packageText || '-'}</strong>
       </div>
     </div>

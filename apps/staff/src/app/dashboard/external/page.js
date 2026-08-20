@@ -1,21 +1,14 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { calculateStarPoints } from '@ephemeris/finance';
-import { BOOKINGS } from '@/data/bookings';
 import { useLanguage } from '@/context/LanguageContext';
 
 const COUNTED_STATUSES = new Set([
-  'pending_review',
-  'accepted',
-  'booked',
-  'finished_experience',
-  'Menunggu',
-  'Disetujui',
-  'Booked',
-  'Finished Experience',
+  'pending',
+  'active',
+  'rescheduled',
 ]);
 
 function getField(booking, snakeName, camelName) {
@@ -25,22 +18,73 @@ function getField(booking, snakeName, camelName) {
 function statusLabel(status, language = 'id') {
   const isEn = language === 'en';
   const labels = {
-    pending_review: isEn ? 'Pending Review' : 'Menunggu Admin',
-    accepted: isEn ? 'Accepted' : 'Diterima',
-    booked: 'Booked',
-    finished_experience: isEn ? 'Finished Experience' : 'Selesai',
-    rejected: isEn ? 'Rejected' : 'Ditolak',
-    cancelled: isEn ? 'Cancelled' : 'Dibatalkan',
+    pending: isEn ? 'Pending' : 'Menunggu',
+    active: isEn ? 'Active' : 'Aktif',
+    completed: isEn ? 'Completed' : 'Selesai',
+    rescheduled: isEn ? 'Rescheduled' : 'Dijadwalkan ulang',
+    cancelled_by_guest: isEn ? 'Cancelled by guest' : 'Dibatalkan tamu',
+    cancelled_weather: isEn ? 'Cancelled by weather' : 'Dibatalkan karena cuaca',
   };
   return labels[status] || status;
 }
 
 function statusClass(status) {
-  if (['accepted', 'booked', 'Disetujui', 'Booked'].includes(status)) return 'tag-confirmed';
-  if (['pending_review', 'Menunggu'].includes(status)) return 'tag-pending';
-  if (['finished_experience', 'Finished Experience', 'Selesai'].includes(status)) return 'tag-completed';
-  if (['rejected', 'Ditolak', 'cancelled', 'Cancelled'].includes(status)) return 'tag-cancelled';
+  if (['active', 'rescheduled'].includes(status)) return 'tag-confirmed';
+  if (status === 'pending') return 'tag-pending';
+  if (status === 'completed') return 'tag-completed';
+  if (status.startsWith('cancelled_')) return 'tag-cancelled';
   return 'tag-info';
+}
+
+function StarIcon({ size = 20 }) {
+  return (
+    <svg
+      className="external-star-icon"
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      aria-hidden="true"
+      focusable="false"
+    >
+      <path
+        d="M12 2.75 14.78 8.4l6.22.9-4.5 4.39 1.06 6.2L12 16.96l-5.56 2.93 1.06-6.2L3 9.3l6.22-.9L12 2.75Z"
+        fill="currentColor"
+        stroke="currentColor"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function FiveStarProgress({ points, threshold, language }) {
+  const pointsPerStar = Math.max(Number(threshold) || 10, 0.01);
+  const starProgress = Math.min(points / pointsPerStar, 5);
+  const completedStars = Math.min(Math.floor(starProgress), 5);
+  const ariaLabel = language === 'en'
+    ? `${starProgress.toFixed(1)} of 5 stars, ${points.toFixed(1)} points`
+    : `${starProgress.toFixed(1)} dari 5 bintang, ${points.toFixed(1)} poin`;
+
+  return (
+    <div className="external-five-star-wrap">
+      <div className="external-five-star-meter" role="img" aria-label={ariaLabel}>
+        {[0, 1, 2, 3, 4].map((index) => {
+          const fillPercent = Math.max(0, Math.min(1, starProgress - index)) * 100;
+          return (
+            <span className="external-progress-star" key={index}>
+              <StarIcon size={32} />
+              <span className="external-progress-star-fill" style={{ width: `${fillPercent}%` }}>
+                <StarIcon size={32} />
+              </span>
+            </span>
+          );
+        })}
+      </div>
+      <span className="external-five-star-caption">
+        {completedStars}/5 {language === 'en' ? 'stars' : 'bintang'}
+      </span>
+    </div>
+  );
 }
 
 export default function ExternalStaffPage() {
@@ -48,19 +92,20 @@ export default function ExternalStaffPage() {
   const pathname = usePathname();
   const isInternal = pathname.startsWith('/dashboard/internal');
   const observerName = isInternal ? 'Ahmad Fauzi' : 'Budi Santoso';
-  const [externalBookings, setExternalBookings] = useState(null);
+  const [externalBookings, setExternalBookings] = useState([]);
   const [loadError, setLoadError] = useState('');
-  const fallbackBookings = BOOKINGS.filter((booking) => booking.observer === observerName);
-  const myBookings = externalBookings || fallbackBookings;
+  const [rewardSummary, setRewardSummary] = useState(null);
+  const myBookings = externalBookings;
 
   const totalBookings = myBookings.length;
   const bookingAktif = myBookings.filter((booking) => COUNTED_STATUSES.has(booking.status)).length;
-  const akanDatang = myBookings.filter((booking) => ['accepted', 'booked', 'Disetujui', 'Booked'].includes(booking.status)).length;
-  const selesai = myBookings.filter((booking) => ['finished_experience', 'Finished Experience', 'Selesai'].includes(booking.status)).length;
+  const akanDatang = myBookings.filter((booking) => ['active', 'rescheduled'].includes(booking.status)).length;
+  const selesai = myBookings.filter((booking) => booking.status === 'completed').length;
   const top5Bookings = myBookings.slice(0, 5);
-  const starPoints = useMemo(() => calculateStarPoints(myBookings), [myBookings]);
-  const starValue = Math.min(starPoints / 10, 5);
-  const progressPercent = Math.min((starPoints / 50) * 100, 100);
+  const starUnits = Number(rewardSummary?.starUnits || 0);
+  const threshold = Math.max(Number(rewardSummary?.starThreshold || 10), 0.01);
+  const fiveStarTarget = threshold * 5;
+  const progressPercent = Math.min((starUnits / fiveStarTarget) * 100, 100);
 
   useEffect(() => {
     let alive = true;
@@ -70,13 +115,20 @@ export default function ExternalStaffPage() {
         if (alive) setExternalBookings(data.bookings || []);
       })
       .catch((error) => {
-        if (alive) setLoadError(error.message);
+        if (alive) {
+          setExternalBookings([]);
+          setLoadError(error.message);
+        }
       });
+    fetch('/api/payouts')
+      .then((res) => res.ok ? res.json() : Promise.reject(new Error(t('dashboard_load_reward_error'))))
+      .then((data) => { if (alive) setRewardSummary(data.summary); })
+      .catch((error) => { if (alive) setLoadError(error.message); });
 
     return () => {
       alive = false;
     };
-  }, [language]);
+  }, [language, t]);
 
   return (
     <div className="external-dashboard-page fade-in-up stagger">
@@ -102,27 +154,36 @@ export default function ExternalStaffPage() {
           <div className="kpi-note">{t('dashboard_active_schedule')}</div>
         </div>
         <div className="kpi-card">
-          <div className="kpi-label">{t('dashboard_finished')}</div>
-          <div className="kpi-value">{selesai}</div>
-          <div className="kpi-note">{t('dashboard_finished_note')}</div>
+          <div className="kpi-label">{t('dashboard_commission_total')}</div>
+          <div className="kpi-value">${Number(rewardSummary?.commissionUsd || 0).toFixed(2)}</div>
+          <div className="kpi-note">{t('dashboard_completed_count').replace('{count}', selesai)}</div>
         </div>
       </section>
 
       <section className="card external-star-card">
         <div className="card-body">
           <div className="external-star-summary">
-            <div>
-              <div className="kpi-label">{t('dashboard_star_progress')}</div>
-              <div className="external-star-value">{starValue.toFixed(1)} / 5</div>
+            <div className="external-star-main">
+              <span className="external-star-icon-wrap">
+                <StarIcon size={28} />
+              </span>
+              <div>
+                <div className="kpi-label">{t('dashboard_star_progress')}</div>
+                <div className="external-star-value">
+                  {starUnits.toFixed(1)} {language === 'en' ? 'points' : 'poin'}
+                </div>
+              </div>
             </div>
-            <StarMeter value={starValue} />
+            <FiveStarProgress points={starUnits} threshold={threshold} language={language} />
           </div>
           <div className="progress-bar external-star-progress">
             <div className="progress-fill" style={{ width: `${progressPercent}%` }} />
           </div>
           <div className="external-star-note">
-            <span>{t('dashboard_points').replace('{points}', starPoints.toFixed(1))}</span>
-            <span>{t('dashboard_star_rule')}</span>
+            <span>
+              {Math.min(starUnits, fiveStarTarget).toFixed(1)} / {fiveStarTarget.toFixed(0)} {language === 'en' ? 'points to 5 stars' : 'poin menuju 5 bintang'}
+            </span>
+            <span>{t('dashboard_monthly_reward_amount').replace('{amount}', `$${Number(rewardSummary?.starRewardUsd || 0).toFixed(2)}`)}</span>
           </div>
           {loadError && <div className="external-star-error">{loadError}</div>}
         </div>
@@ -143,7 +204,7 @@ export default function ExternalStaffPage() {
                     <th>{t('table_station')}</th>
                     <th>{t('table_date')}</th>
                     <th>{t('table_time')}</th>
-                    <th>Status</th>
+                    <th>{t('common_status')}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -177,30 +238,14 @@ export default function ExternalStaffPage() {
           <div className="card-body">
             <ul style={{ paddingLeft: '1.1rem', display: 'flex', flexDirection: 'column', gap: 10, margin: 0, fontSize: 13, lineHeight: 1.55 }}>
               <li><strong>{language === 'en' ? 'New Booking' : 'Booking Baru'}:</strong> {t('dashboard_guide_new')}</li>
-              <li><strong>Status:</strong> {t('dashboard_guide_status')}</li>
-              <li><strong>Invoice:</strong> {t('dashboard_guide_invoice')}</li>
-              <li><strong>Signed:</strong> {t('dashboard_guide_signed')}</li>
-              <li><strong>Feedback:</strong> {t('dashboard_guide_feedback')}</li>
+              <li><strong>{t('dashboard_status_label')}:</strong> {t('dashboard_guide_status')}</li>
+              <li><strong>{t('dashboard_invoice_label')}:</strong> {t('dashboard_guide_invoice')}</li>
+              <li><strong>{t('dashboard_signed_label')}:</strong> {t('dashboard_guide_signed')}</li>
+              <li><strong>{t('dashboard_feedback_label')}:</strong> {t('dashboard_guide_feedback')}</li>
             </ul>
           </div>
         </section>
       </div>
-    </div>
-  );
-}
-
-function StarMeter({ value }) {
-  const { language } = useLanguage();
-  return (
-    <div className="external-star-meter" aria-label={language === 'en' ? `${value.toFixed(1)} out of 5 stars` : `${value.toFixed(1)} dari 5 bintang`}>
-      {[0, 1, 2, 3, 4].map((index) => {
-        const fill = Math.max(0, Math.min(1, value - index)) * 100;
-        return (
-          <span className="external-star" key={index}>
-            <span className="external-star-fill" style={{ width: `${fill}%` }} />
-          </span>
-        );
-      })}
     </div>
   );
 }

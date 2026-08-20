@@ -16,6 +16,16 @@ CREATE DATABASE ephemeris;
 
 4. Run `db/seed.sql`.
 
+For an existing database created before this refactor, back up the database and run
+`db/migrations/015_booking_rbac_rewards_and_resorts.sql` once. It migrates legacy
+booking/payout values before replacing their constraints and read models.
+
+Then run `db/migrations/016_package_inclusions.sql` once to add the ordered
+Including items managed by Admin and backfill the existing package content.
+
+Then run `db/migrations/017_package_schedule.sql` once to add the Schedule field,
+backfill existing package schedules, and make Admin the source used by Landing.
+
 5. Create `.env.local` in **each app folder** (`apps/landing`, `apps/admin`, `apps/staff`):
 
 ```env
@@ -52,15 +62,13 @@ Admin:
 - all booking and finance reports
 
 Internal:
-- operational booking access
-- can see all internal and external staff bookings
-- staff-created bookings become Pending Review until admin accepts or rejects them
-- can finish experience
-- can mark Signed by Guest
+- sees and manages all bookings assigned to their own resort
+- can complete, cancel, sign, and reschedule resort bookings
+- earns commission only; star rewards are bypassed
 
 External:
-- belongs to one resort profile
-- sees bookings from the same resort profile
-- new bookings become Pending Review until admin accepts or rejects them
-- cannot mark Signed by Guest
+- belongs to one resort profile but sees only bookings they created
+- new bookings are stored immediately with active status
+- can submit and view bookings, but cannot change operational status
+- earns commission plus monthly star rewards on chargeable packages
 ```

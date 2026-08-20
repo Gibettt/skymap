@@ -15,6 +15,8 @@ const EMPTY_RESORT = {
   observationSpots: 'Sunset Beach, Helipad, Main Jetty',
   contactName: '',
   contactPhone: '',
+  contactEmail: '',
+  whatsappNumber: '',
   status: 'active',
 };
 
@@ -97,6 +99,8 @@ export default function ResortsPage() {
       observationSpots: resort.observation_spots || 'Sunset Beach, Helipad, Main Jetty',
       contactName: resort.contact_name || '',
       contactPhone: resort.contact_phone || '',
+      contactEmail: resort.contact_email || '',
+      whatsappNumber: resort.whatsapp_number || '',
       status: resort.status || 'active',
     });
     setModalOpen(true);
@@ -133,7 +137,7 @@ export default function ResortsPage() {
   };
 
   const handleToggleStatus = async (resort) => {
-    const nextStatus = resort.status === 'active' ? 'suspended' : 'active';
+    const nextStatus = resort.status === 'active' ? 'inactive' : 'active';
     try {
       const res = await fetch(`/api/resorts/${resort.id}`, {
         method: 'PATCH',
@@ -222,8 +226,8 @@ export default function ResortsPage() {
           </button>
           <button
             type="button"
-            className={`chip ${statusFilter === 'suspended' ? 'active' : ''}`}
-            onClick={() => setStatusFilter('suspended')}
+            className={`chip ${statusFilter === 'inactive' ? 'active' : ''}`}
+            onClick={() => setStatusFilter('inactive')}
           >
             Nonaktif ({stats.total - stats.active})
           </button>
@@ -567,13 +571,36 @@ function ResortModal({ formData, setFormData, isEditing, onClose, onSave, saving
                 />
               </div>
               <div className="input-group">
-                <label className="input-label">Nomor WhatsApp / Kontak PIC</label>
+                <label className="input-label">Nomor Telepon PIC</label>
                 <input
                   type="text"
                   className="input"
                   placeholder="Contoh: +960-000-0100"
                   value={formData.contactPhone}
                   onChange={(e) => setFormData({ ...formData, contactPhone: e.target.value })}
+                />
+              </div>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+              <div className="input-group">
+                <label className="input-label">Email Reservasi</label>
+                <input
+                  type="email"
+                  className="input"
+                  placeholder="concierge@resort.com"
+                  value={formData.contactEmail}
+                  onChange={(e) => setFormData({ ...formData, contactEmail: e.target.value })}
+                />
+              </div>
+              <div className="input-group">
+                <label className="input-label">WhatsApp (kode negara)</label>
+                <input
+                  type="text"
+                  className="input"
+                  placeholder="Contoh: 9607771234"
+                  value={formData.whatsappNumber}
+                  onChange={(e) => setFormData({ ...formData, whatsappNumber: e.target.value })}
                 />
               </div>
             </div>
@@ -586,7 +613,7 @@ function ResortModal({ formData, setFormData, isEditing, onClose, onSave, saving
                 onChange={(e) => setFormData({ ...formData, status: e.target.value })}
               >
                 <option value="active">Aktif (Menerima Reservasi)</option>
-                <option value="suspended">Nonaktif (Suspended)</option>
+                <option value="inactive">Nonaktif</option>
               </select>
             </div>
           </div>

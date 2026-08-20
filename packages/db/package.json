@@ -4,11 +4,17 @@
   "private": true,
   "type": "module",
   "main": "index.js",
+  "scripts": {
+    "test": "node --test test/*.test.mjs"
+  },
   "exports": {
     ".": "./index.js",
     "./helpers": "./helpers.js",
     "./read-models": "./read-models.js",
     "./commands": "./commands.js",
+    "./bookings": "./bookings.js",
+    "./package-content": "./package-content.js",
+    "./scopes": "./scopes.js",
     "./validators/*": "./validators/*.js"
   },
   "dependencies": {

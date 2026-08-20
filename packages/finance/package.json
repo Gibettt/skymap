@@ -4,6 +4,9 @@
   "private": true,
   "type": "module",
   "main": "index.js",
+  "scripts": {
+    "test": "node --test test/finance.test.mjs"
+  },
   "exports": {
     ".": "./index.js"
   }

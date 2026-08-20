@@ -8,54 +8,23 @@ import {
   paginationMeta,
 } from '@ephemeris/db/helpers';
 import { createBookingSchema } from '@ephemeris/db/validators/booking';
+import { bookingScopeForUser } from '@ephemeris/db/scopes';
 import { emit, EventTypes } from '@ephemeris/events';
 import { calculateBookingTotals } from '@ephemeris/finance';
 
 export async function GET(request) {
   try {
-    const user = await requireUser();
-    if (user.role === 'external' && !user.resort_id) {
-      return Response.json({ error: 'External resort profile is not configured' }, { status: 403 });
-    }
+    const user = await requireUser(['internal', 'external']);
     const pagination = paginationFromRequest(request);
-
-    let whereClause = 'WHERE b.staff_id = $1';
-    let params = [user.id];
-    let countSql = 'SELECT COUNT(*) FROM bookings WHERE staff_id = $1';
-    let countParams = [user.id];
-
-    if (user.role === 'internal') {
-      const url = new URL(request.url);
-      const filter = url.searchParams.get('filter'); // 'mine', 'pending', 'external', 'all'
-      if (filter === 'mine') {
-        whereClause = 'WHERE b.staff_id = $1';
-        params = [user.id];
-        countSql = 'SELECT COUNT(*) FROM bookings WHERE staff_id = $1';
-        countParams = [user.id];
-      } else if (filter === 'pending') {
-        whereClause = 'WHERE b.status = $1';
-        params = ['pending_review'];
-        countSql = 'SELECT COUNT(*) FROM bookings WHERE status = $1';
-        countParams = ['pending_review'];
-      } else if (filter === 'external') {
-        whereClause = 'WHERE u.role = $1';
-        params = ['external'];
-        countSql = 'SELECT COUNT(*) FROM bookings b JOIN users u ON u.id = b.staff_id WHERE u.role = $1';
-        countParams = ['external'];
-      } else {
-        // 'all' / default: internal staff sees all operational bookings
-        whereClause = 'WHERE 1=1';
-        params = [];
-        countSql = 'SELECT COUNT(*) FROM bookings';
-        countParams = [];
-      }
-    }
+    const scope = bookingScopeForUser(user);
+    const whereClause = `WHERE ${scope.whereClause}`;
+    const params = scope.values;
 
     const { rows } = await query(
       `${bookingSelectQuery} ${whereClause} ORDER BY b.created_at DESC, b.event_date DESC LIMIT $${params.length + 1} OFFSET $${params.length + 2}`,
       [...params, pagination.limit, pagination.offset]
     );
-    const { rows: countRows } = await query(countSql, countParams);
+    const { rows: countRows } = await query(`SELECT COUNT(*) FROM bookings b ${whereClause}`, params);
     return Response.json({
       bookings: rows,
       pagination: paginationMeta({ ...pagination, total: Number(countRows[0].count) }),
@@ -68,7 +37,7 @@ export async function GET(request) {
 export async function POST(request) {
   try {
     await assertSameOrigin(request);
-    const user = await requireUser();
+    const user = await requireUser(['internal', 'external']);
     console.log('[POST /api/bookings] user:', user?.id, user?.role, 'resort_id:', user?.resort_id);
     const parsed = createBookingSchema.safeParse(await parseJsonBody(request));
     if (!parsed.success) {
@@ -78,15 +47,15 @@ export async function POST(request) {
     const data = parsed.data;
     const packageId = data.packageId;
     const staffId = user.role === 'admin' && data.staffId ? data.staffId : user.id;
-    const resortId = user.role === 'external' ? user.resort_id : data.resortId;
+    const resortId = user.resort_id;
 
-    if (user.role === 'external' && !resortId) {
-      return Response.json({ error: 'External resort profile is not configured' }, { status: 403 });
+    if (!resortId) {
+      return Response.json({ error: 'Staff resort profile is not configured' }, { status: 403 });
     }
 
     const created = await transaction(async (client) => {
       const pkg = await client.query('SELECT * FROM packages WHERE id = $1 AND is_active = true', [packageId]);
-      if (!pkg.rows[0]) throw new Error('Package not found');
+      if (!pkg.rows[0] || pkg.rows[0].resort_id !== resortId) throw new Error('Package not found for this resort');
 
       const staff = await client.query('SELECT id, role, resort_id, name FROM users WHERE id = $1 AND status = $2', [staffId, 'active']);
       if (!staff.rows[0]) throw new Error('Staff not found');
@@ -104,11 +73,11 @@ export async function POST(request) {
         adultPriceUsd: Number(pkg.rows[0].adult_price_usd),
         childPriceUsd: Number(childPriceUsd),
         staffRole: staff.rows[0].role,
+        isChargeable: pkg.rows[0].is_chargeable,
       });
 
-      // Staff Internal: langsung diterima ('accepted') tanpa butuh review admin
-      // Staff External: butuh review ('pending_review')
-      const status = user.role === 'internal' ? 'accepted' : 'pending_review';
+      // Every valid submission is immediately operational; no review gate.
+      const status = 'active';
 
       const { rows } = await client.query(
         `INSERT INTO bookings (
@@ -117,7 +86,7 @@ export async function POST(request) {
           room_number, nationality, adult_count, child_count, child_ages,
           special_occasion, guardian_name, guardian_phone, seating_setup, photo_request,
           privacy_preference, dietary_restrictions, reschedule_consent, slot_status,
-          booking_source, package_id, add_ons, package_notes,
+          booking_source, package_id, booked_adult_price_usd, booked_child_price_usd, add_ons, package_notes,
           staff_id, resort_id, status, signed_by_guest, notes,
           payment_method, invoice_number, billing_notes,
           weather_condition, equipment_needed, assigned_astronomer, assigned_butler, setup_status,
@@ -130,13 +99,13 @@ export async function POST(request) {
           $9, $10, $11, $12, $13,
           $14, $15, $16, $17, $18,
           $19, $20, $21, $22,
-          $23, $24, $25::jsonb, $26,
-          $27, $28, $29, false, $30,
-          $31, $32, $33,
-          $34, $35, $36, $37, $38,
-          $39, $40, $41, $42,
-          $43, $44, $45,
-          $46, $47, $48, $49, $49
+          $23, $24, $25, $26, $27::jsonb, $28,
+          $29, $30, $31, false, $32,
+          $33, $34, $35,
+          $36, $37, $38, $39, $40,
+          $41, $42, $43, $44,
+          $45, $46, $47,
+          $48, $49, $50, $51, $51
         ) RETURNING *`,
         [
           generateBookingCode(),
@@ -163,6 +132,8 @@ export async function POST(request) {
           data.slotStatus || 'available',
           data.bookingSource,
           packageId,
+          pkg.rows[0].adult_price_usd,
+          childPriceUsd,
           JSON.stringify(data.addOns),
           data.packageNotes,
           staffId,
@@ -228,8 +199,8 @@ export async function POST(request) {
         [booking.id, notifTitle, notifMsg, notifMeta]
       );
 
-      // 2. Jika External Staff membuat booking (status pending_review), kirim juga ke Staff Internal untuk di-review
-      if (status === 'pending_review') {
+      // Internal operators at this resort receive an operational notification.
+      if (user.role === 'external') {
         await client.query(
           `INSERT INTO notifications (
             recipient_user_id, type, source_table, source_id, title, message, meta, link, created_at
@@ -245,13 +216,15 @@ export async function POST(request) {
             '/dashboard/internal/bookings',
             now()
           FROM users internal_user
-          WHERE internal_user.role = 'internal' AND internal_user.status = 'active'
+          WHERE internal_user.role = 'internal'
+            AND internal_user.status = 'active'
+            AND internal_user.resort_id = $5
           ON CONFLICT (recipient_user_id, type, source_id) DO UPDATE SET
             title = EXCLUDED.title,
             message = EXCLUDED.message,
             meta = EXCLUDED.meta,
             link = EXCLUDED.link`,
-          [booking.id, notifTitle, notifMsg, notifMeta]
+          [booking.id, notifTitle, notifMsg, notifMeta, resortId]
         );
       }
 

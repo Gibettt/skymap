@@ -57,7 +57,8 @@ test('EventBus isolates handler errors and prevents breaking emit pipeline', asy
 
 test('EventTypes includes core lifecycle constants', () => {
   assert.equal(EventTypes.BOOKING_CREATED, 'booking.created');
-  assert.equal(EventTypes.BOOKING_ACCEPTED, 'booking.accepted');
-  assert.equal(EventTypes.BOOKING_FINISHED, 'booking.finished');
+  assert.equal(EventTypes.BOOKING_ACTIVATED, 'booking.active');
+  assert.equal(EventTypes.BOOKING_COMPLETED, 'booking.completed');
+  assert.equal(EventTypes.BOOKING_RESCHEDULED, 'booking.rescheduled');
   assert.equal(EventTypes.PAYOUT_REQUESTED, 'payout.requested');
 });

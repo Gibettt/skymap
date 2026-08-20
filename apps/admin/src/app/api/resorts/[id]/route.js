@@ -1,10 +1,17 @@
 import { assertSameOrigin, jsonError, parseJsonBody, requireUser, writeAudit } from '@ephemeris/auth';
-import { query } from '@ephemeris/db';
+import { query, transaction } from '@ephemeris/db';
+import { uuidSchema } from '@ephemeris/db/validators/common';
+import { updateResortSchema } from '@ephemeris/db/validators/resort';
+
+function slugify(value) {
+  return String(value).toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+}
 
 export async function GET(request, { params }) {
   try {
     await requireUser(['admin']);
     const { id } = await params;
+    if (!uuidSchema.safeParse(id).success) return Response.json({ error: 'ID tidak valid' }, { status: 400 });
 
     const { rows } = await query('SELECT * FROM resorts WHERE id = $1', [id]);
     if (!rows[0]) {
@@ -44,44 +51,37 @@ export async function PATCH(request, { params }) {
     await assertSameOrigin(request);
     const user = await requireUser(['admin']);
     const { id } = await params;
-    const body = await parseJsonBody(request);
+    if (!uuidSchema.safeParse(id).success) return Response.json({ error: 'ID tidak valid' }, { status: 400 });
+    const parsed = updateResortSchema.safeParse(await parseJsonBody(request));
+    if (!parsed.success) return Response.json({ error: 'Data resort tidak valid', details: parsed.error.flatten() }, { status: 400 });
 
-    const { rows: currentRows } = await query('SELECT * FROM resorts WHERE id = $1', [id]);
-    if (!currentRows[0]) {
-      return Response.json({ error: 'Resort tidak ditemukan.' }, { status: 404 });
-    }
-    const current = currentRows[0];
-
-    const name = body.name !== undefined ? String(body.name).trim() : current.name;
-    const code = body.code !== undefined ? String(body.code).trim().toUpperCase() : current.code;
-    const location = body.location !== undefined ? String(body.location).trim() : current.location;
-    const timezone = body.timezone !== undefined ? String(body.timezone).trim() : current.timezone;
-    const contactName = body.contactName !== undefined || body.contact_name !== undefined ? String(body.contactName || body.contact_name || '').trim() : current.contact_name;
-    const contactPhone = body.contactPhone !== undefined || body.contact_phone !== undefined ? String(body.contactPhone || body.contact_phone || '').trim() : current.contact_phone;
-    const observationSpots = body.observationSpots !== undefined || body.observation_spots !== undefined ? String(body.observationSpots || body.observation_spots || '').trim() : current.observation_spots;
-    const latitude = body.latitude !== undefined && Number.isFinite(Number(body.latitude)) ? Number(body.latitude) : current.latitude;
-    const longitude = body.longitude !== undefined && Number.isFinite(Number(body.longitude)) ? Number(body.longitude) : current.longitude;
-    const status = body.status !== undefined ? (body.status === 'suspended' ? 'suspended' : 'active') : current.status;
-
-    const { rows } = await query(`
-      UPDATE resorts
-      SET name = $1, code = $2, location = $3, timezone = $4, contact_name = $5,
-          contact_phone = $6, observation_spots = $7, latitude = $8, longitude = $9, status = $10,
-          updated_at = now()
-      WHERE id = $11
-      RETURNING *
-    `, [name, code, location, timezone, contactName, contactPhone, observationSpots, latitude, longitude, status, id]);
-
-    await writeAudit({
-      actorId: user.id,
-      actorRole: user.role,
-      action: 'resort.update',
-      targetTable: 'resorts',
-      targetId: id,
-      details: { name, code, status },
+    const resort = await transaction(async (client) => {
+      const currentResult = await client.query('SELECT * FROM resorts WHERE id = $1 FOR UPDATE', [id]);
+      const current = currentResult.rows[0];
+      if (!current) return null;
+      const body = parsed.data;
+      const name = body.name ?? current.name;
+      const { rows } = await client.query(
+        `UPDATE resorts SET
+           name=$2, code=$3, slug=$4, location=$5, timezone=$6, contact_name=$7,
+           contact_phone=$8, contact_email=$9, whatsapp_number=$10, observation_spots=$11,
+           latitude=$12, longitude=$13, status=$14
+         WHERE id=$1 RETURNING *`,
+        [id, name, (body.code ?? current.code).toUpperCase(), body.slug ?? current.slug ?? slugify(name),
+         body.location ?? current.location, body.timezone ?? current.timezone,
+         body.contactName ?? current.contact_name, body.contactPhone ?? current.contact_phone,
+         body.contactEmail === undefined ? current.contact_email : body.contactEmail,
+         body.whatsappNumber ?? current.whatsapp_number, body.observationSpots ?? current.observation_spots,
+         body.latitude ?? current.latitude, body.longitude ?? current.longitude, body.status ?? current.status]
+      );
+      await writeAudit(client, {
+        actorId: user.id, action: 'resort.update', entityType: 'resort', entityId: id,
+        beforeData: current, afterData: rows[0], request,
+      });
+      return rows[0];
     });
-
-    return Response.json({ resort: rows[0] });
+    if (!resort) return Response.json({ error: 'Resort tidak ditemukan.' }, { status: 404 });
+    return Response.json({ resort });
   } catch (error) {
     if (error.code === '23505') {
       return Response.json({ error: 'Kode resort sudah digunakan oleh resort lain.' }, { status: 409 });
@@ -95,33 +95,19 @@ export async function DELETE(request, { params }) {
     await assertSameOrigin(request);
     const user = await requireUser(['admin']);
     const { id } = await params;
-
-    const { rows: bookingRows } = await query('SELECT COUNT(*) FROM bookings WHERE resort_id = $1', [id]);
-    if (Number(bookingRows[0]?.count || 0) > 0) {
-      // If there are bookings, soft-deactivate rather than foreign key fail
-      await query("UPDATE resorts SET status = 'suspended', updated_at = now() WHERE id = $1", [id]);
-      await writeAudit({
-        actorId: user.id,
-        actorRole: user.role,
-        action: 'resort.suspend',
-        targetTable: 'resorts',
-        targetId: id,
-        details: { reason: 'Has existing bookings, suspended instead of hard delete' },
+    if (!uuidSchema.safeParse(id).success) return Response.json({ error: 'ID tidak valid' }, { status: 400 });
+    const result = await transaction(async (client) => {
+      const beforeResult = await client.query('SELECT * FROM resorts WHERE id = $1 FOR UPDATE', [id]);
+      if (!beforeResult.rows[0]) return null;
+      const { rows } = await client.query("UPDATE resorts SET status = 'inactive' WHERE id = $1 RETURNING *", [id]);
+      await writeAudit(client, {
+        actorId: user.id, action: 'resort.deactivate', entityType: 'resort', entityId: id,
+        beforeData: beforeResult.rows[0], afterData: rows[0], request,
       });
-      return Response.json({ success: true, message: 'Resort dinonaktifkan karena memiliki riwayat reservasi.' });
-    }
-
-    await query('DELETE FROM resorts WHERE id = $1', [id]);
-    await writeAudit({
-      actorId: user.id,
-      actorRole: user.role,
-      action: 'resort.delete',
-      targetTable: 'resorts',
-      targetId: id,
-      details: {},
+      return rows[0];
     });
-
-    return Response.json({ success: true, message: 'Resort berhasil dihapus.' });
+    if (!result) return Response.json({ error: 'Resort tidak ditemukan.' }, { status: 404 });
+    return Response.json({ success: true, resort: result, message: 'Resort dinonaktifkan.' });
   } catch (error) {
     return jsonError(error);
   }

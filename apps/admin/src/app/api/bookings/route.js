@@ -48,7 +48,11 @@ export async function POST(request) {
       const staff = await client.query('SELECT id, role, resort_id, name FROM users WHERE id = $1 AND status = $2', [staffId, 'active']);
       const staffRow = staff.rows[0];
       if (!staffRow) throw new Error('Staff not found');
-      const resortId = staffRow.role === 'external' ? staffRow.resort_id : data.resortId;
+      const resortId = data.resortId || staffRow.resort_id || pkg.rows[0].resort_id;
+      if (!resortId) throw new Error('Resort is required');
+      if (pkg.rows[0].resort_id && pkg.rows[0].resort_id !== resortId) {
+        throw new Error('Package is not available at the selected resort');
+      }
 
       const childPriceUsd = pkg.rows[0].child_price_usd ?? (pkg.rows[0].package_type === 'kids' ? pkg.rows[0].adult_price_usd : pkg.rows[0].adult_price_usd * 0.5);
       const totals = calculateBookingTotals({
@@ -57,9 +61,10 @@ export async function POST(request) {
         adultPriceUsd: Number(pkg.rows[0].adult_price_usd),
         childPriceUsd: Number(childPriceUsd),
         staffRole: staffRow.role,
+        isChargeable: pkg.rows[0].is_chargeable,
       });
 
-      const status = 'accepted';
+      const status = 'active';
       const { rows } = await client.query(
         `INSERT INTO bookings (
           booking_code, booking_date, event_date, time_start, time_end,
@@ -67,7 +72,7 @@ export async function POST(request) {
           room_number, nationality, adult_count, child_count, child_ages,
           special_occasion, guardian_name, guardian_phone, seating_setup, photo_request,
           privacy_preference, dietary_restrictions, reschedule_consent, slot_status,
-          booking_source, package_id, add_ons, package_notes,
+          booking_source, package_id, booked_adult_price_usd, booked_child_price_usd, add_ons, package_notes,
           staff_id, resort_id, status, signed_by_guest, notes,
           payment_method, invoice_number, billing_notes,
           weather_condition, equipment_needed, assigned_astronomer, assigned_butler, setup_status,
@@ -80,13 +85,13 @@ export async function POST(request) {
           $9, $10, $11, $12, $13,
           $14, $15, $16, $17, $18,
           $19, $20, $21, $22,
-          $23, $24, $25::jsonb, $26,
-          $27, $28, $29, false, $30,
-          $31, $32, $33,
-          $34, $35, $36, $37, $38,
-          $39, $40, $41, $42,
-          $43, $44, $45,
-          $46, $47, $48, $49, $49
+          $23, $24, $25, $26, $27::jsonb, $28,
+          $29, $30, $31, false, $32,
+          $33, $34, $35,
+          $36, $37, $38, $39, $40,
+          $41, $42, $43, $44,
+          $45, $46, $47,
+          $48, $49, $50, $51, $51
         ) RETURNING *`,
         [
           generateBookingCode(),
@@ -113,6 +118,8 @@ export async function POST(request) {
           data.slotStatus || 'available',
           data.bookingSource,
           packageId,
+          pkg.rows[0].adult_price_usd,
+          childPriceUsd,
           JSON.stringify(data.addOns),
           data.packageNotes,
           staffId,

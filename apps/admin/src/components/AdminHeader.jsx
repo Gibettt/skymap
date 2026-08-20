@@ -11,6 +11,7 @@ const PAGE_META = {
   '/dashboard/admin/keuangan': { title: 'Laporan Keuangan', crumb: 'Keuangan' },
   '/dashboard/admin/payouts': { title: 'Pencairan Staff', crumb: 'Keuangan' },
   '/dashboard/admin/packages': { title: 'Packages', crumb: 'Package & Harga' },
+  '/dashboard/admin/packages/new': { title: 'Tambah Package', crumb: 'Package & Harga' },
   '/dashboard/admin/pengguna': { title: 'Manajemen Pengguna', crumb: 'Pengguna' },
   '/dashboard/admin/audit': { title: 'Audit Log', crumb: 'Keamanan' },
   '/dashboard/admin/jadwal': { title: 'Kalender', crumb: 'Booking' },
@@ -151,7 +152,10 @@ function useAdminNotifications() {
 export default function AdminHeader({ onNewBooking, onMenuToggle }) {
   const { language, setLanguage, t } = useAdminLanguage();
   const pathname = usePathname();
-  const meta = PAGE_META[pathname] || { title: 'Dashboard', crumb: 'Admin' };
+  const isPackageEditPage = pathname.startsWith('/dashboard/admin/packages/') && pathname.endsWith('/edit');
+  const meta = isPackageEditPage
+    ? { title: 'Edit Package', crumb: 'Package & Harga' }
+    : PAGE_META[pathname] || { title: 'Dashboard', crumb: 'Admin' };
   const [notificationOpen, setNotificationOpen] = useState(false);
   const { items: notifications, loading, setItems: setNotifications, reload: reloadNotifications } = useAdminNotifications();
   const unreadCount = useMemo(

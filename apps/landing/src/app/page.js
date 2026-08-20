@@ -2,7 +2,6 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { query } from '@ephemeris/db';
 import StargazingExperienceShowcase from '@/components/StargazingExperienceShowcase';
-import WhatsAppChatWidget from '@/components/WhatsAppChatWidget';
 
 export const dynamic = 'force-dynamic';
 
@@ -22,17 +21,20 @@ const masterclass = [
 
 async function loadPackages() {
   try {
-    await query('ALTER TABLE packages ADD COLUMN IF NOT EXISTS image_data bytea');
-    await query('ALTER TABLE packages ADD COLUMN IF NOT EXISTS image_mime_type text');
-    await query('ALTER TABLE packages ADD COLUMN IF NOT EXISTS image_file_name text');
     const { rows } = await query(`
       SELECT
-        id, name, package_type, experience_type, location, description,
-        adult_price_usd, child_price_usd, child_age_range,
-        image_data IS NOT NULL AS has_image
-      FROM packages
-      WHERE is_active = true
-      ORDER BY name
+        id, name, package_type, experience_type, location, description, schedule,
+        adult_price_usd, child_price_usd, child_age_range, is_chargeable,
+        image_data IS NOT NULL AS has_image,
+        COALESCE((
+          SELECT json_agg(pi.label ORDER BY pi.sort_order)
+          FROM package_inclusions pi
+          WHERE pi.package_id = p.id AND pi.is_active = true
+        ), '[]'::json) AS inclusions
+      FROM packages p
+      WHERE p.is_active = true
+        AND p.resort_id = (SELECT id FROM resorts WHERE slug = 'le-meridien-maldives' AND status = 'active' LIMIT 1)
+      ORDER BY p.name
     `);
     return rows.map((pkg) => ({
       ...pkg,
@@ -43,8 +45,22 @@ async function loadPackages() {
   }
 }
 
+async function loadResorts() {
+  try {
+    const { rows } = await query(
+      `SELECT name, slug, location FROM resorts
+       WHERE status = 'active' AND slug IS NOT NULL
+       ORDER BY name`
+    );
+    return rows;
+  } catch {
+    return [];
+  }
+}
+
 export default async function LandingPage() {
   const packages = await loadPackages();
+  const resorts = await loadResorts();
 
   return (
     <main className="stargazing-page">
@@ -59,6 +75,19 @@ export default async function LandingPage() {
           <a href="#masterclass">Masterclass</a>
           <a href={whatsappLink} target="_blank" rel="noopener noreferrer">WhatsApp</a>
         </div>
+        <details className="stargazing-mobile-nav">
+          <summary aria-label="Open navigation menu">
+            <span />
+            <span />
+            <span />
+          </summary>
+          <div className="stargazing-mobile-nav-panel">
+            <Link href="/sky">Sky Guide 3D</Link>
+            <a href="#experiences">Experiences</a>
+            <a href="#masterclass">Masterclass</a>
+            <a href={whatsappLink} target="_blank" rel="noopener noreferrer">WhatsApp</a>
+          </div>
+        </details>
       </nav>
 
       <section className="stargazing-hero">
@@ -117,6 +146,19 @@ export default async function LandingPage() {
         </div>
       </section>
 
+      {resorts.length > 0 && (
+        <section className="stargazing-note" aria-label="Choose a resort">
+          <p>Choose your resort to see only the packages, pricing, and contact details available at that location.</p>
+          <div className="stargazing-actions resort-grid">
+            {resorts.map((resort) => (
+              <Link key={resort.slug} href={`/resorts/${resort.slug}`} className="stargazing-button secondary">
+                {resort.name}
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
+
       <section id="experiences" className="stargazing-section">
         <div className="stargazing-section-head">
           <p className="stargazing-kicker">Choose your sky</p>
@@ -162,7 +204,6 @@ export default async function LandingPage() {
         <span>#DestinationUnlocked | #LeMeridienMaldives</span>
       </footer>
 
-      <WhatsAppChatWidget />
     </main>
   );
 }

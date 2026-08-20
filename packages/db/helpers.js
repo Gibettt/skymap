@@ -26,6 +26,8 @@ export const bookingSelectQuery = `
     p.name AS package_name,
     p.package_type,
     p.experience_type,
+    p.is_chargeable,
+    p.resort_id AS package_resort_id,
     p.location,
     u.name AS staff_name,
     u.role AS staff_role,

@@ -4,9 +4,10 @@ import { useState, useCallback, useEffect } from 'react';
 import AdminSidebar from '@/components/AdminSidebar';
 import AdminHeader from '@/components/AdminHeader';
 import { ALERTS } from '@/data/alerts';
-import { BOOKINGS } from '@/data/bookings';
+import { useBookingsQuery } from '@/lib/apiQueries';
 
 export default function AdminLayout({ children }) {
+  const { data: bookings = [] } = useBookingsQuery();
   const [newBookingTrigger, setNewBookingTrigger] = useState(0);
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
@@ -21,7 +22,7 @@ export default function AdminLayout({ children }) {
   }, []);
 
   const alertCount = ALERTS.filter(a => a.isOpen).length;
-  const bookingCount = BOOKINGS.length;
+  const bookingCount = bookings.length;
 
   const handleNewBooking = useCallback(() => {
     setNewBookingTrigger(n => n + 1);

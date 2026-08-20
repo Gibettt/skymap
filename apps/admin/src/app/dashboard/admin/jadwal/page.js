@@ -80,9 +80,13 @@ function bookingSort(a, b) {
 
 function statusLabel(status) {
   const labels = {
-    accepted: 'Accepted',
+    pending: 'Pending',
+    active: 'Active',
+    rescheduled: 'Rescheduled',
     booked: 'Booked',
-    finished_experience: 'Finished',
+    completed: 'Completed',
+    cancelled_by_guest: 'Cancelled by guest',
+    cancelled_weather: 'Cancelled by weather',
     cancelled: 'Cancelled',
   };
   return labels[status] || String(status || '-').replaceAll('_', ' ');

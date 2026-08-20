@@ -204,7 +204,7 @@ export default function StaffSidebar({ role = 'Internal', bookingCount = 0, isOp
             className={`sidebar-hamburger-btn desktop-only${isPinned ? ' pinned' : ''}`}
             onClick={togglePin}
             title={isPinned ? t('unpin_sidebar', 'Lepas Kunci Sidebar (Mode Hover)') : t('pin_sidebar', 'Kunci / Buka Penuh Sidebar')}
-            aria-label="Toggle sidebar"
+            aria-label={t('accessibility_toggle_sidebar')}
           >
             <span className="sidebar-hamburger-line" />
             <span className="sidebar-hamburger-line" />
@@ -214,8 +214,8 @@ export default function StaffSidebar({ role = 'Internal', bookingCount = 0, isOp
             type="button"
             className="sidebar-close-btn mobile-only"
             onClick={onClose}
-            title="Tutup Menu"
-            aria-label="Close menu"
+            title={t('accessibility_close_menu')}
+            aria-label={t('accessibility_close_menu')}
           >
             ✕
           </button>
@@ -294,7 +294,7 @@ export default function StaffSidebar({ role = 'Internal', bookingCount = 0, isOp
               onClick={() => setLanguage(language === 'id' ? 'en' : 'id')}
               className="sidebar-lang-compact-btn"
               title={language === 'id' ? 'Ganti ke English (EN)' : 'Ganti ke Bahasa Indonesia (ID)'}
-              aria-label="Toggle language"
+              aria-label={t('accessibility_toggle_language')}
             >
               <span className="sidebar-lang-compact-badge" style={{ background: roleColor, color: 'white' }}>
                 {language === 'id' ? 'ID' : 'EN'}
@@ -393,4 +393,3 @@ export default function StaffSidebar({ role = 'Internal', bookingCount = 0, isOp
     </>
   );
 }
-

@@ -57,10 +57,10 @@
   --header-height: 76px;
 
   /* Radius — brutalist: sharp */
-  --radius-sm: 0px;
-  --radius-md: 0px;
-  --radius-lg: 0px;
-  --radius-xl: 0px;
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
 
   /* Transitions */
   --ease: cubic-bezier(0.4, 0, 0.2, 1);
@@ -910,5 +910,210 @@ button {
 @media (max-width: 480px) {
   .wa-panel {
     width: calc(100vw - 32px);
+  }
+}
+
+/* =============================================
+   RESPONSIVE LANDING SYSTEM
+   Canonical breakpoints: tablet 1024px, mobile 768px
+   ============================================= */
+
+.stargazing-mobile-nav {
+  display: none;
+  position: relative;
+}
+
+.stargazing-mobile-nav summary {
+  width: 48px;
+  height: 48px;
+  display: grid;
+  place-content: center;
+  gap: 5px;
+  list-style: none;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--stargazing-panel);
+  cursor: pointer;
+}
+
+.stargazing-mobile-nav summary::-webkit-details-marker {
+  display: none;
+}
+
+.stargazing-mobile-nav summary span {
+  width: 20px;
+  height: 2px;
+  display: block;
+  background: var(--stargazing-ink);
+  transition: transform 0.18s var(--ease), opacity 0.18s var(--ease);
+}
+
+.stargazing-mobile-nav[open] summary span:nth-child(1) {
+  transform: translateY(7px) rotate(45deg);
+}
+
+.stargazing-mobile-nav[open] summary span:nth-child(2) {
+  opacity: 0;
+}
+
+.stargazing-mobile-nav[open] summary span:nth-child(3) {
+  transform: translateY(-7px) rotate(-45deg);
+}
+
+.stargazing-mobile-nav-panel {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  width: min(320px, calc(100vw - 32px));
+  padding: 8px;
+  display: grid;
+  gap: 4px;
+  background: var(--stargazing-panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.16);
+}
+
+.stargazing-mobile-nav-panel a {
+  min-height: 48px;
+  padding: 0 14px;
+  display: flex;
+  align-items: center;
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  font-weight: 850;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.stargazing-mobile-nav-panel a:hover,
+.stargazing-mobile-nav-panel a:focus-visible {
+  background: var(--accent-muted);
+  color: var(--accent);
+}
+
+.stargazing-button,
+.stargazing-hero-copy,
+.stargazing-hero-image,
+.hero-price-card,
+.experience-card,
+.experience-feature,
+.masterclass-list,
+.wa-panel {
+  border-radius: var(--radius-md);
+}
+
+.stargazing-hero-copy,
+.stargazing-hero-image,
+.experience-card,
+.experience-feature {
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.07);
+}
+
+.resort-grid {
+  width: min(100%, 980px);
+  margin-top: 0;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.resort-grid .stargazing-button {
+  width: 100%;
+  min-width: 0;
+  white-space: normal;
+  text-align: center;
+}
+
+@media (max-width: 1024px) {
+  .stargazing-hero,
+  .masterclass-section,
+  .experience-feature {
+    grid-template-columns: 1fr;
+    min-height: auto;
+  }
+
+  .stargazing-hero-image,
+  .experience-feature-image {
+    min-height: 48dvh;
+  }
+
+  .stargazing-hero-details,
+  .stargazing-proof,
+  .experience-grid,
+  .resort-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .stargazing-note {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
+
+@media (max-width: 768px) {
+  .stargazing-nav {
+    height: 68px;
+    padding: 0 16px;
+    align-items: center;
+    flex-direction: row;
+  }
+
+  .stargazing-nav-links {
+    display: none;
+  }
+
+  .stargazing-mobile-nav {
+    display: block;
+  }
+
+  .stargazing-hero {
+    padding: clamp(14px, 4vw, 20px);
+    gap: 14px;
+  }
+
+  .stargazing-hero-copy {
+    padding: clamp(28px, 8vw, 42px) clamp(18px, 5vw, 28px);
+  }
+
+  .stargazing-hero h1 {
+    font-size: clamp(38px, 12vw, 58px);
+  }
+
+  .stargazing-hero-image,
+  .experience-feature-image {
+    min-height: min(62dvh, 520px);
+  }
+
+  .stargazing-hero-details,
+  .stargazing-proof,
+  .experience-grid,
+  .experience-facts,
+  .masterclass-row,
+  .resort-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .stargazing-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .experience-picker button,
+  .stargazing-actions .stargazing-button {
+    width: 100%;
+  }
+
+  .stargazing-section,
+  .masterclass-section,
+  .stargazing-note {
+    padding: clamp(44px, 12vw, 68px) clamp(16px, 5vw, 24px);
+  }
+
+  button,
+  input,
+  select,
+  textarea {
+    min-height: 48px;
   }
 }

@@ -39,7 +39,7 @@ export async function handlePayoutReviewed(payload, { client, query }) {
 
   try {
     const formattedAmount = Number(amountUsd || 0).toFixed(2);
-    const statusLabel = status === 'paid' ? 'Telah Dicairkan' : (status === 'approved' ? 'Disetujui' : 'Ditolak');
+    const statusLabel = status === 'completed' ? 'Telah Dicairkan' : (status === 'processed' ? 'Sedang Diproses' : 'Ditolak');
     const title = `Permintaan Payout ${statusLabel}`;
     const message = `Pencairan komisi sebesar $${formattedAmount} ${statusLabel.toLowerCase()}`;
     const targetLink = requesterRole === 'external' ? '/dashboard/external/payout' : '/dashboard/internal/payout';

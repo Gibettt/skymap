@@ -7,7 +7,7 @@ import { OBJECT_TYPES, PACKAGE_CATALOG, STATIONS } from '@/data/bookings';
 import { calculateBookingFinance, formatUsd } from '@/data/keuangan';
 import { useBookingsQuery, useUpdateBookingMutation, queryKeys, fetchApi } from '@/lib/apiQueries';
 
-const STATUS_FILTERS = ['Semua', 'Menunggu Admin', 'Diterima', 'Ditolak', 'Booked', 'Finished Experience', 'Cancelled'];
+const STATUS_FILTERS = ['Semua', 'Pending', 'Aktif', 'Selesai', 'Dijadwalkan Ulang', 'Dibatalkan Tamu', 'Dibatalkan Cuaca'];
 
 
 const STAFF_OPTIONS = [
@@ -37,7 +37,7 @@ const EMPTY_FORM = {
   staffId: 'INT-001',
   staffName: 'Ahmad Fauzi',
   staffRole: 'Internal',
-  status: 'Booked',
+  status: 'Aktif',
   signedByGuest: false,
   tipIncentiveUsd: 0,
   feedbackToken: '',
@@ -49,18 +49,18 @@ const EMPTY_FORM = {
 
 function getStatusClass(status) {
   const map = {
-    pending_review: 'tag-pending',
-    accepted: 'tag-confirmed',
-    rejected: 'tag-cancelled',
-    booked: 'tag-confirmed',
-    finished_experience: 'tag-completed',
-    cancelled: 'tag-cancelled',
-    'Menunggu Admin': 'tag-pending',
-    Diterima: 'tag-confirmed',
-    Ditolak: 'tag-cancelled',
-    Booked: 'tag-pending',
-    'Finished Experience': 'tag-completed',
-    Cancelled: 'tag-cancelled',
+    pending: 'tag-pending',
+    active: 'tag-confirmed',
+    completed: 'tag-completed',
+    rescheduled: 'tag-confirmed',
+    cancelled_by_guest: 'tag-cancelled',
+    cancelled_weather: 'tag-cancelled',
+    Pending: 'tag-pending',
+    Aktif: 'tag-confirmed',
+    Selesai: 'tag-completed',
+    'Dijadwalkan Ulang': 'tag-confirmed',
+    'Dibatalkan Tamu': 'tag-cancelled',
+    'Dibatalkan Cuaca': 'tag-cancelled',
   };
   return map[status] || '';
 }
@@ -76,12 +76,12 @@ function getTypeClass(type) {
 
 function statusLabel(status) {
   const labels = {
-    pending_review: 'Menunggu Admin',
-    accepted: 'Diterima',
-    rejected: 'Ditolak',
-    booked: 'Booked',
-    finished_experience: 'Finished Experience',
-    cancelled: 'Cancelled',
+    pending: 'Pending',
+    active: 'Aktif',
+    completed: 'Selesai',
+    rescheduled: 'Dijadwalkan Ulang',
+    cancelled_by_guest: 'Dibatalkan Tamu',
+    cancelled_weather: 'Dibatalkan Cuaca',
   };
   return labels[status] || status;
 }
@@ -666,23 +666,23 @@ function BookingDetail({ booking, onClose, onEdit, onDelete, onReview, reviewing
             </button>
           </div>
           <div style={{ display: 'flex', gap: 10 }}>
-            {booking.rawStatus === 'pending_review' && onReview && (
+            {['active', 'rescheduled'].includes(booking.rawStatus) && onReview && (
               <>
                 <button
                   className="btn btn-secondary btn-sm"
                   style={{ color: 'var(--accent)', borderColor: 'rgba(229,28,28,0.3)' }}
                   disabled={reviewingId === booking.id}
-                  onClick={() => onReview(booking, 'rejected')}
+                  onClick={() => onReview(booking, 'cancelled_by_guest')}
                 >
-                  Tolak
+                  Cancel Guest
                 </button>
                 <button
                   className="btn btn-primary btn-sm"
                   style={{ background: 'var(--emerald)', borderColor: 'var(--emerald)' }}
                   disabled={reviewingId === booking.id}
-                  onClick={() => onReview(booking, 'accepted')}
+                  onClick={() => onReview(booking, 'completed')}
                 >
-                  Terima Booking
+                  Complete
                 </button>
               </>
             )}
@@ -1054,11 +1054,33 @@ export default function BookingsPage() {
           channel.close();
         }
       } catch {}
-      showToast(`Booking ${booking.bookingCode} ${nextStatus === 'accepted' ? 'diterima' : 'ditolak'}.`);
+      showToast(`Booking ${booking.bookingCode} diubah menjadi ${statusLabel(nextStatus)}.`);
     } catch (err) {
       showToast(err.message || 'Review booking gagal.', 'error');
     } finally {
       setReviewingId(null);
+    }
+  };
+
+  const handleReschedule = async (booking) => {
+    const eventDate = window.prompt('Tanggal baru (YYYY-MM-DD)', String(booking.date).slice(0, 10));
+    if (!eventDate) return;
+    const timeStart = window.prompt('Waktu mulai (HH:MM)', String(booking.timeStart).slice(0, 5));
+    if (!timeStart) return;
+    const timeEnd = window.prompt('Waktu selesai (HH:MM)', String(booking.timeEnd).slice(0, 5));
+    if (!timeEnd) return;
+    const reason = window.prompt('Alasan reschedule', 'Permintaan tamu');
+    if (reason === null) return;
+    try {
+      await fetchApi(`/api/bookings/${booking.id}/reschedule`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ eventDate, timeStart, timeEnd, reason }),
+      });
+      queryClient.invalidateQueries({ queryKey: queryKeys.bookings.all });
+      showToast(`Booking ${booking.bookingCode} berhasil dijadwalkan ulang.`);
+    } catch (error) {
+      showToast(error.message || 'Reschedule gagal.', 'error');
     }
   };
 
@@ -1076,8 +1098,8 @@ export default function BookingsPage() {
         </div>
         <div style={{ marginLeft: 'auto', display: 'flex', gap: 6, flexWrap: 'wrap' }}>
           {STATUS_FILTERS.filter((status) => status !== 'Semua').map((status) => {
-            const isPending = status === 'Menunggu Admin';
-            const count = isPending ? bookings.filter((b) => b.status === 'Menunggu Admin' || b.status === 'pending_review' || b.status === 'Pending Review').length : 0;
+            const isPending = status === 'Pending';
+            const count = isPending ? bookings.filter((b) => b.rawStatus === 'pending').length : 0;
             return (
               <button 
                 key={status} 
@@ -1107,7 +1129,7 @@ export default function BookingsPage() {
             {error}
           </div>
         )}
-        <div className="table-container">
+        <div className="table-container responsive-card-table">
           <table>
             <thead>
               <tr>
@@ -1123,14 +1145,14 @@ export default function BookingsPage() {
             </thead>
             <tbody>
               {loading && (
-                <tr><td colSpan={8} style={{ textAlign: 'center', padding: 40, color: 'var(--text-muted)' }}>Memuat booking...</td></tr>
+                <tr><td data-label="Status" colSpan={8} style={{ textAlign: 'center', padding: 40, color: 'var(--text-muted)' }}>Memuat booking...</td></tr>
               )}
               {!loading && paginated.map((b) => {
                 const finance = getFinance(b);
                 return (
                   <tr key={b.id}>
-                    <td className="name-cell" onClick={() => setViewingBooking(b)}>{b.bookingCode}</td>
-                    <td>
+                    <td data-label="Booking" className="name-cell" onClick={() => setViewingBooking(b)}>{b.bookingCode}</td>
+                    <td data-label="Guest">
                       <strong>{b.clientName}</strong><br />
                       <span style={{ fontSize: 11, color: 'var(--text-dim)' }}>Room {b.roomNumber || '-'}</span>
                       {b.resortName && (
@@ -1141,45 +1163,48 @@ export default function BookingsPage() {
                         </div>
                       )}
                     </td>
-                    <td><span className={`tag ${getTypeClass(b.packageType)}`}>{b.packageName}</span></td>
-                    <td>{b.adultCount} adult / {b.childCount} child</td>
-                    <td><span className="tag tag-info">{b.staffRole}</span><br /><span style={{ fontSize: 11, color: 'var(--text-dim)' }}>{b.staffName}</span></td>
-                    <td style={{ textAlign: 'right', fontWeight: 800 }}>{formatUsd(finance.baseTotalUsd)}</td>
-                    <td><span className={`tag ${getStatusClass(b.status)}`}>{b.status}</span></td>
-                    <td style={{ textAlign: 'center' }}>
+                    <td data-label="Package"><span className={`tag ${getTypeClass(b.packageType)}`}>{b.packageName}</span></td>
+                    <td data-label="Pax">{b.adultCount} Adults / {b.childCount} Children</td>
+                    <td data-label="Staff Owner"><span className="tag tag-info">{b.staffRole}</span><br /><span style={{ fontSize: 11, color: 'var(--text-dim)' }}>{b.staffName}</span></td>
+                    <td data-label="Base" style={{ textAlign: 'right', fontWeight: 800 }}>{formatUsd(finance.baseTotalUsd)}</td>
+                    <td data-label="Status"><span className={`tag ${getStatusClass(b.status)}`}>{b.status}</span></td>
+                    <td data-label="Aksi" style={{ textAlign: 'center' }}>
                       <div style={{ display: 'flex', gap: 4, justifyContent: 'center', flexWrap: 'wrap' }}>
-                        {b.rawStatus === 'pending_review' && (
+                        {['active', 'rescheduled'].includes(b.rawStatus) && (
                           <>
                             <button
                               className="btn btn-sm"
                               style={{ background: 'var(--emerald, #059669)', color: 'white', border: 'none', fontWeight: 700, padding: '4px 8px', fontSize: 11 }}
-                              title="Terima booking"
+                              title="Complete booking"
                               disabled={reviewingId === b.id}
-                              onClick={() => setConfirmReviewModal({ type: 'accepted', booking: b })}
+                              onClick={() => handleReview(b, 'completed')}
                             >
-                              ✓ Terima
+                              Complete
                             </button>
                             <button
                               className="btn btn-sm"
                               style={{ background: 'var(--accent, #dc2626)', color: 'white', border: 'none', fontWeight: 700, padding: '4px 8px', fontSize: 11 }}
-                              title="Tolak booking"
+                              title="Cancel booking"
                               disabled={reviewingId === b.id}
-                              onClick={() => setConfirmReviewModal({ type: 'rejected', booking: b })}
+                              onClick={() => handleReview(b, 'cancelled_by_guest')}
                             >
-                              ✕ Tolak
+                              Cancel
                             </button>
                           </>
                         )}
+                        {['active', 'rescheduled'].includes(b.rawStatus) && (
+                          <button className="btn-icon" style={{ fontSize: 12 }} title="Reschedule" onClick={() => handleReschedule(b)}>Schedule</button>
+                        )}
                         <button className="btn-icon" style={{ fontSize: 12 }} title="Lihat" onClick={() => setViewingBooking(b)}>View</button>
                         <button className="btn-icon" style={{ fontSize: 12 }} title="Edit" onClick={() => { setEditingBooking(b); setModalOpen(true); }}>Edit</button>
-                        <button className="btn-icon" style={{ fontSize: 12, color: 'var(--accent)' }} title="Hapus" onClick={() => handleDelete(b.id)}>Del</button>
+                        <button className="btn-icon" style={{ fontSize: 12, color: 'var(--accent)' }} title="Hapus" onClick={() => handleDelete(b.id)}>Delete</button>
                       </div>
                     </td>
                   </tr>
                 );
               })}
               {!loading && paginated.length === 0 && (
-                <tr><td colSpan={8} style={{ textAlign: 'center', padding: 40, color: 'var(--text-muted)' }}>Tidak ada data ditemukan</td></tr>
+                <tr><td data-label="Status" colSpan={8} style={{ textAlign: 'center', padding: 40, color: 'var(--text-muted)' }}>Tidak ada data ditemukan</td></tr>
               )}
             </tbody>
           </table>
@@ -1203,7 +1228,7 @@ export default function BookingsPage() {
           onClose={() => setViewingBooking(null)}
           onEdit={(b) => { setEditingBooking(b); setModalOpen(true); }}
           onDelete={handleDelete}
-          onReview={(b, type) => setConfirmReviewModal({ type, booking: b })}
+          onReview={handleReview}
           reviewingId={reviewingId}
         />
       )}

@@ -5,7 +5,8 @@ import { emit, EventTypes } from '@ephemeris/events';
 import { calculatePayoutSummary } from '@ephemeris/finance';
 
 const bookingSelect = `
-  SELECT b.status, b.signed_by_guest, b.staff_commission_5_usd, b.child_count, p.package_type
+  SELECT b.status, b.signed_by_guest, b.staff_commission_5_usd,
+         b.adult_count, b.child_count, b.event_date, p.is_chargeable
   FROM bookings b
   JOIN packages p ON p.id = b.package_id
 `;
@@ -18,20 +19,11 @@ const payoutSelect = `
 `;
 
 function payoutScope(user) {
-  if (user.role === 'external') {
-    return {
-      bookingWhere: 'WHERE b.resort_id = $1',
-      payoutWhere: 'WHERE pr.resort_id = $1',
-      values: [user.resort_id],
-      resortId: user.resort_id,
-    };
-  }
-
   return {
     bookingWhere: 'WHERE b.staff_id = $1',
     payoutWhere: 'WHERE pr.requester_id = $1',
     values: [user.id],
-    resortId: null,
+    resortId: user.resort_id,
   };
 }
 
@@ -39,18 +31,22 @@ async function loadSummary(user, client = { query }) {
   const scope = payoutScope(user);
   const bookingResult = await client.query(`${bookingSelect} ${scope.bookingWhere}`, scope.values);
   const payoutResult = await client.query(`${payoutSelect} ${scope.payoutWhere} ORDER BY pr.created_at DESC`, scope.values);
+  const settingsResult = await client.query('SELECT * FROM sky_settings WHERE id = true LIMIT 1');
 
   return {
     requests: payoutResult.rows,
-    summary: calculatePayoutSummary(bookingResult.rows, payoutResult.rows),
+    summary: calculatePayoutSummary(bookingResult.rows, payoutResult.rows, {
+      role: user.role,
+      settings: settingsResult.rows[0],
+    }),
   };
 }
 
 export async function GET() {
   try {
     const user = await requireUser(['internal', 'external']);
-    if (user.role === 'external' && !user.resort_id) {
-      return Response.json({ error: 'External resort profile is not configured' }, { status: 403 });
+    if (!user.resort_id) {
+      return Response.json({ error: 'Staff resort profile is not configured' }, { status: 403 });
     }
 
     return Response.json(await loadSummary(user));
@@ -63,17 +59,19 @@ export async function POST(request) {
   try {
     await assertSameOrigin(request);
     const user = await requireUser(['internal', 'external']);
-    if (user.role === 'external' && !user.resort_id) {
-      return Response.json({ error: 'External resort profile is not configured' }, { status: 403 });
+    if (!user.resort_id) {
+      return Response.json({ error: 'Staff resort profile is not configured' }, { status: 403 });
     }
 
     const parsed = createPayoutRequestSchema.safeParse(await parseJsonBody(request));
     if (!parsed.success) {
       return Response.json({ error: 'Data payout tidak valid', details: parsed.error.flatten() }, { status: 400 });
     }
-    const { amountUsd, paymentMethod, accountName, accountNumber, notes } = parsed.data;
+    const { amountUsd, bankName, accountHolderName, accountNumber, notes } = parsed.data;
 
     const created = await transaction(async (client) => {
+      // Serialize payout requests per user so concurrent submissions cannot overspend.
+      await client.query('SELECT id FROM users WHERE id = $1 FOR UPDATE', [user.id]);
       const { summary } = await loadSummary(user, client);
       if (Math.round(amountUsd * 100) > Math.round(summary.availableUsd * 100)) {
         return { error: 'Amount exceeds available payout balance' };
@@ -83,7 +81,7 @@ export async function POST(request) {
       const { rows } = await client.query(
         `INSERT INTO payout_requests
           (requester_id, resort_id, amount_usd, commission_usd, star_bonus_usd, star_points, full_stars,
-           payment_method, account_name, account_number, notes)
+           bank_name, account_holder_name, account_number, notes)
          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
          RETURNING *`,
         [
@@ -94,8 +92,8 @@ export async function POST(request) {
           summary.starBonusUsd,
           summary.starPoints,
           summary.fullStars,
-          paymentMethod,
-          accountName,
+          bankName,
+          accountHolderName,
           accountNumber,
           notes,
         ]

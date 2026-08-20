@@ -1,13 +1,15 @@
 'use client';
 
 import { TELESCOPES } from '@/data/bookings';
+import { useLanguage } from '@/context/LanguageContext';
 
 export default function ExternalInstrumentsPage() {
+  const { t } = useLanguage();
   return (
     <div className="fade-in-up stagger">
       <header className="page-header">
-        <h1 className="page-title">Instruments</h1>
-        <p>Daftar teleskop yang tersedia di jaringan observatorium.</p>
+        <h1 className="page-title">{t('instruments_title')}</h1>
+        <p>{t('instruments_desc')}</p>
       </header>
 
       <div className="grid-3">

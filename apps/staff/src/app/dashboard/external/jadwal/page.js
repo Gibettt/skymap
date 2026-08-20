@@ -165,9 +165,9 @@ export default function StaffMonthlyCalendarPage() {
           <h1 className="page-title">{t('calendar_title')}</h1>
         </div>
         <div className="calendar-header-actions">
-          <button className="btn btn-secondary btn-sm" type="button" onClick={() => moveMonth(-1)}>Prev</button>
-          <button className="btn btn-secondary btn-sm" type="button" onClick={goToday}>Today</button>
-          <button className="btn btn-secondary btn-sm" type="button" onClick={() => moveMonth(1)}>Next</button>
+          <button className="btn btn-secondary btn-sm" type="button" onClick={() => moveMonth(-1)}>{t('calendar_previous')}</button>
+          <button className="btn btn-secondary btn-sm" type="button" onClick={goToday}>{t('calendar_today')}</button>
+          <button className="btn btn-secondary btn-sm" type="button" onClick={() => moveMonth(1)}>{t('calendar_next')}</button>
         </div>
       </header>
 
@@ -256,14 +256,14 @@ export default function StaffMonthlyCalendarPage() {
               <article className="calendar-booking-card" key={booking.id}>
                 <div className="calendar-booking-top">
                   <strong>{formatTime(booking.time_start)} - {formatTime(booking.time_end)}</strong>
-                  <span>{booking.status === 'finished_experience' ? 'Finished' : booking.status}</span>
+                  <span>{booking.status === 'completed' ? 'Completed' : booking.status}</span>
                 </div>
                 <h4>{booking.guest_name}</h4>
                 <div className="calendar-booking-meta">
                   <span>{booking.package_name}</span>
                   <span>{booking.location}</span>
                   {booking.resort_name && <span>{booking.resort_name}</span>}
-                  <span>Room {booking.room_number}</span>
+                  <span>{t('common_room')} {booking.room_number}</span>
                   {isInternal && <span>Staff: {booking.staff_name}</span>}
                 </div>
                 {booking.notes && <p>{booking.notes}</p>}

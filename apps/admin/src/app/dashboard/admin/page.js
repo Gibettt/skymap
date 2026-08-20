@@ -2,7 +2,6 @@
 
 import { useState, useMemo, useEffect } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { BOOKINGS } from '@/data/bookings';
 import { calculateBookingFinance } from '@/data/keuangan';
 import { ALERTS } from '@/data/alerts';
 import { STATION_DATA } from '@/data/stations';
@@ -31,11 +30,17 @@ function titleCase(value) {
 function normalizeOverviewBooking(row) {
   const rawStatus = row.status || '';
   let status = rawStatus;
-  if (rawStatus === 'finished_experience' || rawStatus === 'Finished Experience') {
+  if (rawStatus === 'completed' || rawStatus === 'Selesai') {
     status = 'Finished Experience';
-  } else if (rawStatus === 'booked' || rawStatus === 'accepted' || rawStatus === 'pending_review' || rawStatus === 'Booked') {
+  } else if (rawStatus === 'active' || rawStatus === 'pending' || rawStatus === 'rescheduled') {
     status = 'Booked';
-  } else if (rawStatus === 'cancelled' || rawStatus === 'rejected' || rawStatus === 'Cancelled') {
+  } else if (
+    rawStatus === 'cancelled_by_guest'
+    || rawStatus === 'cancelled_weather'
+    || rawStatus === 'cancelled'
+    || rawStatus === 'rejected'
+    || rawStatus === 'Cancelled'
+  ) {
     status = 'Cancelled';
   }
 
@@ -111,7 +116,7 @@ const CHART_BOTTOM = 184;
 
 export default function AdminOverviewPage() {
   const queryClient = useQueryClient();
-  const { data: rawBookings = [] } = useBookingsQuery();
+  const { data: rawBookings = [], error: bookingsError } = useBookingsQuery();
   const [hoveredBar, setHoveredBar] = useState(null);
   const [activePackageName, setActivePackageName] = useState(null);
 
@@ -133,12 +138,10 @@ export default function AdminOverviewPage() {
     };
   }, [queryClient]);
 
-  const allBookings = useMemo(() => {
-    if (Array.isArray(rawBookings) && rawBookings.length > 0) {
-      return rawBookings.map(normalizeOverviewBooking);
-    }
-    return BOOKINGS.map(normalizeOverviewBooking);
-  }, [rawBookings]);
+  const allBookings = useMemo(
+    () => (Array.isArray(rawBookings) ? rawBookings.map(normalizeOverviewBooking) : []),
+    [rawBookings]
+  );
 
   const currentMonth = useMemo(() => {
     const months = allBookings.map(bookingMonth).filter((m) => m !== null);
@@ -333,6 +336,21 @@ export default function AdminOverviewPage() {
       </div>
 
       {/* ── KPI Hero Grid: Booking Quadrant + Large Revenue Hero ── */}
+      {bookingsError && (
+        <div
+          role="alert"
+          style={{
+            padding: '12px 14px',
+            border: '1px solid var(--border-accent)',
+            background: 'var(--accent-muted)',
+            color: 'var(--accent)',
+            fontSize: 13,
+          }}
+        >
+          Data booking gagal dimuat: {bookingsError.message}
+        </div>
+      )}
+
       <div className="admin-overview-hero-grid stagger">
         {/* Left: 4 Booking Status KPIs (2x2 Quad) */}
         <div className="admin-overview-kpi-quad">
@@ -740,7 +758,7 @@ export default function AdminOverviewPage() {
           <div className="card fade-in-up">
             <div className="card-header">
               <span className="card-title">Sebaran Paket</span>
-              <span style={{ fontSize: 11, color: 'var(--text-dim)' }}>{BOOKINGS.length} total</span>
+              <span style={{ fontSize: 11, color: 'var(--text-dim)' }}>{allBookings.length} total</span>
             </div>
             <div className="card-body" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
               {catalogDist.map((cat) => {

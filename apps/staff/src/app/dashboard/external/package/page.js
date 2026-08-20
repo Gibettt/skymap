@@ -32,17 +32,17 @@ export default function ExternalPackagePage() {
     <div className="fade-in-up">
       <div className="form-booking-toolbar">
         <div>
-          <h1>Package</h1>
+          <h1>{t('package_title')}</h1>
           <p>{t('package_desc')}</p>
         </div>
         <Link href={`${basePath}/form-booking`} className="btn btn-primary" style={{ background: '#7c3aed', textDecoration: 'none' }}>
-          Form Booking
+          {t('package_form_booking')}
         </Link>
       </div>
 
       <section className="card">
         <div className="card-header">
-          <h2 className="card-title">Service Package</h2>
+          <h2 className="card-title">{t('package_service_title')}</h2>
           <span style={{ color: 'var(--text-muted)', fontSize: 12 }}>{t('package_service_count').replace('{count}', serviceItems.length)}</span>
         </div>
 
@@ -52,8 +52,9 @@ export default function ExternalPackagePage() {
               <span className="package-service-icon">{item.icon}</span>
               <span className="package-service-main">
                 <strong>{item.title}</strong>
+                {item.inclusions && <small>{t('package_including')}: {item.inclusions}</small>}
               </span>
-              <span className="package-service-meta">{item.price || 'Upon request'}</span>
+              <span className="package-service-meta">{item.price || t('package_upon_request')}</span>
             </Link>
           ))}
         </div>

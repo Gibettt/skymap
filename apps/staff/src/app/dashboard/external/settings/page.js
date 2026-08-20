@@ -84,7 +84,7 @@ export default function ExternalSettingsPage() {
                     Bahasa Indonesia
                   </div>
                   <div style={{ fontSize: 11, color: 'var(--text-dim)', marginTop: 2 }}>
-                    Default (ID)
+                    {t('settings_default_language')}
                   </div>
                 </div>
               </div>
@@ -118,7 +118,7 @@ export default function ExternalSettingsPage() {
                     English (US/UK)
                   </div>
                   <div style={{ fontSize: 11, color: 'var(--text-dim)', marginTop: 2 }}>
-                    International (EN)
+                    {t('settings_international_language')}
                   </div>
                 </div>
               </div>
@@ -133,7 +133,7 @@ export default function ExternalSettingsPage() {
           </div>
 
           <div style={{ marginTop: 14, fontSize: 11, color: 'var(--text-muted)' }}>
-            <em>* {language === 'en' ? 'Only application interface elements change. Data inputted by users remains untouched.' : 'Hanya teks antarmuka aplikasi yang berubah. Data yang sudah diinput tetap terjaga.'}</em>
+            <em>* {t('settings_interface_note')}</em>
           </div>
         </div>
       </section>
@@ -152,7 +152,7 @@ export default function ExternalSettingsPage() {
             <label className="input-label">{t('settings_institution', 'Institusi / Peran')}</label>
             <input
               className="input"
-              value={profile?.resort_name || (profile?.role === 'internal' ? t('role_internal', 'Staff Internal') : 'Resort belum diset')}
+              value={profile?.resort_name || (profile?.role === 'internal' ? t('role_internal', 'Staff Internal') : t('settings_resort_unset'))}
               disabled
             />
           </div>

@@ -23,20 +23,24 @@ export async function PATCH(request, { params }) {
         `SELECT pr.*, u.role AS requester_role
          FROM payout_requests pr
          JOIN users u ON u.id = pr.requester_id
-         WHERE pr.id = $1`,
+         WHERE pr.id = $1
+         FOR UPDATE OF pr`,
         [id]
       );
       if (!before.rows[0]) return null;
 
       const current = before.rows[0];
-      if (current.status === 'paid' || current.status === 'rejected') {
+      if (current.status === 'completed' || current.status === 'rejected') {
         return { error: 'Payout request is already closed' };
       }
-      if (status === 'approved' && current.status !== 'requested') {
-        return { error: 'Only requested payouts can be approved' };
+      if (status === 'processed' && current.status !== 'requested') {
+        return { error: 'Only requested payouts can be processed' };
       }
-      if (status === 'paid' && !['requested', 'approved'].includes(current.status)) {
-        return { error: 'Only requested or approved payouts can be paid' };
+      if (status === 'completed' && current.status !== 'processed') {
+        return { error: 'Only processed payouts can be completed' };
+      }
+      if (status === 'rejected' && !['requested', 'processed'].includes(current.status)) {
+        return { error: 'Only open payouts can be rejected' };
       }
 
       const { rows } = await client.query(
@@ -45,7 +49,7 @@ export async function PATCH(request, { params }) {
           admin_notes = COALESCE($3, admin_notes),
           reviewed_by = $4,
           reviewed_at = CASE WHEN reviewed_at IS NULL THEN now() ELSE reviewed_at END,
-          paid_at = CASE WHEN $2 = 'paid' THEN now() ELSE paid_at END
+          paid_at = CASE WHEN $2 = 'completed' THEN now() ELSE paid_at END
          WHERE id = $1
          RETURNING *`,
         [id, status, adminNotes, user.id]
@@ -62,9 +66,9 @@ export async function PATCH(request, { params }) {
       });
 
       // Emit domain event for payout review
-      const eventType = status === 'paid'
-        ? EventTypes.PAYOUT_PAID
-        : (status === 'approved' ? EventTypes.PAYOUT_APPROVED : EventTypes.PAYOUT_REJECTED);
+      const eventType = status === 'completed'
+        ? EventTypes.PAYOUT_COMPLETED
+        : (status === 'processed' ? EventTypes.PAYOUT_PROCESSED : EventTypes.PAYOUT_REJECTED);
 
       await emit(eventType, {
         payoutId: id,

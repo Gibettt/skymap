@@ -6,7 +6,7 @@ import { uuidSchema } from '@ephemeris/db/validators/common';
 import { emit, EventTypes } from '@ephemeris/events';
 import { calculateBookingTotals } from '@ephemeris/finance';
 
-const BOOKING_STATUSES = new Set(['pending_review', 'accepted', 'rejected', 'booked', 'finished_experience', 'cancelled']);
+const BOOKING_STATUSES = new Set(['pending', 'active', 'completed', 'cancelled_by_guest', 'cancelled_weather', 'rescheduled']);
 
 export async function PATCH(request, { params }) {
   try {
@@ -21,18 +21,41 @@ export async function PATCH(request, { params }) {
       return Response.json({ error: 'Data booking tidak valid', details: parsed.error.flatten() }, { status: 400 });
     }
     const body = parsed.data;
+    if (body.eventDate !== undefined || body.timeStart !== undefined || body.timeEnd !== undefined) {
+      throw new ApiError(400, 'Use the reschedule endpoint to change booking schedule');
+    }
+    if (body.status === 'rescheduled') {
+      throw new ApiError(400, 'Use the reschedule endpoint to set rescheduled status');
+    }
 
     const updated = await transaction(async (client) => {
       const beforeResult = await client.query('SELECT * FROM bookings WHERE id = $1', [id]);
       const before = beforeResult.rows[0];
       if (!before) return null;
-      if (user.role === 'external' && before.staff_id !== user.id) {
-        throw new ApiError(403, 'Forbidden');
+      const packageId = body.packageId || before.package_id;
+      const packageChanged = packageId !== before.package_id;
+      let adultPriceUsd = Number(before.booked_adult_price_usd);
+      let childPriceUsd = Number(before.booked_child_price_usd);
+      let newBookedAdultPriceUsd = adultPriceUsd;
+      let newBookedChildPriceUsd = childPriceUsd;
+      let isChargeable = true;
+
+      if (packageChanged || (adultPriceUsd === 0 && before.base_total_usd === 0) || !adultPriceUsd) {
+        const pkg = await client.query('SELECT * FROM packages WHERE id = $1', [packageId]);
+        if (!pkg.rows[0] || (pkg.rows[0].resort_id && pkg.rows[0].resort_id !== before.resort_id)) {
+          throw new Error('Package not found for this resort');
+        }
+        adultPriceUsd = Number(pkg.rows[0].adult_price_usd);
+        childPriceUsd = Number(pkg.rows[0].child_price_usd ?? (pkg.rows[0].package_type === 'kids' ? adultPriceUsd : adultPriceUsd * 0.5));
+        newBookedAdultPriceUsd = adultPriceUsd;
+        newBookedChildPriceUsd = childPriceUsd;
+        isChargeable = pkg.rows[0].is_chargeable;
+      } else {
+        const pkg = await client.query('SELECT is_chargeable FROM packages WHERE id = $1', [packageId]);
+        if (!pkg.rows[0]) throw new Error('Package not found');
+        isChargeable = pkg.rows[0].is_chargeable;
       }
 
-      const packageId = body.packageId || before.package_id;
-      const pkg = await client.query('SELECT * FROM packages WHERE id = $1', [packageId]);
-      if (!pkg.rows[0]) throw new Error('Package not found');
       const staffResult = await client.query('SELECT role FROM users WHERE id = $1', [before.staff_id]);
       const staffRole = staffResult.rows[0]?.role || 'external';
 
@@ -41,24 +64,26 @@ export async function PATCH(request, { params }) {
       if (adultCount + childCount <= 0) {
         throw new ApiError(400, 'Minimal harus ada 1 tamu (dewasa atau anak)');
       }
-      const childPriceUsd = pkg.rows[0].child_price_usd ?? (pkg.rows[0].package_type === 'kids' ? pkg.rows[0].adult_price_usd : pkg.rows[0].adult_price_usd * 0.5);
+
       const totals = calculateBookingTotals({
         adultCount,
         childCount,
-        adultPriceUsd: Number(pkg.rows[0].adult_price_usd),
-        childPriceUsd: Number(childPriceUsd),
+        adultPriceUsd,
+        childPriceUsd,
         staffRole,
+        isChargeable,
       });
 
       const nextStatus = body.status ?? before.status;
-      const signedByGuest = user.role === 'external'
-        ? before.signed_by_guest
-        : Boolean(body.signedByGuest ?? before.signed_by_guest);
+      const signedByGuest = Boolean(body.signedByGuest ?? before.signed_by_guest);
       const addOns = body.addOns === undefined ? null : body.addOns;
       const guestEmail = body.guestEmail === undefined ? before.guest_email : cleanText(body.guestEmail);
 
       if (!BOOKING_STATUSES.has(nextStatus)) {
         throw new ApiError(400, 'Invalid booking status');
+      }
+      if (body.status === 'completed' && !['active', 'rescheduled'].includes(before.status)) {
+        throw new ApiError(409, 'Only active or rescheduled bookings can be completed');
       }
       if (guestEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(guestEmail)) {
         throw new ApiError(400, 'Invalid email');
@@ -89,38 +114,40 @@ export async function PATCH(request, { params }) {
           slot_status = $22,
           booking_source = $23,
           package_id = $24,
-          add_ons = $25::jsonb,
-          package_notes = $26,
-          status = $27,
-          signed_by_guest = $28,
-          notes = $29,
-          payment_method = $30,
-          invoice_number = $31,
-          billing_notes = $32,
-          weather_condition = $33,
-          equipment_needed = $34,
-          assigned_astronomer = $35,
-          assigned_butler = $36,
-          setup_status = $37,
-          base_total_usd = $38,
-          service_charge_10_usd = $39,
-          gst_17_usd = $40,
-          invoice_total_usd = $41,
-          operation_share_50_usd = $42,
-          company_share_50_usd = $43,
-          staff_commission_5_usd = $44,
-          field_tip_incentive_usd = $45,
-          tip_recipient = $46,
-          tip_notes = $47,
-          payout_status = $48,
-          updated_by = $49
+          booked_adult_price_usd = $25,
+          booked_child_price_usd = $26,
+          add_ons = $27::jsonb,
+          package_notes = $28,
+          status = $29,
+          signed_by_guest = $30,
+          notes = $31,
+          payment_method = $32,
+          invoice_number = $33,
+          billing_notes = $34,
+          weather_condition = $35,
+          equipment_needed = $36,
+          assigned_astronomer = $37,
+          assigned_butler = $38,
+          setup_status = $39,
+          base_total_usd = $40,
+          service_charge_10_usd = $41,
+          gst_17_usd = $42,
+          invoice_total_usd = $43,
+          operation_share_50_usd = $44,
+          company_share_50_usd = $45,
+          staff_commission_5_usd = $46,
+          field_tip_incentive_usd = $47,
+          tip_recipient = $48,
+          tip_notes = $49,
+          payout_status = $50,
+          updated_by = $51
          WHERE id = $1
          RETURNING *`,
         [
           id,
-          body.eventDate ?? before.event_date,
-          body.timeStart ?? before.time_start,
-          body.timeEnd ?? before.time_end,
+          before.event_date,
+          before.time_start,
+          before.time_end,
           body.guestName ?? before.guest_name,
           body.guestPhone === undefined ? before.guest_phone : cleanText(body.guestPhone),
           guestEmail,
@@ -141,6 +168,8 @@ export async function PATCH(request, { params }) {
           body.slotStatus === undefined ? before.slot_status : cleanText(body.slotStatus) || 'available',
           body.bookingSource === undefined ? before.booking_source : cleanText(body.bookingSource),
           packageId,
+          newBookedAdultPriceUsd,
+          newBookedChildPriceUsd,
           addOns === null ? JSON.stringify(before.add_ons || []) : JSON.stringify(addOns),
           body.packageNotes === undefined ? before.package_notes : cleanText(body.packageNotes),
           nextStatus,
@@ -182,11 +211,10 @@ export async function PATCH(request, { params }) {
       // Emit domain event based on status transition
       let eventType = EventTypes.BOOKING_UPDATED;
       if (before.status !== nextStatus) {
-        if (nextStatus === 'accepted') eventType = EventTypes.BOOKING_ACCEPTED;
-        else if (nextStatus === 'finished_experience') eventType = EventTypes.BOOKING_FINISHED;
-        else if (nextStatus === 'cancelled') eventType = EventTypes.BOOKING_CANCELLED;
-        else if (nextStatus === 'rejected') eventType = EventTypes.BOOKING_REJECTED;
-        else if (nextStatus === 'booked') eventType = EventTypes.BOOKING_BOOKED;
+        if (nextStatus === 'active') eventType = EventTypes.BOOKING_ACTIVATED;
+        else if (nextStatus === 'completed') eventType = EventTypes.BOOKING_COMPLETED;
+        else if (nextStatus.startsWith('cancelled_')) eventType = EventTypes.BOOKING_CANCELLED;
+        else if (nextStatus === 'rescheduled') eventType = EventTypes.BOOKING_RESCHEDULED;
       }
 
       await emit(eventType, {

@@ -169,12 +169,12 @@ export default function StaffHeader({ role = 'Internal', onNewBooking, onMenuTog
   return (
     <div className="header">
       {/* Hamburger — visible only on mobile via CSS */}
-      <button className="sidebar-toggle" onClick={onMenuToggle} aria-label="Toggle menu">
+      <button className="sidebar-toggle" onClick={onMenuToggle} aria-label={t('accessibility_toggle_menu')}>
         <span className="hamburger-line" />
         <span className="hamburger-line" />
         <span className="hamburger-line" />
       </button>
-      <div>
+      <div className="header-copy">
         <div className="header-breadcrumb">{roleLabel} · {meta.crumb}</div>
         <div className="header-title">{meta.title}</div>
       </div>
@@ -182,7 +182,7 @@ export default function StaffHeader({ role = 'Internal', onNewBooking, onMenuTog
       <Clock />
 
       {/* Actions */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+      <div className="staff-header-actions" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
         {showNewBooking && (
           <Link
             href={`/dashboard/${role.toLowerCase()}/form-booking`}
@@ -291,6 +291,7 @@ export default function StaffHeader({ role = 'Internal', onNewBooking, onMenuTog
         {/* Quick Language Toggle Button */}
         <button
           type="button"
+          className="staff-language-toggle"
           onClick={toggleLanguage}
           title={language === 'id' ? 'Switch to English' : 'Ganti ke Bahasa Indonesia'}
           style={{
@@ -310,7 +311,7 @@ export default function StaffHeader({ role = 'Internal', onNewBooking, onMenuTog
           <span>{language === 'id' ? '🇮🇩 ID' : '🇬🇧 EN'}</span>
         </button>
 
-        <div style={{
+        <div className="staff-avatar" style={{
           width: '36px', height: '36px', background: roleColor,
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           fontSize: '12px', fontWeight: 700, color: 'white', cursor: 'pointer', flexShrink: 0,

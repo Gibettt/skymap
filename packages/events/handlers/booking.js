@@ -32,7 +32,9 @@ export async function handleBookingCreated(payload, { client, query }) {
     // 2. If created by external staff, also notify active internal astronomers
     if (creatorRole === 'external') {
       const { rows: internals } = await db.query(
-        `SELECT id FROM users WHERE role = 'internal' AND status = 'active'`
+        `SELECT id FROM users
+         WHERE role = 'internal' AND status = 'active' AND resort_id = $1`,
+        [payload.resortId]
       );
 
       for (const internal of internals) {
@@ -65,9 +67,9 @@ export async function handleBookingAccepted(payload, { client, query }) {
       type: 'booking',
       sourceTable: 'bookings',
       sourceId: bookingId,
-      title: 'Booking Disetujui',
-      message: `Booking ${bookingCode || ''} untuk ${guestName || 'tamu'} telah disetujui`,
-      meta: 'Status: Accepted',
+      title: 'Booking Aktif',
+      message: `Booking ${bookingCode || ''} untuk ${guestName || 'tamu'} kini aktif`,
+      meta: 'Status: Active',
       link: '/dashboard/external/bookings',
     });
   } catch (err) {
@@ -88,12 +90,31 @@ export async function handleBookingFinished(payload, { client, query }) {
         sourceTable: 'bookings',
         sourceId: bookingId,
         title: 'Pengalaman Selesai',
-        message: `Booking ${bookingCode || ''} (${guestName || 'Tamu'}) selesai. Komisi & Star Points telah dicatat.`,
-        meta: 'Status: Finished',
+        message: `Booking ${bookingCode || ''} (${guestName || 'Tamu'}) selesai. Komisi telah dicatat.`,
+        meta: 'Status: Completed',
         link: '/dashboard/internal/bookings',
       });
     }
   } catch (err) {
     console.error('[events:booking:finished] Error processing booking.finished event:', err);
+  }
+}
+
+export async function handleBookingRescheduled(payload, { client, query }) {
+  const db = client || { query };
+  if (!payload.staffId) return;
+  try {
+    await insertNotification(db, {
+      recipientUserId: payload.staffId,
+      type: 'booking',
+      sourceTable: 'bookings',
+      sourceId: payload.bookingId,
+      title: 'Booking Dijadwalkan Ulang',
+      message: `Booking ${payload.bookingCode || ''} dipindahkan ke ${payload.eventDate}`,
+      meta: payload.reason || 'Jadwal diperbarui',
+      link: '/dashboard/external/bookings',
+    });
+  } catch (err) {
+    console.error('[events:booking:rescheduled] Error processing event:', err);
   }
 }

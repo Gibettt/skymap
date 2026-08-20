@@ -105,6 +105,23 @@ export function useCreatePackageMutation() {
   });
 }
 
+export function useUpdatePackageMutation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, formData }) => {
+      // API expects PATCH /api/packages/:id with JSON if no image, or let's check API.
+      // Wait, in my admin route.js, I parsed JSON. Let's see if the API supports formData.
+      return fetchApi(`/api/packages/${id}`, {
+        method: 'PATCH',
+        body: formData,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.packages.all });
+    },
+  });
+}
+
 /* ── Resorts Hooks ──────────────────────────────────────── */
 export function useResortsQuery(options = {}) {
   return useQuery({

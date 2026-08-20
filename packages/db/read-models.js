@@ -13,19 +13,18 @@ export async function getDashboardKPI(clientOrPool) {
   const { rows } = await db.query(
     `SELECT
       total_bookings,
-      bookings_pending_review,
-      bookings_accepted,
-      bookings_booked,
-      bookings_finished,
+      bookings_pending,
+      bookings_active,
+      bookings_completed,
       bookings_cancelled,
-      bookings_rejected,
+      bookings_rescheduled,
       total_revenue_usd,
       total_base_usd,
       total_service_charge,
       total_gst,
       total_operation_share,
       total_company_share,
-      total_commissions_paid,
+      total_commissions_earned,
       active_staff_count,
       active_resorts_count,
       avg_guest_rating,
@@ -71,17 +70,18 @@ export async function getStaffPerformance({ role, search, limit = 50, offset = 0
       user_role,
       resort_name,
       total_bookings_handled,
-      finished_bookings,
+      completed_bookings,
       total_commission_usd,
-      total_star_points,
+      monthly_star_units,
       full_stars,
-      star_bonus_usd,
+      star_bonus_total_usd,
+      partial_progress_usd,
       avg_guest_rating,
       total_guests_served,
       last_booking_date
     FROM mv_staff_performance
     ${whereClause}
-    ORDER BY total_star_points DESC, finished_bookings DESC
+    ORDER BY monthly_star_units DESC, completed_bookings DESC
     LIMIT ${limitParam} OFFSET ${offsetParam}`,
     params
   );
@@ -100,7 +100,7 @@ export async function getResortAnalytics(clientOrPool) {
       resort_name,
       resort_code,
       total_bookings,
-      finished_bookings,
+      completed_bookings,
       cancelled_bookings,
       total_revenue_usd,
       total_operation_share,
@@ -186,14 +186,18 @@ export async function refreshMaterializedViews(clientOrPool) {
  */
 export async function refreshMaterializedView(viewName, clientOrPool) {
   const db = clientOrPool || { query: defaultQuery };
+  const isTransactional = Boolean(clientOrPool);
   const savepoint = `sp_refresh_${viewName}`;
   try {
-    await db.query(`SAVEPOINT ${savepoint}`);
+    if (isTransactional) await db.query(`SAVEPOINT ${savepoint}`);
     await db.query(`REFRESH MATERIALIZED VIEW ${viewName}`);
-    await db.query(`RELEASE SAVEPOINT ${savepoint}`);
+    if (isTransactional) await db.query(`RELEASE SAVEPOINT ${savepoint}`);
     return true;
   } catch (error) {
-    await db.query(`ROLLBACK TO SAVEPOINT ${savepoint}`);
+    if (isTransactional) {
+      await db.query(`ROLLBACK TO SAVEPOINT ${savepoint}`);
+      await db.query(`RELEASE SAVEPOINT ${savepoint}`);
+    }
     console.error(`[cqrs:read-models] Failed to refresh view ${viewName}:`, error.message);
     return false;
   }

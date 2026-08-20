@@ -13,8 +13,8 @@ function formatDate(value) {
 
 function statusClass(status) {
   if (status === 'requested') return 'tag-pending';
-  if (status === 'approved') return 'tag-confirmed';
-  if (status === 'paid') return 'tag-completed';
+  if (status === 'processed') return 'tag-confirmed';
+  if (status === 'completed') return 'tag-completed';
   return 'tag-cancelled';
 }
 
@@ -68,8 +68,8 @@ export default function AdminPencairanStaffPanel() {
     <div>
       <div className="kpi-grid" style={{ marginBottom: 24 }}>
         <Kpi label="Requested" value={formatUsd(totals.requested)} />
-        <Kpi label="Approved" value={formatUsd(totals.approved)} />
-        <Kpi label="Paid" value={formatUsd(totals.paid)} accent="var(--emerald)" />
+        <Kpi label="Processed" value={formatUsd(totals.processed)} />
+        <Kpi label="Completed" value={formatUsd(totals.completed)} accent="var(--emerald)" />
         <Kpi label="Rejected" value={formatUsd(totals.rejected)} accent="var(--accent)" />
       </div>
 
@@ -106,17 +106,17 @@ export default function AdminPencairanStaffPanel() {
                     <br />
                     <span style={{ fontSize: 11, color: 'var(--text-dim)' }}>{Number(item.star_points || 0).toFixed(1)} pts, {item.full_stars} stars</span>
                   </td>
-                  <td>{item.payment_method}<br /><span style={{ fontSize: 11, color: 'var(--text-dim)' }}>{item.account_name} - {item.account_number}</span></td>
+                  <td>{item.bank_name}<br /><span style={{ fontSize: 11, color: 'var(--text-dim)' }}>{item.account_holder_name} - {item.account_number}</span></td>
                   <td><span className={`tag ${statusClass(item.status)}`}>{item.status}</span></td>
                   <td>
                     <div style={{ display: 'flex', justifyContent: 'center', gap: 8, flexWrap: 'wrap' }}>
                       {item.status === 'requested' && (
-                        <button className="btn btn-secondary btn-sm" disabled={updatingId === item.id} onClick={() => updateStatus(item, 'approved')}>Approve</button>
+                        <button className="btn btn-secondary btn-sm" disabled={updatingId === item.id} onClick={() => updateStatus(item, 'processed')}>Process</button>
                       )}
-                      {['requested', 'approved'].includes(item.status) && (
-                        <button className="btn btn-secondary btn-sm" disabled={updatingId === item.id} onClick={() => updateStatus(item, 'paid')}>Mark Paid</button>
+                      {item.status === 'processed' && (
+                        <button className="btn btn-secondary btn-sm" disabled={updatingId === item.id} onClick={() => updateStatus(item, 'completed')}>Complete</button>
                       )}
-                      {['requested', 'approved'].includes(item.status) && (
+                      {['requested', 'processed'].includes(item.status) && (
                         <button className="btn btn-secondary btn-sm" disabled={updatingId === item.id} onClick={() => updateStatus(item, 'rejected')}>Reject</button>
                       )}
                     </div>

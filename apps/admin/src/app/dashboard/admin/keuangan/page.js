@@ -145,7 +145,7 @@ export default function KeuanganPage() {
                     <td className="name-cell">{b.bookingCode}</td>
                     <td>{b.clientName}<br /><span style={{ fontSize: 11, color: 'var(--text-dim)' }}>Room {b.roomNumber}</span></td>
                     <td>{b.packageName}</td>
-                    <td>{b.adultCount} adult / {b.childCount} child</td>
+                    <td>{b.adultCount} Adults / {b.childCount} Children</td>
                     <td style={{ textAlign: 'right' }}>{formatUsd(b.finance.baseTotalUsd)}</td>
                     <td style={{ textAlign: 'right' }}>{formatUsd(b.finance.serviceChargeUsd)}</td>
                     <td style={{ textAlign: 'right' }}>{formatUsd(b.finance.gstUsd)}</td>

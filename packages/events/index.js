@@ -4,6 +4,7 @@ import {
   handleBookingCreated,
   handleBookingAccepted,
   handleBookingFinished,
+  handleBookingRescheduled,
 } from './handlers/booking.js';
 import {
   handlePayoutRequested,
@@ -23,13 +24,14 @@ export function setupDefaultHandlers() {
 
   // Booking handlers
   bus.on(EventTypes.BOOKING_CREATED, handleBookingCreated);
-  bus.on(EventTypes.BOOKING_ACCEPTED, handleBookingAccepted);
-  bus.on(EventTypes.BOOKING_FINISHED, handleBookingFinished);
+  bus.on(EventTypes.BOOKING_ACTIVATED, handleBookingAccepted);
+  bus.on(EventTypes.BOOKING_COMPLETED, handleBookingFinished);
+  bus.on(EventTypes.BOOKING_RESCHEDULED, handleBookingRescheduled);
 
   // Payout handlers
   bus.on(EventTypes.PAYOUT_REQUESTED, handlePayoutRequested);
-  bus.on(EventTypes.PAYOUT_APPROVED, handlePayoutReviewed);
-  bus.on(EventTypes.PAYOUT_PAID, handlePayoutReviewed);
+  bus.on(EventTypes.PAYOUT_PROCESSED, handlePayoutReviewed);
+  bus.on(EventTypes.PAYOUT_COMPLETED, handlePayoutReviewed);
   bus.on(EventTypes.PAYOUT_REJECTED, handlePayoutReviewed);
 }
 

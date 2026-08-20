@@ -1,56 +1,44 @@
 'use client';
 
 import Image from 'next/image';
-import { useState } from 'react';
+import Link from 'next/link';
+import { useEffect, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { AttachmentUpload } from '@/components/motion/AttachmentUpload';
-import { usePackagesQuery, useCreatePackageMutation, queryKeys, fetchApi } from '@/lib/apiQueries';
+import { usePackagesQuery, queryKeys, fetchApi } from '@/lib/apiQueries';
 
-const EMPTY = {
-  name: '',
-  packageType: 'regular',
-  experienceType: 'communal',
-  location: '',
-  description: '',
-  adultPriceUsd: 0,
-  childPriceUsd: '',
-  childAgeRange: '',
-  isActive: true,
-};
-
-const MAX_IMAGE_SIZE = 2 * 1024 * 1024;
+const DEFAULT_REWARD_SETTINGS = { starAdultUnit: 1, starChildUnit: 0.5, starThreshold: 10, starBonusUsd: 10 };
 
 export default function AdminPackagesPage() {
   const queryClient = useQueryClient();
-  const { data: packages = [], isLoading, error } = usePackagesQuery();
-  const createMutation = useCreatePackageMutation();
-
-  const [form, setForm] = useState(EMPTY);
-  const [imageItems, setImageItems] = useState([]);
-  const [showForm, setShowForm] = useState(false);
+  const { data: packages = [], error } = usePackagesQuery();
   const [message, setMessage] = useState('');
+  const [rewardSettings, setRewardSettings] = useState(DEFAULT_REWARD_SETTINGS);
 
-  // Derived: the actual File object from the first (and only) attachment
-  const imageFile = imageItems[0]?.file ?? null;
+  useEffect(() => {
+    let active = true;
+    fetchApi('/api/reward-settings').then(({ settings }) => {
+      if (!active || !settings) return;
+      setRewardSettings({
+        starAdultUnit: settings.star_adult_unit,
+        starChildUnit: settings.star_child_unit,
+        starThreshold: settings.star_threshold,
+        starBonusUsd: settings.star_bonus_usd,
+      });
+    }).catch(() => {});
+    return () => { active = false; };
+  }, []);
 
-  const createPackage = async (event) => {
+  const saveRewardSettings = async (event) => {
     event.preventDefault();
-    if (imageFile && imageFile.size > MAX_IMAGE_SIZE) {
-      setMessage('Gambar maksimal 2MB.');
-      return;
-    }
-    const payload = new FormData();
-    Object.entries(form).forEach(([key, value]) => payload.append(key, String(value ?? '')));
-    if (imageFile) payload.append('image', imageFile);
-
     try {
-      await createMutation.mutateAsync(payload);
-      setForm(EMPTY);
-      setImageItems([]);
-      setShowForm(false);
-      setMessage('Package berhasil dibuat.');
-    } catch (err) {
-      setMessage(err.message || 'Package gagal dibuat.');
+      await fetchApi('/api/reward-settings', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(rewardSettings),
+      });
+      setMessage('Pengaturan star dan reward berhasil disimpan.');
+    } catch (error) {
+      setMessage(error.message || 'Gagal menyimpan reward settings.');
     }
   };
 
@@ -74,68 +62,28 @@ export default function AdminPackagesPage() {
           <h1>Package & Harga</h1>
           <p>Kelola nama package, harga, status aktif, dan estimasi umur anak.</p>
         </div>
-        <button className="btn btn-primary" onClick={() => setShowForm((value) => !value)}>
-          {showForm ? 'Tutup Form' : '+ Tambah Package'}
-        </button>
+        <Link className="btn btn-primary" href="/dashboard/admin/packages/new">+ Tambah Package</Link>
       </div>
       {message && <div className="external-booking-note" style={{ marginBottom: 16 }}>{message}</div>}
       {error && <div className="external-booking-note" style={{ marginBottom: 16, borderColor: 'var(--accent)' }}>{error.message}</div>}
 
-
-      {showForm && (
-      <div className="card" style={{ marginBottom: 24 }}>
-        <div className="card-header">
-          <span className="card-title">Tambah Package Baru</span>
-        </div>
-        <form className="card-body" onSubmit={createPackage}>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 14 }}>
-            <Input label="Name" value={form.name} onChange={(value) => setForm({ ...form, name: value })} required />
-            <Select label="Type" value={form.packageType} onChange={(value) => setForm({ ...form, packageType: value })} options={['regular', 'private', 'kids']} />
-            <Select label="Experience" value={form.experienceType} onChange={(value) => setForm({ ...form, experienceType: value })} options={['communal', 'private', 'kids']} />
-            <Input label="Location" value={form.location} onChange={(value) => setForm({ ...form, location: value })} required />
-            <Input label="Adult Price USD" type="number" min="0" value={form.adultPriceUsd} onChange={(value) => setForm({ ...form, adultPriceUsd: value })} required />
-            <Input label="Child Price USD" type="number" min="0" value={form.childPriceUsd} onChange={(value) => setForm({ ...form, childPriceUsd: value })} />
-            <Input label="Estimasi Umur Anak" value={form.childAgeRange} onChange={(value) => setForm({ ...form, childAgeRange: value })} placeholder="Contoh: 6 - 15 tahun" />
-            <div className="input-group">
-              <span className="input-label">Gambar Package</span>
-              <AttachmentUpload
-                value={imageItems}
-                onValueChange={setImageItems}
-                onFilesRejected={(files, reason) => {
-                  if (reason === 'too-large') setMessage('Gambar maksimal 2MB.');
-                  else setMessage('Hanya 1 gambar yang diperbolehkan.');
-                }}
-                multiple={false}
-                maxFiles={1}
-                maxFileSize={MAX_IMAGE_SIZE}
-                accept="image/jpeg,image/png,image/webp"
-                title="Drag & drop atau pilih gambar"
-                description="JPEG, PNG, WebP — maks 2MB"
-                attachmentsLabel="Gambar dipilih"
-              />
-            </div>
-            <label className="input-group" style={{ gridColumn: 'span 2' }}>
-              <span className="input-label">Deskripsi Singkat</span>
-              <textarea className="input" rows="2" maxLength="240" value={form.description} onChange={(event) => setForm({ ...form, description: event.target.value })} placeholder="Ringkasan singkat isi package untuk staff." />
-            </label>
-          </div>
-          <div style={{ marginTop: 16, display: 'flex', gap: 10, alignItems: 'center' }}>
-            <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13 }}>
-              <input type="checkbox" checked={form.isActive} onChange={(event) => setForm({ ...form, isActive: event.target.checked })} />
-              Aktifkan package
-            </label>
-            <button className="btn btn-primary" type="submit">Tambah Package</button>
-          </div>
+      <section className="card" style={{ marginBottom: 24 }}>
+        <div className="card-header"><span className="card-title">Dynamic Star & Reward Settings</span></div>
+        <form className="card-body" onSubmit={saveRewardSettings} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 14, alignItems: 'end' }}>
+          <Input label="Adult Unit" type="number" min="0" step="0.01" value={rewardSettings.starAdultUnit} onChange={(value) => setRewardSettings({ ...rewardSettings, starAdultUnit: value })} required />
+          <Input label="Child Unit" type="number" min="0" step="0.01" value={rewardSettings.starChildUnit} onChange={(value) => setRewardSettings({ ...rewardSettings, starChildUnit: value })} required />
+          <Input label="Star Threshold" type="number" min="0.01" step="0.01" value={rewardSettings.starThreshold} onChange={(value) => setRewardSettings({ ...rewardSettings, starThreshold: value })} required />
+          <Input label="Full Star Bonus USD" type="number" min="0" step="0.01" value={rewardSettings.starBonusUsd} onChange={(value) => setRewardSettings({ ...rewardSettings, starBonusUsd: value })} required />
+          <button className="btn btn-primary" type="submit">Save Reward Settings</button>
         </form>
-      </div>
-      )}
+      </section>
 
       <div className="card">
         <div className="card-header">
           <span className="card-title">Daftar Package</span>
           <span style={{ fontSize: 11, color: 'var(--text-dim)' }}>{packages.length} package</span>
         </div>
-        <div className="table-container">
+        <div className="table-container responsive-card-table">
           <table>
             <thead>
               <tr>
@@ -144,29 +92,40 @@ export default function AdminPackagesPage() {
                 <th>Type</th>
                 <th>Experience</th>
                 <th>Location</th>
+                <th>Schedule</th>
                 <th>Umur Anak</th>
+                <th>Including</th>
                 <th style={{ textAlign: 'right' }}>Adult</th>
                 <th style={{ textAlign: 'right' }}>Child</th>
                 <th>Status</th>
+                <th>Reward</th>
                 <th style={{ textAlign: 'center' }}>Aksi</th>
               </tr>
             </thead>
             <tbody>
               {packages.map((pkg) => (
                 <tr key={pkg.id}>
-                  <td className="name-cell">{pkg.name}</td>
-                  <td>{pkg.image_url ? <Image src={pkg.image_url} alt={pkg.name} width={54} height={36} unoptimized style={{ objectFit: 'cover', border: '1px solid var(--border)' }} /> : '-'}</td>
-                  <td>{pkg.package_type}</td>
-                  <td>{pkg.experience_type}</td>
-                  <td>{pkg.location}</td>
-                  <td>{pkg.child_age_range || '-'}</td>
-                  <td style={{ textAlign: 'right' }}>${pkg.adult_price_usd}</td>
-                  <td style={{ textAlign: 'right' }}>{pkg.child_price_usd === null ? '-' : `$${pkg.child_price_usd}`}</td>
-                  <td><span className={`tag ${pkg.is_active ? 'tag-completed' : 'tag-cancelled'}`}>{pkg.is_active ? 'Active' : 'Inactive'}</span></td>
-                  <td style={{ textAlign: 'center' }}>
-                    <button className="btn btn-secondary btn-sm" onClick={() => toggleActive(pkg)}>
-                      {pkg.is_active ? 'Disable' : 'Enable'}
-                    </button>
+                  <td data-label="Name" className="name-cell">{pkg.name}</td>
+                  <td data-label="Image">{pkg.image_url ? <Image src={pkg.image_url} alt={pkg.name} width={54} height={36} unoptimized style={{ objectFit: 'cover', border: '1px solid var(--border)' }} /> : '-'}</td>
+                  <td data-label="Type">{pkg.package_type}</td>
+                  <td data-label="Experience">{pkg.experience_type}</td>
+                  <td data-label="Location">{pkg.location}</td>
+                  <td data-label="Schedule">{pkg.schedule || 'Upon request'}</td>
+                  <td data-label="Umur Anak">{pkg.child_age_range || '-'}</td>
+                  <td data-label="Including">{pkg.inclusions?.length ? pkg.inclusions.join(', ') : '-'}</td>
+                  <td data-label="Adult" style={{ textAlign: 'right' }}>${pkg.adult_price_usd}</td>
+                  <td data-label="Child" style={{ textAlign: 'right' }}>{pkg.child_price_usd === null ? '-' : `$${pkg.child_price_usd}`}</td>
+                  <td data-label="Status"><span className={`tag ${pkg.is_active ? 'tag-completed' : 'tag-cancelled'}`}>{pkg.is_active ? 'Active' : 'Inactive'}</span></td>
+                  <td data-label="Reward"><span className={`tag ${pkg.is_chargeable ? 'tag-confirmed' : 'tag-pending'}`}>{pkg.is_chargeable ? 'Chargeable' : 'Free'}</span></td>
+                  <td data-label="Aksi" style={{ textAlign: 'center' }}>
+                    <div style={{ display: 'flex', gap: 6, justifyContent: 'center' }}>
+                      <Link className="btn btn-secondary btn-sm" href={`/dashboard/admin/packages/${pkg.id}/edit`}>
+                        Edit
+                      </Link>
+                      <button className="btn btn-secondary btn-sm" onClick={() => toggleActive(pkg)}>
+                        {pkg.is_active ? 'Disable' : 'Enable'}
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -178,21 +137,26 @@ export default function AdminPackagesPage() {
   );
 }
 
-function Input({ label, value, onChange, type = 'text', required = false, min, placeholder = '' }) {
+function Input({ label, value, onChange, type = 'text', required = false, min, step, placeholder = '' }) {
   return (
     <label className="input-group">
       <span className="input-label">{label}</span>
-      <input className="input" type={type} min={min} required={required} value={value} placeholder={placeholder} onChange={(event) => onChange(event.target.value)} />
+      <input className="input" type={type} min={min} step={step} required={required} value={value} placeholder={placeholder} onChange={(event) => onChange(event.target.value)} />
     </label>
   );
 }
 
-function Select({ label, value, onChange, options }) {
+function Select({ label, value, onChange, options, placeholder }) {
   return (
     <label className="input-group">
       <span className="input-label">{label}</span>
       <select className="input" value={value} onChange={(event) => onChange(event.target.value)}>
-        {options.map((option) => <option key={option}>{option}</option>)}
+        {placeholder && <option value="">{placeholder}</option>}
+        {options.map((option) => {
+          const valueOption = typeof option === 'string' ? option : option.value;
+          const labelOption = typeof option === 'string' ? option : option.label;
+          return <option key={valueOption} value={valueOption}>{labelOption}</option>;
+        })}
       </select>
     </label>
   );

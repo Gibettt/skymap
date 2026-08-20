@@ -1,19 +1,13 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { BOOKINGS } from '@/data/bookings';
 import { useLanguage } from '@/context/LanguageContext';
 
 const COUNTED_STATUSES = new Set([
-  'pending_review',
-  'accepted',
-  'booked',
-  'finished_experience',
-  'Menunggu',
-  'Disetujui',
-  'Booked',
-  'Finished Experience',
+  'pending',
+  'active',
+  'rescheduled',
 ]);
 
 function getField(booking, snakeName, camelName) {
@@ -23,36 +17,36 @@ function getField(booking, snakeName, camelName) {
 function statusLabel(status, language = 'id') {
   const isEn = language === 'en';
   const labels = {
-    pending_review: isEn ? 'Pending Review' : 'Menunggu Admin',
-    accepted: isEn ? 'Accepted' : 'Diterima',
-    booked: 'Booked',
-    finished_experience: isEn ? 'Finished Experience' : 'Selesai',
-    rejected: isEn ? 'Rejected' : 'Ditolak',
-    cancelled: isEn ? 'Cancelled' : 'Dibatalkan',
+    pending: isEn ? 'Pending' : 'Menunggu',
+    active: isEn ? 'Active' : 'Aktif',
+    completed: isEn ? 'Completed' : 'Selesai',
+    rescheduled: isEn ? 'Rescheduled' : 'Dijadwalkan ulang',
+    cancelled_by_guest: isEn ? 'Cancelled by guest' : 'Dibatalkan tamu',
+    cancelled_weather: isEn ? 'Cancelled by weather' : 'Dibatalkan karena cuaca',
   };
   return labels[status] || status;
 }
 
 function statusClass(status) {
-  if (['accepted', 'booked', 'Disetujui', 'Booked'].includes(status)) return 'tag-confirmed';
-  if (['pending_review', 'Menunggu'].includes(status)) return 'tag-pending';
-  if (['finished_experience', 'Finished Experience', 'Selesai'].includes(status)) return 'tag-completed';
-  if (['rejected', 'Ditolak', 'cancelled', 'Cancelled'].includes(status)) return 'tag-cancelled';
+  if (['active', 'rescheduled'].includes(status)) return 'tag-confirmed';
+  if (status === 'pending') return 'tag-pending';
+  if (status === 'completed') return 'tag-completed';
+  if (status.startsWith('cancelled_')) return 'tag-cancelled';
   return 'tag-info';
 }
 
 export default function InternalStaffPage() {
   const { language, t } = useLanguage();
   const observerName = 'Ahmad Fauzi';
-  const [internalBookings, setInternalBookings] = useState(null);
+  const [internalBookings, setInternalBookings] = useState([]);
   const [loadError, setLoadError] = useState('');
-  const fallbackBookings = BOOKINGS.filter((booking) => booking.observer === observerName);
-  const myBookings = internalBookings || fallbackBookings;
+  const [rewardSummary, setRewardSummary] = useState(null);
+  const myBookings = internalBookings;
 
   const totalBookings = myBookings.length;
   const bookingAktif = myBookings.filter((booking) => COUNTED_STATUSES.has(booking.status)).length;
-  const akanDatang = myBookings.filter((booking) => ['accepted', 'booked', 'Disetujui', 'Booked'].includes(booking.status)).length;
-  const selesai = myBookings.filter((booking) => ['finished_experience', 'Finished Experience', 'Selesai'].includes(booking.status)).length;
+  const akanDatang = myBookings.filter((booking) => ['active', 'rescheduled'].includes(booking.status)).length;
+  const selesai = myBookings.filter((booking) => booking.status === 'completed').length;
   const top5Bookings = myBookings.slice(0, 5);
 
   useEffect(() => {
@@ -63,13 +57,20 @@ export default function InternalStaffPage() {
         if (alive) setInternalBookings(data.bookings || []);
       })
       .catch((error) => {
-        if (alive) setLoadError(error.message);
+        if (alive) {
+          setInternalBookings([]);
+          setLoadError(error.message);
+        }
       });
+    fetch('/api/payouts')
+      .then((res) => res.ok ? res.json() : Promise.reject(new Error(t('dashboard_load_commission_error'))))
+      .then((data) => { if (alive) setRewardSummary(data.summary); })
+      .catch((error) => { if (alive) setLoadError(error.message); });
 
     return () => {
       alive = false;
     };
-  }, [language]);
+  }, [language, t]);
 
   return (
     <div className="external-dashboard-page fade-in-up stagger">
@@ -95,9 +96,9 @@ export default function InternalStaffPage() {
           <div className="kpi-note">{t('dashboard_active_schedule')}</div>
         </div>
         <div className="kpi-card">
-          <div className="kpi-label">{t('dashboard_finished')}</div>
-          <div className="kpi-value">{selesai}</div>
-          <div className="kpi-note">{t('dashboard_finished_note')}</div>
+          <div className="kpi-label">{t('dashboard_commission_total')}</div>
+          <div className="kpi-value">${Number(rewardSummary?.commissionUsd || 0).toFixed(2)}</div>
+          <div className="kpi-note">{t('dashboard_completed_count').replace('{count}', selesai)}</div>
         </div>
       </section>
 
@@ -120,7 +121,7 @@ export default function InternalStaffPage() {
                     <th>{t('table_station')}</th>
                     <th>{t('table_date')}</th>
                     <th>{t('table_time')}</th>
-                    <th>Status</th>
+                    <th>{t('common_status')}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -154,10 +155,10 @@ export default function InternalStaffPage() {
           <div className="card-body">
             <ul style={{ paddingLeft: '1.1rem', display: 'flex', flexDirection: 'column', gap: 10, margin: 0, fontSize: 13, lineHeight: 1.55 }}>
               <li><strong>{language === 'en' ? 'New Booking' : 'Booking Baru'}:</strong> {t('dashboard_guide_new')}</li>
-              <li><strong>Status:</strong> {t('dashboard_guide_status')}</li>
-              <li><strong>Invoice:</strong> {t('dashboard_guide_invoice')}</li>
-              <li><strong>Signed:</strong> {t('dashboard_guide_signed')}</li>
-              <li><strong>Feedback:</strong> {t('dashboard_guide_feedback')}</li>
+              <li><strong>{t('dashboard_status_label')}:</strong> {t('dashboard_guide_status')}</li>
+              <li><strong>{t('dashboard_invoice_label')}:</strong> {t('dashboard_guide_invoice')}</li>
+              <li><strong>{t('dashboard_signed_label')}:</strong> {t('dashboard_guide_signed')}</li>
+              <li><strong>{t('dashboard_feedback_label')}:</strong> {t('dashboard_guide_feedback')}</li>
             </ul>
           </div>
         </section>
