@@ -111,13 +111,7 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       # -----------------------------------------------------------------------
-      # 5. Install Vercel CLI
-      # -----------------------------------------------------------------------
-      - name: Install Vercel CLI
-        run: pnpm add -g vercel@latest
-
-      # -----------------------------------------------------------------------
-      # 6. Deploy Landing App
+      # 7. Deploy Landing App
       # -----------------------------------------------------------------------
       # TODO: Uncomment and configure once Vercel projects are set up
       #
@@ -134,7 +128,7 @@ jobs:
       #     echo "### 🚀 Landing deployed to $DEPLOYMENT_URL" >> "$GITHUB_STEP_SUMMARY"
 
       # -----------------------------------------------------------------------
-      # 7. Deploy Admin App
+      # 8. Deploy Admin App
       # -----------------------------------------------------------------------
       # - name: Deploy Admin App
       #   id: deploy-admin
@@ -149,7 +143,7 @@ jobs:
       #     echo "### 🚀 Admin deployed to $DEPLOYMENT_URL" >> "$GITHUB_STEP_SUMMARY"
 
       # -----------------------------------------------------------------------
-      # 8. Deploy Staff App
+      # 9. Deploy Staff App
       # -----------------------------------------------------------------------
       # - name: Deploy Staff App
       #   id: deploy-staff
