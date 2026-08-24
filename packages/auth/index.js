@@ -11,7 +11,8 @@ export async function currentUser() {
   const { rows } = await query(
     `SELECT
       u.id, u.name, u.email, u.role, u.status, u.resort_id,
-      r.name AS resort_name, r.code AS resort_code, r.location AS resort_location
+      r.name AS resort_name, r.code AS resort_code, r.location AS resort_location,
+      r.status AS resort_status
      FROM users u
      LEFT JOIN resorts r ON r.id = u.resort_id
      WHERE u.id = $1
@@ -20,6 +21,7 @@ export async function currentUser() {
   );
   const user = rows[0];
   if (!user || user.status !== 'active') return null;
+  if (['internal', 'external'].includes(user.role) && user.resort_status !== 'active') return null;
   return user;
 }
 

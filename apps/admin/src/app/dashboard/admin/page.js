@@ -443,11 +443,16 @@ export default function AdminOverviewPage() {
         <div className="card-header">
           <span className="card-title">Booking per Bulan — 2026</span>
           <div style={{ display: 'flex', gap: 14, alignItems: 'center', flexWrap: 'wrap' }}>
-            <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 11, color: 'var(--text-muted)' }}>
+            <label className="admin-month-filter">
               Sampai Bulan
-              <select className="input" value={chartMonth} onChange={(event) => setChartMonth(Number(event.target.value))} style={{ height: 32, minHeight: 32, width: 112, padding: '0 28px 0 10px', fontSize: 12 }}>
+              <select
+                className="input admin-month-select"
+                value={chartMonth}
+                onChange={(event) => setChartMonth(Number(event.target.value))}
+                aria-label="Pilih batas bulan grafik booking"
+              >
                 {MONTHS.slice(0, currentMonth + 1).map((month, index) => (
-                  <option key={month} value={index}>{month}</option>
+                  <option key={month} value={index}>{MONTH_LABELS[index]}</option>
                 ))}
               </select>
             </label>

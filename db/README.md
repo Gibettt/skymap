@@ -26,6 +26,18 @@ Including items managed by Admin and backfill the existing package content.
 Then run `db/migrations/017_package_schedule.sql` once to add the Schedule field,
 backfill existing package schedules, and make Admin the source used by Landing.
 
+Then run `db/migrations/018_sky_guide_internal_ownership.sql` once to move Sky Guide
+management authority from Admin to active Internal staff at the database boundary.
+
+Then run `db/migrations/019_resort_calendar_and_booking_assignment.sql` once to scope
+events per resort and add the external-review/internal-assignment booking flow.
+
+Then run `db/migrations/020_user_presence.sql` once to store staff heartbeat and
+activity timestamps for the realtime Admin presence view.
+
+Then run `db/migrations/021_resort_staff_coverage.sql` once to add the resort
+coverage read model and protect activation, deactivation, and last-staff changes.
+
 5. Create `.env.local` in **each app folder** (`apps/landing`, `apps/admin`, `apps/staff`):
 
 ```env
@@ -64,11 +76,12 @@ Admin:
 Internal:
 - sees and manages all bookings assigned to their own resort
 - can complete, cancel, sign, and reschedule resort bookings
+- exclusively manages Sky Guide events and observatory coordinates
 - earns commission only; star rewards are bypassed
 
 External:
 - belongs to one resort profile but sees only bookings they created
-- new bookings are stored immediately with active status
+- new bookings wait for approval by Internal staff at the same resort
 - can submit and view bookings, but cannot change operational status
 - earns commission plus monthly star rewards on chargeable packages
 ```

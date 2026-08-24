@@ -8,6 +8,7 @@ import {
   paginationMeta,
 } from '@ephemeris/db/helpers';
 import { createBookingSchema } from '@ephemeris/db/validators/booking';
+import { bookingCreationState } from '@ephemeris/db/bookings';
 import { bookingScopeForUser } from '@ephemeris/db/scopes';
 import { emit, EventTypes } from '@ephemeris/events';
 import { calculateBookingTotals } from '@ephemeris/finance';
@@ -38,10 +39,8 @@ export async function POST(request) {
   try {
     await assertSameOrigin(request);
     const user = await requireUser(['internal', 'external']);
-    console.log('[POST /api/bookings] user:', user?.id, user?.role, 'resort_id:', user?.resort_id);
     const parsed = createBookingSchema.safeParse(await parseJsonBody(request));
     if (!parsed.success) {
-      console.error('[POST /api/bookings] validation error:', JSON.stringify(parsed.error.flatten()));
       return Response.json({ error: 'Data booking tidak valid', details: parsed.error.flatten() }, { status: 400 });
     }
     const data = parsed.data;
@@ -57,6 +56,19 @@ export async function POST(request) {
       const pkg = await client.query('SELECT * FROM packages WHERE id = $1 AND is_active = true', [packageId]);
       if (!pkg.rows[0] || pkg.rows[0].resort_id !== resortId) throw new Error('Package not found for this resort');
 
+      let skyEvent = null;
+      if (data.skyEventId) {
+        const eventResult = await client.query(
+          `SELECT id, package_id, price_override_usd
+           FROM sky_events WHERE id = $1 AND resort_id = $2 AND status = 'published'`,
+          [data.skyEventId, resortId]
+        );
+        skyEvent = eventResult.rows[0];
+        if (!skyEvent || (skyEvent.package_id && skyEvent.package_id !== packageId)) {
+          throw new Error('Sky event not found for this resort and package');
+        }
+      }
+
       const staff = await client.query('SELECT id, role, resort_id, name FROM users WHERE id = $1 AND status = $2', [staffId, 'active']);
       if (!staff.rows[0]) throw new Error('Staff not found');
 
@@ -66,18 +78,20 @@ export async function POST(request) {
         resortName = resortRes.rows[0]?.name || null;
       }
 
-      const childPriceUsd = pkg.rows[0].child_price_usd ?? (pkg.rows[0].package_type === 'kids' ? pkg.rows[0].adult_price_usd : pkg.rows[0].adult_price_usd * 0.5);
+      const adultPriceUsd = skyEvent?.price_override_usd ?? pkg.rows[0].adult_price_usd;
+      const childPriceUsd = skyEvent?.price_override_usd != null
+        ? Number(skyEvent.price_override_usd) * 0.5
+        : pkg.rows[0].child_price_usd ?? (pkg.rows[0].package_type === 'kids' ? pkg.rows[0].adult_price_usd : pkg.rows[0].adult_price_usd * 0.5);
       const totals = calculateBookingTotals({
         adultCount: data.adultCount,
         childCount: data.childCount,
-        adultPriceUsd: Number(pkg.rows[0].adult_price_usd),
+        adultPriceUsd: Number(adultPriceUsd),
         childPriceUsd: Number(childPriceUsd),
         staffRole: staff.rows[0].role,
         isChargeable: pkg.rows[0].is_chargeable,
       });
 
-      // Every valid submission is immediately operational; no review gate.
-      const status = 'active';
+      const { status, assignedInternalId } = bookingCreationState(user);
 
       const { rows } = await client.query(
         `INSERT INTO bookings (
@@ -132,7 +146,7 @@ export async function POST(request) {
           data.slotStatus || 'available',
           data.bookingSource,
           packageId,
-          pkg.rows[0].adult_price_usd,
+          adultPriceUsd,
           childPriceUsd,
           JSON.stringify(data.addOns),
           data.packageNotes,
@@ -162,7 +176,13 @@ export async function POST(request) {
         ]
       );
 
-      const booking = rows[0];
+      const assigned = await client.query(
+        `UPDATE bookings
+         SET assigned_internal_id = $2, sky_event_id = $3, observation_spot = $4
+         WHERE id = $1 RETURNING *`,
+        [rows[0].id, assignedInternalId, data.skyEventId || null, data.observationSpot || null]
+      );
+      const booking = assigned.rows[0];
       await client.query(
         'INSERT INTO feedback_tokens (booking_id, token, status) VALUES ($1, $2, $3)',
         [booking.id, generateFeedbackToken(), 'not_sent']
@@ -258,7 +278,6 @@ export async function POST(request) {
 
     return Response.json({ booking: created }, { status: 201 });
   } catch (error) {
-    console.error('[POST /api/bookings] error:', error?.message || error);
     return jsonError(error);
   }
 }

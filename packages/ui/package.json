@@ -6,7 +6,8 @@
   "main": "index.js",
   "exports": {
     ".": "./index.js",
-    "./LoginClient": "./LoginClient.jsx"
+    "./LoginClient": "./LoginClient.jsx",
+    "./product.css": "./product.css"
   },
   "peerDependencies": {
     "next": "16.2.12",

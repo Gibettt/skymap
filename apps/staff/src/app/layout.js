@@ -1,15 +1,10 @@
-import { DM_Sans, Instrument_Sans, Geist_Mono } from 'next/font/google';
+import { Geist, Geist_Mono } from 'next/font/google';
 import './globals.css';
+import '@ephemeris/ui/product.css';
 
-const dmSans = DM_Sans({
+const geistSans = Geist({
   subsets: ['latin'],
-  variable: '--font-dm-sans',
-  display: 'swap',
-});
-
-const instrumentSans = Instrument_Sans({
-  subsets: ['latin'],
-  variable: '--font-instrument-sans',
+  variable: '--font-geist-sans',
   display: 'swap',
 });
 
@@ -21,14 +16,14 @@ const geistMono = Geist_Mono({
 
 export const metadata = {
   title: 'Ephemeris Staff — Observatorium Nasional',
-  description: 'Portal staff internal & external Ephemeris: booking, jadwal, dan observasi.',
+  description: 'Portal staff Ephemeris: booking, jadwal, observasi, dan Sky Guide untuk staff internal.',
 };
 
 import ClientWrapper from '@/components/ClientWrapper';
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="id" className={`${dmSans.variable} ${instrumentSans.variable} ${geistMono.variable}`} suppressHydrationWarning>
+    <html lang="id" className={`${geistSans.variable} ${geistMono.variable}`} suppressHydrationWarning>
       <head>
         <meta name="viewport" content="width=device-width, initial-scale=1" />
       </head>

@@ -1,23 +1,28 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import { Building2, Receipt, Users, Wallet } from 'lucide-react';
 import AdminPencairanStaffPanel from '@/components/AdminPencairanStaffPanel';
 import { BOOKINGS } from '@/data/bookings';
 import { calculateBookingFinance, formatUsd } from '@/data/keuangan';
 
-function KpiCard({ label, value, sub, accent = 'var(--text-primary)', border = 'var(--border)' }) {
-  return (
-    <div className="kpi-card" style={{ borderTop: `3px solid ${border}` }}>
-      <div className="kpi-label">{label}</div>
-      <div className="kpi-value" style={{ color: accent, fontSize: 32 }}>{value}</div>
-      {sub && <div className="kpi-note" style={{ marginTop: 8 }}>{sub}</div>}
-    </div>
-  );
-}
+const TABS = [
+  ['rekap', 'Rekap'],
+  ['receipt', 'Digital Receipt'],
+  ['commission', 'Komisi Staff'],
+  ['pencairan', 'Pencairan Staff'],
+  ['tips', 'Tip Lapangan'],
+];
+
+const formatDate = (value) => new Intl.DateTimeFormat('id-ID', {
+  day: '2-digit',
+  month: 'short',
+  year: 'numeric',
+}).format(new Date(value));
 
 function Stars({ rating }) {
   if (!rating) return <span style={{ color: 'var(--text-dim)' }}>Belum ada</span>;
-  return <span style={{ color: 'var(--amber)', letterSpacing: 2 }}>{'★'.repeat(rating)}{'☆'.repeat(5 - rating)}</span>;
+  return <span className="finance-rating">{rating}/5</span>;
 }
 
 export default function KeuanganPage() {
@@ -44,6 +49,8 @@ export default function KeuanganPage() {
   const totals = useMemo(() => completedBookings.reduce((acc, b) => {
     acc.base += b.finance.baseTotalUsd;
     acc.invoice += b.finance.invoiceTotalUsd;
+    acc.serviceCharge += b.finance.serviceChargeUsd;
+    acc.gst += b.finance.gstUsd;
     acc.operation += b.finance.operationShareUsd;
     acc.company += b.finance.companyShareUsd;
     acc.commission += b.finance.staffCommissionUsd;
@@ -53,7 +60,7 @@ export default function KeuanganPage() {
       acc.ratingCount += 1;
     }
     return acc;
-  }, { base: 0, invoice: 0, operation: 0, company: 0, commission: 0, tip: 0, ratingSum: 0, ratingCount: 0 }), [completedBookings]);
+  }, { base: 0, invoice: 0, serviceCharge: 0, gst: 0, operation: 0, company: 0, commission: 0, tip: 0, ratingSum: 0, ratingCount: 0 }), [completedBookings]);
 
   const commissionByStaff = useMemo(() => {
     const map = new Map();
@@ -73,52 +80,156 @@ export default function KeuanganPage() {
   }, [completedBookings]);
 
   const averageRating = totals.ratingCount ? (totals.ratingSum / totals.ratingCount).toFixed(1) : '-';
+  const signedBookings = completedBookings.filter((booking) => booking.signedByGuest).length;
+  const summaryItems = [
+    { label: 'Invoice Tamu', value: formatUsd(totals.invoice), note: 'Total tagihan final', Icon: Receipt, primary: true },
+    { label: 'Base Revenue', value: formatUsd(totals.base), note: 'Dasar pembagian', Icon: Wallet },
+    { label: 'Jatah Resort', value: formatUsd(totals.operation), note: '50% dari base', Icon: Building2 },
+    { label: 'Komisi Staff', value: formatUsd(totals.commission), note: 'Dari booking selesai', Icon: Users },
+  ];
 
   return (
-    <div className="fade-in-up">
-      <div style={{ display: 'flex', gap: 0, marginBottom: 24, border: '1px solid var(--border)', width: 'fit-content', flexWrap: 'wrap' }}>
-        {[
-          ['rekap', 'Rekap'],
-          ['receipt', 'Digital Receipt'],
-          ['commission', 'Komisi Staff'],
-          ['pencairan', 'Pencairan Staff'],
-          ['tips', 'Tip Lapangan'],
-        ].map(([key, label]) => (
-          <button key={key} onClick={() => setTab(key)} style={{
-            padding: '10px 20px',
-            fontSize: 12,
-            fontWeight: 700,
-            letterSpacing: '0.06em',
-            textTransform: 'uppercase',
-            border: 'none',
-            borderRight: '1px solid var(--border)',
-            cursor: 'pointer',
-            fontFamily: 'var(--font-body)',
-            background: tab === key ? 'var(--text-primary)' : 'var(--bg-card)',
-            color: tab === key ? 'var(--bg-card)' : 'var(--text-secondary)',
-          }}>{label}</button>
+    <div className="finance-report fade-in-up">
+      <section className="finance-report-heading">
+        <div>
+          <span className="finance-report-eyebrow">Financial Operations</span>
+          <h1>Revenue and settlement overview</h1>
+          <p>Pantau invoice, pembagian pendapatan, komisi, dan pencairan dalam satu laporan.</p>
+        </div>
+        <div className="finance-report-period">
+          <span>Periode data</span>
+          <strong>Semua transaksi selesai</strong>
+          <small>USD, {completedBookings.length} transaksi tercatat</small>
+        </div>
+      </section>
+
+      <div className="finance-report-tabs" role="tablist" aria-label="Bagian laporan keuangan">
+        {TABS.map(([key, label]) => (
+          <button
+            key={key}
+            id={`finance-tab-${key}`}
+            type="button"
+            role="tab"
+            aria-selected={tab === key}
+            aria-controls="finance-tab-panel"
+            className={tab === key ? 'is-active' : ''}
+            onClick={() => setTab(key)}
+          >
+            {label}
+          </button>
         ))}
       </div>
 
-      {tab === 'rekap' && (
-        <>
-          <div className="kpi-grid stagger">
-            <KpiCard label="Invoice Tamu" value={formatUsd(totals.invoice)} border="var(--emerald)" accent="var(--emerald)" sub="Base + 10% service charge + 17% GST" />
-            <KpiCard label="Base Revenue" value={formatUsd(totals.base)} border="var(--cyan)" accent="var(--cyan)" sub="Dasar split dan komisi" />
-            <KpiCard label="Jatah Resort 50%" value={formatUsd(totals.operation)} border="var(--violet)" accent="var(--violet)" sub="Operation share" />
-            <KpiCard label="Komisi Staff" value={formatUsd(totals.commission)} border="var(--amber)" accent="var(--amber)" sub="External tetap lama, internal 9% dari base" />
-          </div>
+      <div
+        id="finance-tab-panel"
+        className="finance-report-tab-panel"
+        role="tabpanel"
+        aria-labelledby={`finance-tab-${tab}`}
+      >
+        {tab === 'rekap' && (
+          <div className="finance-report-recap">
+            <section className="finance-report-summary" aria-label="Ringkasan pendapatan">
+              {summaryItems.map(({ label, value, note, Icon, primary }) => (
+                <article key={label} className={primary ? 'is-primary' : ''}>
+                  <div className="finance-summary-label">
+                    <Icon size={16} strokeWidth={1.7} aria-hidden="true" />
+                    <span>{label}</span>
+                  </div>
+                  <strong>{value}</strong>
+                  <small>{note}</small>
+                </article>
+              ))}
+            </section>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 24 }}>
-            <KpiCard label="Selesai" value={completedBookings.length} sub="Finished Experience" />
-            <KpiCard label="Signed by Guest" value={completedBookings.filter((b) => b.signedByGuest).length} sub="Bukti invoice fisik" />
-            <KpiCard label="Average Rating" value={averageRating} sub={`${totals.ratingCount} feedback masuk`} />
-            <KpiCard label="Tip Lapangan" value={formatUsd(totals.tip)} sub="Terpisah dari komisi" />
-          </div>
-        </>
-      )}
+            <div className="finance-report-grid">
+              <section className="finance-report-panel finance-revenue-panel">
+                <div className="finance-panel-heading">
+                  <div>
+                    <span>Revenue flow</span>
+                    <h2>Rekonsiliasi Invoice</h2>
+                  </div>
+                  <span className="finance-balanced-status">Balanced</span>
+                </div>
 
-      {tab === 'receipt' && (
+                <div className="finance-invoice-total">
+                  <span>Invoice Tamu</span>
+                  <strong>{formatUsd(totals.invoice)}</strong>
+                  <small>Base + service charge + GST</small>
+                </div>
+
+                <div className="finance-breakdown">
+                  <div><span>Base revenue</span><strong>{formatUsd(totals.base)}</strong></div>
+                  <div><span>Service charge 10%</span><strong>{formatUsd(totals.serviceCharge)}</strong></div>
+                  <div><span>GST 17%</span><strong>{formatUsd(totals.gst)}</strong></div>
+                  <div className="is-total"><span>Total invoice</span><strong>{formatUsd(totals.invoice)}</strong></div>
+                </div>
+
+                <div className="finance-allocation">
+                  <div className="finance-allocation-heading">
+                    <h3>Distribusi Pendapatan</h3>
+                    <span>Berdasarkan base revenue</span>
+                  </div>
+                  <div className="finance-allocation-split">
+                    <div><span>Resort operation</span><strong>{formatUsd(totals.operation)}</strong><small>50%</small></div>
+                    <div><span>Company share</span><strong>{formatUsd(totals.company)}</strong><small>50%</small></div>
+                  </div>
+                </div>
+              </section>
+
+              <section className="finance-report-panel finance-health-panel">
+                <div className="finance-panel-heading">
+                  <div>
+                    <span>Operational status</span>
+                    <h2>Kesiapan Dokumen</h2>
+                  </div>
+                </div>
+                <div className="finance-health-list">
+                  <div><span>Experience selesai</span><strong>{completedBookings.length}</strong></div>
+                  <div><span>Signed by guest</span><strong>{signedBookings}</strong></div>
+                  <div><span>Belum ditandatangani</span><strong>{completedBookings.length - signedBookings}</strong></div>
+                  <div><span>Average rating</span><strong>{averageRating}</strong></div>
+                </div>
+                <div className="finance-tip-total">
+                  <span>Tip Lapangan</span>
+                  <strong>{formatUsd(totals.tip)}</strong>
+                  <small>Dicatat terpisah dari komisi staff</small>
+                </div>
+              </section>
+            </div>
+
+            <section className="finance-report-recent">
+              <div className="finance-panel-heading">
+                <div>
+                  <span>Latest activity</span>
+                  <h2>Transaksi Selesai Terbaru</h2>
+                </div>
+                <small>{completedBookings.length} transaksi</small>
+              </div>
+              <div className="finance-recent-list">
+                {completedBookings.length ? completedBookings.slice(0, 4).map((booking) => (
+                  <article key={booking.id}>
+                    <div className="finance-recent-booking">
+                      <strong>{booking.bookingCode}</strong>
+                      <span>{booking.clientName}, Room {booking.roomNumber}</span>
+                    </div>
+                    <div className="finance-recent-package">
+                      <strong>{booking.packageName}</strong>
+                      <span>{formatDate(booking.date)}</span>
+                    </div>
+                    <span className={`tag ${booking.signedByGuest ? 'tag-completed' : 'tag-pending'}`}>
+                      {booking.signedByGuest ? 'Signed' : 'Unsigned'}
+                    </span>
+                    <strong className="finance-recent-amount">{formatUsd(booking.finance.invoiceTotalUsd)}</strong>
+                  </article>
+                )) : (
+                  <div className="finance-report-empty">Belum ada transaksi selesai untuk ditampilkan.</div>
+                )}
+              </div>
+            </section>
+          </div>
+        )}
+
+        {tab === 'receipt' && (
         <div className="card">
           <div className="card-header">
             <span className="card-title">Digital Receipt Preview</span>
@@ -159,7 +270,7 @@ export default function KeuanganPage() {
         </div>
       )}
 
-      {tab === 'commission' && (
+        {tab === 'commission' && (
         <div className="card">
           <div className="card-header">
             <span className="card-title">Laporan Komisi Staff</span>
@@ -192,9 +303,9 @@ export default function KeuanganPage() {
         </div>
       )}
 
-      {tab === 'pencairan' && <AdminPencairanStaffPanel />}
+        {tab === 'pencairan' && <AdminPencairanStaffPanel />}
 
-      {tab === 'tips' && (
+        {tab === 'tips' && (
         <div className="card">
           <div className="card-header">
             <span className="card-title">Resort & Review Summary / Tip Lapangan</span>
@@ -229,7 +340,8 @@ export default function KeuanganPage() {
             </table>
           </div>
         </div>
-      )}
+        )}
+      </div>
     </div>
   );
 }

@@ -2,15 +2,16 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { query } from '@ephemeris/db';
 import StargazingExperienceShowcase from '@/components/StargazingExperienceShowcase';
+import ResortLocator from '@/components/ResortLocator';
 
 export const dynamic = 'force-dynamic';
 
 export const metadata = {
-  title: 'Beach Stargazing | Le Meridien Maldives',
-  description: 'Premium guided stargazing, solar observation, celestial dining, and astronomy programmes at Le Meridien Maldives.',
+  title: 'Maldives Stargazing Experiences | Ephemeris',
+  description: 'Discover guided stargazing, solar observation, celestial dining, and astronomy programmes across partner resorts in the Maldives.',
 };
 
-const whatsappLink = 'https://wa.me/6285179546466?text=Halo%2C%20saya%20ingin%20bertanya%20tentang%20Stargazing%20Experience%20di%20Le%20Meridien%20Maldives.';
+const whatsappLink = 'https://wa.me/6285179546466?text=Hello%2C%20I%20would%20like%20to%20ask%20about%20an%20Ephemeris%20stargazing%20experience.';
 
 const masterclass = [
   ['Skygazer - basic', '3 days', 'USD 285++ per person'],
@@ -33,7 +34,7 @@ async function loadPackages() {
         ), '[]'::json) AS inclusions
       FROM packages p
       WHERE p.is_active = true
-        AND p.resort_id = (SELECT id FROM resorts WHERE slug = 'le-meridien-maldives' AND status = 'active' LIMIT 1)
+        AND p.resort_id = (SELECT id FROM resorts WHERE code = 'LMM' AND status = 'active' LIMIT 1)
       ORDER BY p.name
     `);
     return rows.map((pkg) => ({
@@ -48,7 +49,7 @@ async function loadPackages() {
 async function loadResorts() {
   try {
     const { rows } = await query(
-      `SELECT name, slug, location FROM resorts
+      `SELECT name, slug, location, latitude, longitude FROM resorts
        WHERE status = 'active' AND slug IS NOT NULL
        ORDER BY name`
     );
@@ -63,121 +64,118 @@ export default async function LandingPage() {
   const resorts = await loadResorts();
 
   return (
-    <main className="stargazing-page">
-      <nav className="stargazing-nav">
-        <Link href="/" className="stargazing-brand">
-          <span>Ephemeris</span>
-          <small>Le Meridien Maldives</small>
-        </Link>
-        <div className="stargazing-nav-links">
-          <Link href="/sky" style={{ color: '#38bdf8', fontWeight: 700 }}>🌌 Sky Guide 3D</Link>
-          <a href="#experiences">Experiences</a>
-          <a href="#masterclass">Masterclass</a>
-          <a href={whatsappLink} target="_blank" rel="noopener noreferrer">WhatsApp</a>
-        </div>
-        <details className="stargazing-mobile-nav">
-          <summary aria-label="Open navigation menu">
-            <span />
-            <span />
-            <span />
-          </summary>
-          <div className="stargazing-mobile-nav-panel">
+    <main className="stargazing-page home-page">
+      <header className="home-site-header">
+        <nav className="home-nav" aria-label="Main navigation">
+          <Link href="/" className="home-brand">
+            <span className="home-brand-mark" aria-hidden="true">
+              <Image src="/stargazing-assets/ephemeris-logo.png" alt="" width={66} height={44} sizes="66px" />
+            </span>
+            <span><strong>Ephemeris</strong><small>Maldives Stargazing</small></span>
+          </Link>
+          <div className="home-nav-links">
             <Link href="/sky">Sky Guide 3D</Link>
             <a href="#experiences">Experiences</a>
+            <a href="#resorts">Resorts</a>
             <a href="#masterclass">Masterclass</a>
-            <a href={whatsappLink} target="_blank" rel="noopener noreferrer">WhatsApp</a>
+            <a className="home-nav-cta" href={whatsappLink} target="_blank" rel="noopener noreferrer">Contact</a>
           </div>
-        </details>
-      </nav>
+          <details className="home-mobile-nav">
+            <summary aria-label="Open navigation menu"><span /><span /><span /></summary>
+            <div className="home-mobile-nav-panel">
+              <Link href="/sky">Sky Guide 3D</Link>
+              <a href="#experiences">Experiences</a>
+              <a href="#resorts">Resorts</a>
+              <a href="#masterclass">Masterclass</a>
+              <a href={whatsappLink} target="_blank" rel="noopener noreferrer">Contact</a>
+            </div>
+          </details>
+        </nav>
+      </header>
 
-      <section className="stargazing-hero">
-        <div className="stargazing-hero-copy">
-          <p className="stargazing-kicker">Palm Beach | Maldives | Guided by resident astronomer</p>
-          <h1>Beach Stargazing at Le Meridien Maldives</h1>
-          <p>
-            A bold, intimate astronomy experience under the Maldivian night sky, made for couples, families, and curious travelers.
-          </p>
-          <div className="stargazing-actions">
-            <a href={whatsappLink} target="_blank" rel="noopener noreferrer" className="stargazing-button">
-              Chat via WhatsApp
-            </a>
-            <Link href="/sky" className="stargazing-button" style={{ background: 'linear-gradient(135deg, #0284c7, #7c3aed)', border: 'none' }}>
-              🌌 Buka Peta Langit 3D
-            </Link>
-            <a href="#experiences" className="stargazing-button secondary">View Experiences</a>
-          </div>
-        </div>
-
-        <div className="stargazing-hero-image">
-          <Image
-            src="/stargazing-assets/experience-3.jpg"
-            alt="Beach stargazing under the Maldivian night sky"
-            fill
-            priority
-            sizes="100vw"
-          />
-          <div className="hero-price-card">
-            <span>Signature Night</span>
-            <strong>USD 90++</strong>
-            <small>per adult | children 50% off</small>
-          </div>
-        </div>
-
-        <div className="stargazing-hero-details">
-          <span>Monday, Thursday & Saturday</span>
-          <span>21:00 to 22:00</span>
-          <span>Palm Beach</span>
-          <span>Concierge reservation required</span>
+      <section className="home-hero" aria-labelledby="home-hero-title">
+        <Image
+          className="home-hero-media"
+          src="/stargazing-assets/ephemeris-nasa-editorial-hero.png"
+          alt="A resident astronomer guides two guests beside a telescope under the Milky Way in the Maldives"
+          fill
+          priority
+          sizes="100vw"
+        />
+        <div className="home-hero-shade" />
+        <div className="home-hero-copy">
+          <p className="home-eyebrow">Guided astronomy in the Maldives</p>
+          <h1 id="home-hero-title">Meet the universe after dark.</h1>
+          <p>Explore the night sky with a resident astronomer from your island resort.</p>
+          <a className="home-hero-action" href="#resorts"><span>Choose your resort</span><strong aria-hidden="true">→</strong></a>
         </div>
       </section>
 
-      <section className="stargazing-proof" aria-label="Experience highlights">
-        <div>
-          <strong>4.9/5</strong>
-          <span>guest rating target</span>
-        </div>
-        <div>
-          <strong>10% SC + 17% GST</strong>
-          <span>clear resort pricing</span>
-        </div>
-        <div>
-          <strong>Staff assisted</strong>
-          <span>reserve by concierge or WhatsApp</span>
-        </div>
+      <section className="home-facts" aria-label="Experience information">
+        <p><strong>{resorts.length}</strong><span>Active resort locations</span></p>
+        <p><strong>{packages.length}</strong><span>Published experiences</span></p>
+        <p><strong>7 days</strong><span>Live guest calendar</span></p>
+        <p><strong>Nightly</strong><span>Weather-led observation</span></p>
       </section>
 
-      {resorts.length > 0 && (
-        <section className="stargazing-note" aria-label="Choose a resort">
-          <p>Choose your resort to see only the packages, pricing, and contact details available at that location.</p>
-          <div className="stargazing-actions resort-grid">
-            {resorts.map((resort) => (
-              <Link key={resort.slug} href={`/resorts/${resort.slug}`} className="stargazing-button secondary">
-                {resort.name}
-              </Link>
-            ))}
+      <section id="experiences" className="home-featured" aria-labelledby="home-experiences-title">
+        <div className="home-featured-heading">
+          <div>
+            <h2 id="home-experiences-title">Featured experiences</h2>
+            <p>Beach observation, solar sessions, celestial dining, and guided astrophotography.</p>
           </div>
-        </section>
-      )}
-
-      <section id="experiences" className="stargazing-section">
-        <div className="stargazing-section-head">
-          <p className="stargazing-kicker">Choose your sky</p>
-          <h2>Guided astronomy experiences for every kind of night.</h2>
-          <p>
-            From beach stargazing and moonlit dining to kids sessions and solar observation, each programme is designed to feel personal, visual, and easy to reserve.
-          </p>
+          <a href="#resorts">Find your location <span aria-hidden="true">→</span></a>
         </div>
-
         <StargazingExperienceShowcase packages={packages} />
       </section>
 
-      <section id="masterclass" className="masterclass-section">
+      <section id="resorts" className="home-resorts" aria-labelledby="home-resorts-title">
+        <div className="home-section-heading">
+          <h2 id="home-resorts-title">Your island. Your sky.</h2>
+          <p>Every resort publishes its own packages, observation points, pricing, and rolling seven-day calendar.</p>
+        </div>
+        {resorts.length > 0 ? (
+          <div className="home-resort-panel">
+            <ResortLocator resorts={resorts} />
+            <div className="home-resort-list">
+              {resorts.map((resort) => (
+                <Link key={resort.slug} href={`/resorts/${resort.slug}`} className="home-resort-link">
+                  <span><strong>{resort.name}</strong><small>{resort.location || 'Maldives'}</small></span>
+                  <span aria-hidden="true">Explore →</span>
+                </Link>
+              ))}
+            </div>
+          </div>
+        ) : (
+          <div className="stargazing-note"><p>Resort locations are being prepared. Ask our concierge for current availability.</p></div>
+        )}
+      </section>
+
+      <section className="home-image-story" aria-labelledby="home-story-title">
+        <div className="home-story-image">
+          <Image
+            src="/stargazing-assets/experience-8.jpg"
+            alt="Guests learning about the night sky beside a beach telescope"
+            fill
+            sizes="(max-width: 768px) 100vw, 55vw"
+          />
+        </div>
+        <div className="home-story-copy">
+          <p className="home-story-label">Tonight under the stars</p>
+          <h2 id="home-story-title">The beach becomes your observatory.</h2>
+          <p>A resident astronomer brings the sky into focus with a professional telescope and a story shaped around what is visible tonight.</p>
+          <dl>
+            <div><dt>Before</dt><dd>Your resort confirms the meeting point and weather.</dd></div>
+            <div><dt>Observe</dt><dd>See planets, stars, and deep-sky objects through the telescope.</dd></div>
+            <div><dt>Continue</dt><dd>Add a masterclass, astro-portrait, or private dining experience.</dd></div>
+          </dl>
+        </div>
+      </section>
+
+      <section id="masterclass" className="masterclass-section home-masterclass">
         <div>
-          <p className="stargazing-kicker">For deeper explorers</p>
           <h2>Astronomy Masterclass</h2>
-          <p>
-            Certified programmes for guests who want a hands-on path into celestial observation, sky reading, and astro-photography.
-          </p>
+          <p>Hands-on programmes for guests ready to observe, navigate, and photograph the night sky.</p>
         </div>
         <div className="masterclass-list">
           {masterclass.map(([name, duration, price]) => (
@@ -190,20 +188,32 @@ export default async function LandingPage() {
         </div>
       </section>
 
-      <section className="stargazing-note">
-        <p>
-          Reservation is handled by resort staff. Prices are in USD and subject to 10% service charge and 17% GST.
-        </p>
-        <a href={whatsappLink} target="_blank" rel="noopener noreferrer" className="stargazing-button">
-          Ask concierge
-        </a>
+      <section className="home-booking" aria-labelledby="home-booking-title">
+        <div>
+          <h2 id="home-booking-title">Your night sky starts here.</h2>
+          <p>Resort staff confirm availability, weather, meeting point, and final pricing.</p>
+        </div>
+        <a href={whatsappLink} target="_blank" rel="noopener noreferrer" className="home-booking-action"><span>Ask the concierge</span><strong aria-hidden="true">→</strong></a>
       </section>
 
-      <footer className="stargazing-footer">
-        <span>@LeMeridienMaldives</span>
-        <span>#DestinationUnlocked | #LeMeridienMaldives</span>
+      <footer className="home-footer">
+        <div>
+          <Link href="/" className="home-brand">
+            <span className="home-brand-mark" aria-hidden="true">
+              <Image src="/stargazing-assets/ephemeris-logo.png" alt="" width={66} height={44} sizes="66px" />
+            </span>
+            <span><strong>Ephemeris</strong><small>Maldives Stargazing</small></span>
+          </Link>
+          <p>Guided astronomy experiences across partner resorts in the Maldives.</p>
+        </div>
+        <nav aria-label="Footer navigation">
+          <Link href="/sky">Sky Guide 3D</Link>
+          <a href="#experiences">Experiences</a>
+          <a href="#resorts">Resorts</a>
+          <a href="#masterclass">Masterclass</a>
+        </nav>
+        <small>Experiences are subject to weather and resort availability.</small>
       </footer>
-
     </main>
   );
 }

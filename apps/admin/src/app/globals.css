@@ -321,7 +321,10 @@ button {
 /* Nav items — fixed 44px height, exact 18px padding */
 .sidebar-nav {
   flex: 1;
-  padding: 6px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px 0 6px;
   overflow-y: auto;
   overflow-x: hidden;
 }
@@ -1215,6 +1218,44 @@ tbody td.name-cell:hover { color: var(--accent-hover); }
 select.input { cursor: pointer; appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%2364748b' viewBox='0 0 16 16'%3E%3Cpath d='M8 11L3 6h10z'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 12px center; padding-right: 34px; }
 textarea.input { min-height: 100px; resize: vertical; }
 
+.admin-month-filter {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+select.admin-month-select {
+  width: 132px;
+  height: 36px;
+  min-height: 36px;
+  padding: 0 34px 0 12px;
+  color-scheme: dark;
+  background-color: var(--bg-primary);
+  border-color: var(--border);
+  color: var(--text-primary);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+select.admin-month-select:hover {
+  border-color: var(--accent);
+  background-color: var(--bg-elevated);
+}
+
+select.admin-month-select option {
+  background: var(--bg-primary);
+  color: var(--text-primary);
+}
+
+select.admin-month-select option:checked {
+  background: var(--accent-muted);
+  color: var(--text-primary);
+}
+
 /* === Search Bar === */
 .search-bar { position: relative; width: 100%; max-width: 360px; }
 .search-bar input { width: 100%; padding: 10px 14px; background: var(--bg-primary); border: 1px solid var(--border); color: var(--text-primary); font-family: var(--font-body); font-size: 13px; transition: all 0.2s var(--ease); outline: none; }
@@ -1255,6 +1296,307 @@ textarea.input { min-height: 100px; resize: vertical; }
 .modal-close:hover { background: rgba(0, 0, 0, 0.05); color: var(--text-primary); }
 .modal-body { padding: 24px 26px; }
 .modal-footer { padding: 16px 26px; border-top: 1px solid var(--border); display: flex; justify-content: flex-end; gap: 10px; }
+
+.booking-edit-modal {
+  width: min(760px, calc(100vw - 32px));
+  max-height: min(88dvh, 820px);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.booking-edit-modal > form {
+  min-height: 0;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.booking-edit-modal .modal-body {
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.booking-edit-modal .modal-header,
+.booking-edit-modal .modal-footer {
+  flex-shrink: 0;
+  background: var(--bg-card);
+}
+
+.booking-edit-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.booking-edit-checkbox {
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.booking-edit-checkbox input {
+  width: 22px;
+  height: 22px;
+}
+
+.booking-edit-notes {
+  grid-column: 1 / -1;
+}
+
+@media (max-width: 768px) {
+  .booking-edit-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .booking-edit-notes {
+    grid-column: auto;
+  }
+}
+
+/* Admin booking reschedule */
+.admin-reschedule-backdrop {
+  padding: 20px;
+  background: rgba(8, 10, 16, 0.72);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+
+.admin-reschedule-modal {
+  display: flex;
+  width: min(560px, 100%);
+  max-height: calc(100dvh - 40px);
+  overflow: hidden;
+  flex-direction: column;
+  border: 1px solid var(--border);
+  border-top: 3px solid var(--accent);
+  border-radius: 12px;
+  background: var(--bg-card);
+  box-shadow: 0 24px 70px rgba(8, 10, 16, 0.38);
+  animation: slideUp 0.22s var(--ease);
+}
+
+.admin-reschedule-header {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr) 34px;
+  align-items: center;
+  gap: 13px;
+  padding: 19px 22px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-elevated);
+}
+
+.admin-reschedule-heading-icon {
+  display: grid;
+  width: 42px;
+  height: 42px;
+  place-items: center;
+  border: 1px solid color-mix(in srgb, var(--accent) 34%, transparent);
+  border-radius: 9px;
+  background: var(--accent-muted);
+  color: var(--accent-hover);
+}
+
+.admin-reschedule-header h2 {
+  color: var(--text-primary);
+  font-family: var(--font-heading);
+  font-size: 18px;
+  font-weight: 680;
+  letter-spacing: -0.025em;
+  line-height: 1.2;
+}
+
+.admin-reschedule-header p {
+  margin-top: 4px;
+  overflow: hidden;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-reschedule-close {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  min-height: 34px;
+  place-items: center;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg-card);
+  color: var(--text-muted);
+  transition: border-color 140ms ease, background-color 140ms ease, color 140ms ease, transform 140ms ease;
+}
+
+.admin-reschedule-close:hover {
+  border-color: var(--text-dim);
+  background: var(--bg-card-hover);
+  color: var(--text-primary);
+}
+
+.admin-reschedule-close:active {
+  transform: scale(0.97);
+}
+
+.admin-reschedule-body {
+  min-height: 0;
+  overflow-y: auto;
+  padding: 22px;
+}
+
+.admin-reschedule-current {
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr);
+  align-items: center;
+  gap: 11px;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: var(--bg-elevated);
+  color: var(--text-muted);
+}
+
+.admin-reschedule-current div {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 2px 14px;
+}
+
+.admin-reschedule-current span {
+  grid-column: 1 / -1;
+  color: var(--text-dim);
+  font-size: 9.5px;
+  font-weight: 650;
+  letter-spacing: 0.055em;
+  text-transform: uppercase;
+}
+
+.admin-reschedule-current strong,
+.admin-reschedule-current small {
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.admin-reschedule-current strong {
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.admin-reschedule-current small {
+  color: var(--text-secondary);
+  font-size: 11px;
+}
+
+.admin-reschedule-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  margin-top: 19px;
+}
+
+.admin-reschedule-field {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.admin-reschedule-field.is-full {
+  grid-column: 1 / -1;
+}
+
+.admin-reschedule-field > span {
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-weight: 650;
+}
+
+.admin-reschedule-field .input {
+  width: 100%;
+  min-height: 43px;
+  border-radius: 8px;
+  background: var(--bg-primary);
+  color-scheme: dark;
+}
+
+.admin-reschedule-field textarea.input {
+  min-height: 82px;
+  line-height: 1.5;
+}
+
+.admin-reschedule-field > small {
+  color: var(--text-dim);
+  font-size: 9.5px;
+  line-height: 1.45;
+}
+
+.admin-reschedule-error {
+  margin-top: 14px;
+  padding: 9px 11px;
+  border: 1px solid color-mix(in srgb, var(--accent) 34%, transparent);
+  border-radius: 8px;
+  background: var(--accent-muted);
+  color: var(--accent-hover);
+  font-size: 10.5px;
+  font-weight: 650;
+}
+
+.admin-reschedule-footer {
+  display: flex;
+  flex-shrink: 0;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 15px 22px;
+  border-top: 1px solid var(--border);
+  background: var(--bg-elevated);
+}
+
+.admin-reschedule-footer .btn {
+  min-height: 38px;
+  padding: 8px 15px;
+}
+
+.admin-reschedule-footer .btn-primary {
+  min-width: 146px;
+}
+
+@media (max-width: 600px) {
+  .admin-reschedule-backdrop {
+    align-items: flex-end;
+    padding: 10px;
+  }
+
+  .admin-reschedule-modal {
+    width: 100%;
+    max-height: calc(100dvh - 20px);
+  }
+
+  .admin-reschedule-header,
+  .admin-reschedule-body,
+  .admin-reschedule-footer {
+    padding-inline: 16px;
+  }
+
+  .admin-reschedule-form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-reschedule-field.is-full {
+    grid-column: auto;
+  }
+
+  .admin-reschedule-footer {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .admin-reschedule-footer .btn {
+    width: 100%;
+  }
+}
 
 .staff-booking-modal {
   display: flex;
@@ -1328,7 +1670,7 @@ textarea.input { min-height: 100px; resize: vertical; }
   justify-content: space-between;
   gap: 18px;
   padding: 16px 28px;
-  background: linear-gradient(135deg, #ffffff 0%, #f4efff 56%, #fff7ed 100%);
+  background: var(--bg-card);
   border-bottom: 1px solid var(--border);
 }
 
@@ -3393,6 +3735,1129 @@ textarea,
   }
 
   .package-create-actions .btn {
+    width: 100%;
+  }
+}
+
+/* Finance report */
+.finance-report {
+  display: grid;
+  width: 100%;
+  max-width: 1600px;
+  margin: 0 auto;
+  gap: 14px;
+}
+
+.finance-report-heading {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 32px;
+  padding: 4px 2px 8px;
+}
+
+.finance-report-eyebrow,
+.finance-panel-heading span,
+.finance-report-period > span {
+  color: var(--text-dim);
+  font-size: 9px;
+  font-weight: 620;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.finance-report-heading h1 {
+  margin-top: 5px;
+  color: var(--text-primary);
+  font-size: clamp(22px, 2vw, 30px);
+  font-weight: 650;
+  letter-spacing: -0.045em;
+  line-height: 1.08;
+}
+
+.finance-report-heading p {
+  max-width: 620px;
+  margin-top: 7px;
+  color: var(--text-muted);
+  font-size: 11.5px;
+}
+
+.finance-report-period {
+  min-width: 230px;
+  padding: 3px 0 3px 18px;
+  border-left: 1px solid var(--border);
+}
+
+.finance-report-period strong,
+.finance-report-period small {
+  display: block;
+}
+
+.finance-report-period strong {
+  margin-top: 4px;
+  color: var(--text-primary);
+  font-size: 12px;
+  font-weight: 580;
+}
+
+.finance-report-period small {
+  margin-top: 2px;
+  color: var(--text-dim);
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+}
+
+.finance-report-tabs {
+  display: flex;
+  width: fit-content;
+  max-width: 100%;
+  overflow-x: auto;
+  padding: 4px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: rgba(255, 255, 255, 0.02);
+  scrollbar-width: none;
+}
+
+.finance-report-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.finance-report-tabs button {
+  flex: 0 0 auto;
+  min-height: 32px;
+  padding: 7px 14px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 10.5px;
+  font-weight: 560;
+  white-space: nowrap;
+  transition: background-color 140ms ease, color 140ms ease, transform 140ms ease;
+}
+
+.finance-report-tabs button:hover {
+  background: rgba(255, 255, 255, 0.035);
+  color: var(--text-primary);
+}
+
+.finance-report-tabs button:active {
+  transform: scale(0.98);
+}
+
+.finance-report-tabs button.is-active {
+  background: var(--bg-elevated);
+  color: var(--text-primary);
+  box-shadow: var(--shadow-sm);
+}
+
+.finance-report-tab-panel,
+.finance-report-recap {
+  min-width: 0;
+}
+
+.finance-report-recap {
+  display: grid;
+  gap: 12px;
+}
+
+.finance-report-summary {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: rgba(255, 255, 255, 0.025);
+  box-shadow: var(--shadow-sm);
+}
+
+.finance-report-summary article {
+  min-width: 0;
+  padding: 15px 16px;
+}
+
+.finance-report-summary article + article {
+  border-left: 1px solid var(--border);
+}
+
+.finance-report-summary article.is-primary {
+  background: var(--accent-muted);
+}
+
+.finance-summary-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-muted);
+  font-size: 10px;
+  font-weight: 540;
+}
+
+.finance-summary-label svg {
+  color: var(--text-dim);
+}
+
+.finance-report-summary article.is-primary .finance-summary-label svg {
+  color: var(--accent-hover);
+}
+
+.finance-report-summary article > strong,
+.finance-report-summary article > small {
+  display: block;
+}
+
+.finance-report-summary article > strong {
+  margin-top: 13px;
+  overflow: hidden;
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-size: clamp(20px, 2vw, 27px);
+  font-weight: 620;
+  letter-spacing: -0.055em;
+  line-height: 1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.finance-report-summary article.is-primary > strong {
+  color: var(--accent-hover);
+}
+
+.finance-report-summary article > small {
+  margin-top: 8px;
+  color: var(--text-dim);
+  font-size: 9.5px;
+}
+
+.finance-report-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.55fr) minmax(280px, 0.7fr);
+  gap: 12px;
+}
+
+.finance-report-panel,
+.finance-report-recent {
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--bg-card);
+  box-shadow: var(--shadow-sm);
+}
+
+.finance-report-panel {
+  padding: 17px;
+}
+
+.finance-panel-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.finance-panel-heading h2 {
+  margin-top: 3px;
+  color: var(--text-primary);
+  font-size: 14px;
+  font-weight: 610;
+  letter-spacing: -0.015em;
+}
+
+.finance-balanced-status {
+  padding: 4px 7px;
+  border: 1px solid rgba(98, 185, 140, 0.28);
+  border-radius: 7px;
+  background: var(--emerald-muted);
+  color: var(--emerald) !important;
+  font-size: 9px !important;
+  letter-spacing: 0.02em !important;
+  text-transform: none !important;
+}
+
+.finance-invoice-total {
+  margin-top: 16px;
+  padding: 15px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--accent-muted);
+}
+
+.finance-invoice-total span,
+.finance-invoice-total strong,
+.finance-invoice-total small {
+  display: block;
+}
+
+.finance-invoice-total span {
+  color: var(--text-muted);
+  font-size: 10px;
+}
+
+.finance-invoice-total strong {
+  margin-top: 8px;
+  color: var(--accent-hover);
+  font-family: var(--font-mono);
+  font-size: clamp(27px, 3vw, 36px);
+  font-weight: 630;
+  letter-spacing: -0.06em;
+  line-height: 1;
+}
+
+.finance-invoice-total small {
+  margin-top: 8px;
+  color: var(--text-dim);
+  font-size: 9.5px;
+}
+
+.finance-breakdown {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin-top: 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+
+.finance-breakdown > div {
+  min-width: 0;
+  padding: 11px 12px;
+}
+
+.finance-breakdown > div + div {
+  border-left: 1px solid var(--border);
+}
+
+.finance-breakdown span,
+.finance-breakdown strong {
+  display: block;
+}
+
+.finance-breakdown span {
+  color: var(--text-dim);
+  font-size: 9px;
+}
+
+.finance-breakdown strong {
+  margin-top: 5px;
+  overflow: hidden;
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 580;
+  letter-spacing: -0.025em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.finance-breakdown .is-total strong {
+  color: var(--text-primary);
+}
+
+.finance-allocation {
+  margin-top: 17px;
+  padding-top: 15px;
+  border-top: 1px solid var(--border);
+}
+
+.finance-allocation-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.finance-allocation-heading h3 {
+  color: var(--text-primary);
+  font-size: 11px;
+  font-weight: 590;
+}
+
+.finance-allocation-heading span {
+  color: var(--text-dim);
+  font-size: 9.5px;
+}
+
+.finance-allocation-split {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin-top: 11px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+
+.finance-allocation-split > div {
+  position: relative;
+  padding: 13px;
+}
+
+.finance-allocation-split > div + div {
+  border-left: 1px solid var(--border);
+}
+
+.finance-allocation-split span,
+.finance-allocation-split strong,
+.finance-allocation-split small {
+  display: block;
+}
+
+.finance-allocation-split span {
+  color: var(--text-muted);
+  font-size: 9.5px;
+}
+
+.finance-allocation-split strong {
+  margin-top: 7px;
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: -0.045em;
+}
+
+.finance-allocation-split small {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  color: var(--accent-hover);
+  font-family: var(--font-mono);
+  font-size: 9px;
+}
+
+.finance-health-panel {
+  display: flex;
+  flex-direction: column;
+}
+
+.finance-health-list {
+  margin-top: 15px;
+}
+
+.finance-health-list > div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  min-height: 43px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.finance-health-list span {
+  color: var(--text-muted);
+  font-size: 10.5px;
+}
+
+.finance-health-list strong {
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.finance-tip-total {
+  margin-top: auto;
+  padding-top: 16px;
+}
+
+.finance-tip-total span,
+.finance-tip-total strong,
+.finance-tip-total small {
+  display: block;
+}
+
+.finance-tip-total span {
+  color: var(--text-muted);
+  font-size: 10px;
+}
+
+.finance-tip-total strong {
+  margin-top: 7px;
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-size: 25px;
+  font-weight: 620;
+  letter-spacing: -0.05em;
+}
+
+.finance-tip-total small {
+  margin-top: 5px;
+  color: var(--text-dim);
+  font-size: 9.5px;
+}
+
+.finance-report-recent > .finance-panel-heading {
+  min-height: 52px;
+  padding: 10px 15px;
+}
+
+.finance-report-recent > .finance-panel-heading > small {
+  color: var(--text-dim);
+  font-size: 9.5px;
+}
+
+.finance-recent-list {
+  border-top: 1px solid var(--border);
+}
+
+.finance-recent-list article {
+  display: grid;
+  grid-template-columns: minmax(170px, 1.15fr) minmax(150px, 1fr) auto minmax(90px, auto);
+  align-items: center;
+  gap: 18px;
+  min-height: 58px;
+  padding: 9px 15px;
+}
+
+.finance-recent-list article + article {
+  border-top: 1px solid var(--border-subtle);
+}
+
+.finance-recent-booking strong,
+.finance-recent-booking span,
+.finance-recent-package strong,
+.finance-recent-package span {
+  display: block;
+}
+
+.finance-recent-booking strong,
+.finance-recent-package strong {
+  overflow: hidden;
+  color: var(--text-primary);
+  font-size: 10.5px;
+  font-weight: 570;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.finance-recent-booking span,
+.finance-recent-package span {
+  margin-top: 3px;
+  overflow: hidden;
+  color: var(--text-dim);
+  font-size: 9.5px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.finance-recent-amount {
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  text-align: right;
+}
+
+.finance-rating {
+  color: var(--amber);
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  font-weight: 620;
+}
+
+.finance-report-empty {
+  padding: 26px 15px;
+  color: var(--text-muted);
+  font-size: 11px;
+  text-align: center;
+}
+
+@media (max-width: 1100px) {
+  .finance-report-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .finance-tip-total {
+    margin-top: 16px;
+  }
+}
+
+@media (max-width: 768px) {
+  .finance-report-heading {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  .finance-report-period {
+    width: 100%;
+    padding: 12px 0 0;
+    border-top: 1px solid var(--border);
+    border-left: 0;
+  }
+
+  .finance-report-tabs {
+    width: 100%;
+  }
+
+  .finance-report-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .finance-report-summary article + article {
+    border-left: 0;
+  }
+
+  .finance-report-summary article:nth-child(even) {
+    border-left: 1px solid var(--border);
+  }
+
+  .finance-report-summary article:nth-child(n + 3) {
+    border-top: 1px solid var(--border);
+  }
+
+  .finance-breakdown {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .finance-breakdown > div + div {
+    border-left: 0;
+  }
+
+  .finance-breakdown > div:nth-child(even) {
+    border-left: 1px solid var(--border);
+  }
+
+  .finance-breakdown > div:nth-child(n + 3) {
+    border-top: 1px solid var(--border);
+  }
+
+  .finance-recent-list article {
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 10px 16px;
+  }
+
+  .finance-recent-package {
+    grid-column: 1;
+    grid-row: 2;
+  }
+
+  .finance-recent-list article .tag {
+    grid-column: 2;
+    grid-row: 1;
+  }
+
+  .finance-recent-amount {
+    grid-column: 2;
+    grid-row: 2;
+  }
+}
+
+@media (max-width: 520px) {
+  .finance-report-summary,
+  .finance-breakdown,
+  .finance-allocation-split {
+    grid-template-columns: 1fr;
+  }
+
+  .finance-report-summary article:nth-child(even),
+  .finance-breakdown > div:nth-child(even),
+  .finance-allocation-split > div + div {
+    border-left: 0;
+  }
+
+  .finance-report-summary article + article,
+  .finance-breakdown > div + div,
+  .finance-allocation-split > div + div {
+    border-top: 1px solid var(--border);
+  }
+
+  .finance-report-panel {
+    padding: 14px;
+  }
+
+  .finance-allocation-heading {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 3px;
+  }
+}
+
+/* Resort staff management */
+.resort-staff-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(4, 8, 18, 0.78);
+  backdrop-filter: blur(8px);
+}
+
+.resort-staff-modal {
+  display: flex;
+  width: min(940px, 100%);
+  max-height: calc(100dvh - 40px);
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 16px;
+  outline: none;
+  background: var(--bg-card);
+  box-shadow: 0 28px 90px rgba(0, 0, 0, 0.55);
+}
+
+.resort-staff-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 20px 24px;
+  border-bottom: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.015);
+}
+
+.resort-staff-heading h3,
+.resort-staff-create-heading h4,
+.resort-staff-role-heading h4 {
+  margin: 0;
+}
+
+.resort-staff-heading h3 {
+  margin-top: 3px;
+  font-family: var(--font-heading);
+  font-size: 20px;
+}
+
+.resort-staff-heading p {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 7px 0 0;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.resort-staff-kicker {
+  color: var(--text-dim);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.resort-staff-code {
+  padding: 3px 7px;
+  border: 1px solid rgba(99, 102, 241, 0.38);
+  border-radius: 5px;
+  color: var(--violet);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+
+.resort-staff-close {
+  display: grid;
+  width: 38px;
+  height: 38px;
+  flex: 0 0 auto;
+  place-items: center;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  background: var(--bg-card-hover);
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 24px;
+  line-height: 1;
+}
+
+.resort-staff-close:hover,
+.resort-staff-close:focus-visible {
+  border-color: var(--border-light);
+  color: var(--text-primary);
+}
+
+.resort-staff-body {
+  overflow-y: auto;
+  padding: 20px 24px 24px;
+  scrollbar-color: var(--border-light) transparent;
+  scrollbar-width: thin;
+}
+
+.resort-staff-readiness {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 13px 15px;
+  border: 1px solid rgba(217, 119, 6, 0.38);
+  border-radius: 10px;
+  background: var(--amber-muted);
+}
+
+.resort-staff-readiness.is-ready {
+  border-color: rgba(5, 150, 105, 0.38);
+  background: var(--emerald-muted);
+}
+
+.resort-staff-readiness-copy {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  min-width: 0;
+}
+
+.resort-staff-readiness-icon {
+  display: grid;
+  width: 32px;
+  height: 32px;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 9px;
+  background: rgba(217, 119, 6, 0.16);
+  color: var(--amber);
+  font-size: 14px;
+  font-weight: 900;
+}
+
+.is-ready .resort-staff-readiness-icon {
+  background: rgba(5, 150, 105, 0.16);
+  color: var(--emerald);
+}
+
+.resort-staff-readiness-copy strong {
+  color: var(--amber);
+  font-size: 12px;
+}
+
+.is-ready .resort-staff-readiness-copy strong {
+  color: var(--emerald);
+}
+
+.resort-staff-readiness-copy p {
+  margin: 3px 0 0;
+  color: var(--text-secondary);
+  font-size: 11px;
+}
+
+.resort-staff-coverage-counts {
+  display: flex;
+  gap: 8px;
+  flex: 0 0 auto;
+}
+
+.resort-staff-coverage-counts span {
+  padding: 7px 9px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: rgba(0, 0, 0, 0.12);
+  color: var(--text-muted);
+  font-size: 10px;
+}
+
+.resort-staff-coverage-counts span.is-complete {
+  border-color: rgba(5, 150, 105, 0.35);
+  color: var(--emerald);
+}
+
+.resort-staff-coverage-counts strong {
+  margin-left: 5px;
+  color: inherit;
+}
+
+.resort-staff-error {
+  margin-top: 14px;
+  padding: 11px 13px;
+  border: 1px solid rgba(220, 38, 38, 0.35);
+  border-radius: 8px;
+  background: rgba(220, 38, 38, 0.08);
+  color: #f87171;
+  font-size: 11px;
+}
+
+.resort-staff-loading {
+  padding: 48px;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.resort-staff-role-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  margin-top: 14px;
+}
+
+.resort-staff-role-card {
+  --role-color: var(--cyan);
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-top: 2px solid var(--role-color);
+  border-radius: 10px;
+  background: var(--bg-primary);
+}
+
+.resort-staff-role-card.is-external {
+  --role-color: var(--violet);
+}
+
+.resort-staff-role-heading {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+}
+
+.resort-staff-role-mark {
+  display: grid;
+  width: 32px;
+  height: 32px;
+  place-items: center;
+  border: 1px solid var(--role-color);
+  border-radius: 8px;
+  color: var(--role-color);
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+}
+
+.resort-staff-role-heading h4 {
+  color: var(--role-color);
+  font-size: 13px;
+}
+
+.resort-staff-role-heading p {
+  overflow: hidden;
+  margin: 3px 0 0;
+  color: var(--text-dim);
+  font-size: 10px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.resort-staff-role-count {
+  padding: 4px 7px;
+  border-radius: 999px;
+  background: var(--bg-card-hover);
+  color: var(--text-muted);
+  font-size: 9px;
+  font-weight: 700;
+}
+
+.resort-staff-member-list {
+  display: flex;
+  min-height: 76px;
+  max-height: 132px;
+  flex-direction: column;
+  margin: 14px 0;
+  overflow-y: auto;
+}
+
+.resort-staff-empty {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 1px dashed var(--border);
+  border-radius: 8px;
+  color: var(--text-dim);
+}
+
+.resort-staff-empty span {
+  display: grid;
+  width: 21px;
+  height: 21px;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--bg-card-hover);
+  font-size: 13px;
+}
+
+.resort-staff-empty p {
+  margin: 0;
+  font-size: 10px;
+}
+
+.resort-staff-member {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 9px;
+  padding: 8px 2px;
+  border-bottom: 1px solid var(--border);
+}
+
+.resort-staff-avatar {
+  display: grid;
+  width: 28px;
+  height: 28px;
+  place-items: center;
+  border-radius: 7px;
+  background: var(--bg-card-hover);
+  color: var(--role-color);
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.resort-staff-member-copy {
+  min-width: 0;
+}
+
+.resort-staff-member-copy strong,
+.resort-staff-member-copy small {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.resort-staff-member-copy strong {
+  font-size: 11px;
+}
+
+.resort-staff-member-copy small {
+  margin-top: 2px;
+  color: var(--text-dim);
+  font-size: 9px;
+}
+
+.resort-staff-member-status {
+  color: var(--text-dim);
+  font-size: 9px;
+}
+
+.resort-staff-member-status.is-active {
+  color: var(--emerald);
+}
+
+.resort-staff-assignment {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 8px;
+  margin-top: auto;
+}
+
+.resort-staff-assignment .btn {
+  min-height: 42px;
+}
+
+.resort-staff-create {
+  margin-top: 14px;
+  padding: 18px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg-primary);
+}
+
+.resort-staff-create-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 15px;
+}
+
+.resort-staff-create-heading h4 {
+  margin-top: 3px;
+  font-size: 14px;
+}
+
+.resort-staff-create-heading p {
+  margin: 4px 0 0;
+  color: var(--text-muted);
+  font-size: 10px;
+}
+
+.resort-staff-create-badge {
+  padding: 5px 8px;
+  border: 1px solid rgba(99, 102, 241, 0.35);
+  border-radius: 999px;
+  color: var(--violet);
+  font-size: 9px;
+  white-space: nowrap;
+}
+
+.resort-staff-create-grid {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 11px;
+}
+
+.resort-staff-create-grid > .input-group {
+  grid-column: span 2;
+}
+
+.resort-staff-create-grid > .input-group:last-child {
+  grid-column: span 4;
+}
+
+.resort-staff-create-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: 15px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+}
+
+.resort-staff-create-footer small {
+  color: var(--text-dim);
+  font-size: 9px;
+}
+
+@media (max-width: 720px) {
+  .resort-staff-backdrop {
+    align-items: end;
+    padding: 0;
+  }
+
+  .resort-staff-modal {
+    width: 100%;
+    max-height: calc(100dvh - 16px);
+    border-right: 0;
+    border-bottom: 0;
+    border-left: 0;
+    border-radius: 16px 16px 0 0;
+  }
+
+  .resort-staff-header,
+  .resort-staff-body {
+    padding-right: 16px;
+    padding-left: 16px;
+  }
+
+  .resort-staff-readiness {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .resort-staff-coverage-counts {
+    width: 100%;
+  }
+
+  .resort-staff-coverage-counts span {
+    flex: 1;
+  }
+
+  .resort-staff-role-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .resort-staff-create-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .resort-staff-create-grid > .input-group,
+  .resort-staff-create-grid > .input-group:last-child {
+    grid-column: auto;
+  }
+
+  .resort-staff-create-heading,
+  .resort-staff-create-footer {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .resort-staff-create-badge {
+    align-self: flex-start;
+  }
+
+  .resort-staff-create-footer .btn {
     width: 100%;
   }
 }

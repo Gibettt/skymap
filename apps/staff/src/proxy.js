@@ -50,6 +50,7 @@ export function proxy(request) {
       '/dashboard/internal/observations',
       '/dashboard/internal/package',
       '/dashboard/internal/payout',
+      '/dashboard/internal/sky-events',
       '/dashboard/internal/settings',
     ];
     if (!allowed.some((path) => pathname === path || pathname.startsWith(`${path}/`))) {

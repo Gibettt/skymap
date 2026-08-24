@@ -3,6 +3,8 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { query } from '@ephemeris/db';
 import StargazingExperienceShowcase from '@/components/StargazingExperienceShowcase';
+import ResortEventCalendar from '@/components/ResortEventCalendar';
+import { rollingDateWindow } from '@ephemeris/sky';
 
 export const dynamic = 'force-dynamic';
 
@@ -18,7 +20,7 @@ function contactLinks(resort) {
 
 async function loadResort(slug) {
   const resortResult = await query(
-    `SELECT id, name, code, slug, location, contact_email, whatsapp_number
+    `SELECT id, name, code, slug, location, contact_email, whatsapp_number, timezone
      FROM resorts WHERE slug = $1 AND status = 'active' LIMIT 1`,
     [slug]
   );
@@ -39,8 +41,25 @@ async function loadResort(slug) {
      ORDER BY p.name`,
     [resort.id]
   );
+  const window = rollingDateWindow(resort.timezone);
+  const eventResult = await query(
+    `SELECT se.id, se.title, se.event_type, se.starts_at, se.ends_at, se.description,
+            se.observation_spot, se.capacity, se.price_override_usd, se.image_url, se.status,
+            p.name AS package_name, p.adult_price_usd
+     FROM sky_events se
+     LEFT JOIN packages p ON p.id = se.package_id AND p.is_active = true
+     WHERE se.resort_id = $1
+       AND se.status = 'published'
+       AND se.is_published = true
+       AND (se.starts_at AT TIME ZONE $2)::date BETWEEN $3::date AND $4::date
+       AND COALESCE(se.ends_at, se.starts_at) >= now()
+     ORDER BY se.starts_at`,
+    [resort.id, resort.timezone, window.from, window.to]
+  );
   return {
     resort,
+    window,
+    events: eventResult.rows,
     packages: packageResult.rows.map((pkg) => ({
       ...pkg,
       image_url: pkg.has_image ? `/api/packages/${pkg.id}/image` : null,
@@ -62,7 +81,7 @@ export default async function ResortLandingPage({ params }) {
   const { slug } = await params;
   const data = await loadResort(slug);
   if (!data) notFound();
-  const { resort, packages } = data;
+  const { resort, packages, events, window } = data;
   const contacts = contactLinks(resort);
   const primaryContact = contacts.whatsapp || contacts.email || '#experiences';
   const heroImage = packages.find((pkg) => pkg.image_url)?.image_url || '/stargazing-assets/experience-3.jpg';
@@ -119,6 +138,17 @@ export default async function ResortLandingPage({ params }) {
         {packages.length > 0
           ? <StargazingExperienceShowcase packages={packages} contactLink={primaryContact} />
           : <div className="stargazing-note"><p>No active packages are currently published for this resort.</p></div>}
+      </section>
+
+      <section className="stargazing-section" aria-labelledby="upcoming-events-title">
+        <div className="stargazing-section-head">
+          <p className="stargazing-kicker">{window.from} — {window.to}</p>
+          <h2 id="upcoming-events-title">Special events in the next 7 days</h2>
+          <p>This rolling calendar updates automatically using {resort.name}&apos;s local timezone.</p>
+        </div>
+        {events.length > 0
+          ? <ResortEventCalendar resortName={resort.name} timeZone={resort.timezone} events={events} />
+          : <div className="stargazing-note"><p>No special event is published for this seven-day window.</p></div>}
       </section>
 
       <footer className="stargazing-footer"><span>Ephemeris</span><span>{resort.name}</span></footer>

@@ -23,7 +23,7 @@ EXCEPTION WHEN duplicate_object THEN NULL;
 END $$;
 
 DO $$ BEGIN
-  CREATE TYPE booking_status AS ENUM ('pending', 'active', 'completed', 'cancelled_by_guest', 'cancelled_weather', 'rescheduled');
+  CREATE TYPE booking_status AS ENUM ('pending', 'active', 'completed', 'rejected', 'cancelled_by_guest', 'cancelled_weather', 'rescheduled');
 EXCEPTION WHEN duplicate_object THEN NULL;
 END $$;
 
@@ -43,6 +43,9 @@ CREATE TABLE IF NOT EXISTS resorts (
   code text NOT NULL UNIQUE,
   location text,
   timezone text NOT NULL DEFAULT 'Indian/Maldives',
+  latitude numeric(9,6) CHECK (latitude IS NULL OR latitude BETWEEN -90 AND 90),
+  longitude numeric(9,6) CHECK (longitude IS NULL OR longitude BETWEEN -180 AND 180),
+  observation_spots text NOT NULL DEFAULT '',
   contact_name text,
   contact_phone text,
   contact_email varchar(254),
@@ -62,6 +65,8 @@ CREATE TABLE IF NOT EXISTS users (
   resort_id uuid REFERENCES resorts(id),
   status user_status NOT NULL DEFAULT 'active',
   password_hash text NOT NULL,
+  last_seen_at timestamptz,
+  last_active_at timestamptz,
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz NOT NULL DEFAULT now()
 );
@@ -131,8 +136,9 @@ CREATE TABLE IF NOT EXISTS bookings (
   add_ons jsonb NOT NULL DEFAULT '[]'::jsonb,
   package_notes text,
   staff_id uuid NOT NULL REFERENCES users(id),
+  assigned_internal_id uuid REFERENCES users(id),
   resort_id uuid REFERENCES resorts(id),
-  status booking_status NOT NULL DEFAULT 'active',
+  status booking_status NOT NULL DEFAULT 'pending',
   signed_by_guest boolean NOT NULL DEFAULT false,
   notes text,
   payment_method text,
@@ -307,6 +313,7 @@ CREATE TABLE IF NOT EXISTS sky_app_settings (
   latitude numeric(8,5) NOT NULL CHECK (latitude BETWEEN -90 AND 90),
   longitude numeric(8,5) NOT NULL CHECK (longitude BETWEEN -180 AND 180),
   timezone text NOT NULL,
+  updated_by uuid REFERENCES users(id),
   updated_at timestamptz NOT NULL DEFAULT now()
 );
 
@@ -346,6 +353,13 @@ CREATE TABLE IF NOT EXISTS sky_events (
   source_name text,
   source_url text,
   visibility text NOT NULL DEFAULT 'both' CHECK (visibility IN ('north', 'south', 'both')),
+  resort_id uuid NOT NULL REFERENCES resorts(id),
+  package_id uuid REFERENCES packages(id) ON DELETE SET NULL,
+  observation_spot varchar(120),
+  capacity integer CHECK (capacity IS NULL OR capacity > 0),
+  price_override_usd numeric(10,2) CHECK (price_override_usd IS NULL OR price_override_usd >= 0),
+  image_url varchar(500),
+  status text NOT NULL DEFAULT 'published' CHECK (status IN ('draft', 'published', 'cancelled', 'sold_out')),
   is_published boolean NOT NULL DEFAULT true,
   created_by uuid REFERENCES users(id),
   updated_by uuid REFERENCES users(id),
@@ -354,14 +368,148 @@ CREATE TABLE IF NOT EXISTS sky_events (
   CHECK (ends_at IS NULL OR ends_at > starts_at)
 );
 
+CREATE OR REPLACE FUNCTION enforce_internal_sky_manager()
+RETURNS trigger AS $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM users
+    WHERE id = NEW.updated_by AND role = 'internal' AND status = 'active'
+  ) THEN
+    RAISE EXCEPTION 'Sky Guide can only be managed by active internal staff';
+  END IF;
+  IF TG_TABLE_NAME = 'sky_events' AND NOT EXISTS (
+    SELECT 1 FROM users
+    WHERE id = NEW.updated_by AND resort_id = NEW.resort_id
+  ) THEN
+    RAISE EXCEPTION 'Internal staff can only manage Sky Guide for their assigned resort';
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
 DROP TRIGGER IF EXISTS sky_app_settings_set_updated_at ON sky_app_settings;
 CREATE TRIGGER sky_app_settings_set_updated_at BEFORE UPDATE ON sky_app_settings FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+DROP TRIGGER IF EXISTS sky_app_settings_internal_manager ON sky_app_settings;
+CREATE TRIGGER sky_app_settings_internal_manager BEFORE INSERT OR UPDATE ON sky_app_settings FOR EACH ROW EXECUTE FUNCTION enforce_internal_sky_manager();
 DROP TRIGGER IF EXISTS sky_events_set_updated_at ON sky_events;
 CREATE TRIGGER sky_events_set_updated_at BEFORE UPDATE ON sky_events FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+DROP TRIGGER IF EXISTS sky_events_internal_manager ON sky_events;
+CREATE TRIGGER sky_events_internal_manager BEFORE INSERT OR UPDATE ON sky_events FOR EACH ROW EXECUTE FUNCTION enforce_internal_sky_manager();
 CREATE INDEX IF NOT EXISTS idx_sky_events_public_starts ON sky_events(is_published, starts_at);
+CREATE INDEX IF NOT EXISTS idx_sky_events_resort_status_starts ON sky_events(resort_id, status, starts_at);
 CREATE INDEX IF NOT EXISTS idx_packages_resort_active ON packages(resort_id, is_active);
 CREATE UNIQUE INDEX IF NOT EXISTS idx_packages_resort_name ON packages(resort_id, name);
 CREATE INDEX IF NOT EXISTS idx_booking_reschedule_history_booking ON booking_reschedule_history(booking_id, created_at DESC);
+
+ALTER TABLE bookings ADD COLUMN IF NOT EXISTS sky_event_id uuid REFERENCES sky_events(id) ON DELETE SET NULL;
+ALTER TABLE bookings ADD COLUMN IF NOT EXISTS observation_spot varchar(120);
+CREATE INDEX IF NOT EXISTS idx_bookings_assigned_internal ON bookings(assigned_internal_id, event_date);
+CREATE INDEX IF NOT EXISTS idx_bookings_sky_event ON bookings(sky_event_id);
+
+CREATE OR REPLACE VIEW resort_staff_coverage AS
+SELECT
+  r.id AS resort_id,
+  r.name AS resort_name,
+  r.status AS resort_status,
+  COALESCE(staff.active_internal_count, 0)::int AS active_internal_count,
+  COALESCE(staff.active_external_count, 0)::int AS active_external_count,
+  COALESCE(bookings.open_bookings_count, 0)::int AS open_bookings_count,
+  CASE
+    WHEN r.status <> 'active' THEN 'inactive'
+    WHEN COALESCE(staff.active_internal_count, 0) > 0
+      AND COALESCE(staff.active_external_count, 0) > 0 THEN 'ready'
+    WHEN COALESCE(staff.active_internal_count, 0) = 0
+      AND COALESCE(staff.active_external_count, 0) = 0 THEN 'needs_both'
+    WHEN COALESCE(staff.active_internal_count, 0) = 0 THEN 'needs_internal'
+    ELSE 'needs_external'
+  END AS coverage_status
+FROM resorts r
+LEFT JOIN LATERAL (
+  SELECT
+    COUNT(*) FILTER (WHERE role = 'internal' AND status = 'active') AS active_internal_count,
+    COUNT(*) FILTER (WHERE role = 'external' AND status = 'active') AS active_external_count
+  FROM users
+  WHERE resort_id = r.id
+) staff ON true
+LEFT JOIN LATERAL (
+  SELECT COUNT(*) AS open_bookings_count
+  FROM bookings
+  WHERE resort_id = r.id AND status IN ('pending', 'active', 'rescheduled')
+) bookings ON true;
+
+CREATE OR REPLACE FUNCTION enforce_resort_operational_transition()
+RETURNS trigger AS $$
+DECLARE
+  internal_count integer;
+  external_count integer;
+  open_count integer;
+BEGIN
+  IF NEW.status = 'active' AND (TG_OP = 'INSERT' OR OLD.status IS DISTINCT FROM NEW.status) THEN
+    SELECT
+      COUNT(*) FILTER (WHERE role = 'internal' AND status = 'active'),
+      COUNT(*) FILTER (WHERE role = 'external' AND status = 'active')
+    INTO internal_count, external_count
+    FROM users
+    WHERE resort_id = NEW.id;
+    IF internal_count = 0 OR external_count = 0 THEN
+      RAISE EXCEPTION 'Active resort requires Internal and External staff coverage'
+        USING ERRCODE = '23514', CONSTRAINT = 'resort_staff_coverage_required';
+    END IF;
+  END IF;
+
+  IF TG_OP = 'UPDATE' AND OLD.status = 'active' AND NEW.status = 'inactive' THEN
+    SELECT COUNT(*) INTO open_count
+    FROM bookings
+    WHERE resort_id = NEW.id AND status IN ('pending', 'active', 'rescheduled');
+    IF open_count > 0 THEN
+      RAISE EXCEPTION 'Resort with open bookings cannot be deactivated'
+        USING ERRCODE = '23514', CONSTRAINT = 'resort_open_bookings_block_deactivation';
+    END IF;
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS resorts_operational_transition ON resorts;
+CREATE TRIGGER resorts_operational_transition
+BEFORE INSERT OR UPDATE OF status ON resorts
+FOR EACH ROW EXECUTE FUNCTION enforce_resort_operational_transition();
+
+CREATE OR REPLACE FUNCTION enforce_last_resort_staff_coverage()
+RETURNS trigger AS $$
+DECLARE
+  replacement_count integer;
+  open_count integer;
+  keeps_coverage boolean;
+BEGIN
+  IF OLD.resort_id IS NULL OR OLD.status <> 'active' OR OLD.role NOT IN ('internal', 'external') THEN
+    RETURN COALESCE(NEW, OLD);
+  END IF;
+  keeps_coverage := TG_OP <> 'DELETE'
+    AND NEW.status = 'active'
+    AND NEW.role = OLD.role
+    AND NEW.resort_id = OLD.resort_id;
+  IF keeps_coverage THEN RETURN NEW; END IF;
+
+  PERFORM id FROM resorts WHERE id = OLD.resort_id FOR UPDATE;
+  SELECT COUNT(*) INTO replacement_count
+  FROM users
+  WHERE resort_id = OLD.resort_id AND role = OLD.role AND status = 'active' AND id <> OLD.id;
+  SELECT COUNT(*) INTO open_count
+  FROM bookings
+  WHERE resort_id = OLD.resort_id AND status IN ('pending', 'active', 'rescheduled');
+  IF replacement_count = 0 AND open_count > 0 THEN
+    RAISE EXCEPTION 'Last covered staff cannot leave a resort with open bookings'
+      USING ERRCODE = '23514', CONSTRAINT = 'last_resort_staff_with_open_bookings';
+  END IF;
+  RETURN COALESCE(NEW, OLD);
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS users_last_resort_staff_coverage ON users;
+CREATE TRIGGER users_last_resort_staff_coverage
+BEFORE UPDATE OF role, status, resort_id OR DELETE ON users
+FOR EACH ROW EXECUTE FUNCTION enforce_last_resort_staff_coverage();
 
 CREATE OR REPLACE VIEW booking_finance_report AS
 SELECT

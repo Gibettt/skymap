@@ -11,6 +11,7 @@ export const translations = {
     nav_package: 'Paket Observasi',
     nav_payout: 'Pencairan Komisi',
     nav_calendar: 'Kalender Jadwal',
+    nav_sky_guide: 'Sky Guide',
     nav_settings: 'Pengaturan',
     nav_main_section: 'Navigasi Utama',
     nav_active_locations: 'Lokasi Aktif',
@@ -21,6 +22,7 @@ export const translations = {
     role_external: 'Staff External',
     role_astronomer: 'Astronom In-House',
     resort_profile: 'Profil Resort',
+    page_sky_calendar: 'PWA & Kalender Langit',
 
     // Header & Clock
     clock_wib: 'WIB',
@@ -422,6 +424,7 @@ export const translations = {
     nav_package: 'Observation Packages',
     nav_payout: 'Commission Payout',
     nav_calendar: 'Schedule Calendar',
+    nav_sky_guide: 'Sky Guide',
     nav_settings: 'Settings',
     nav_main_section: 'Main Navigation',
     nav_active_locations: 'Active Locations',
@@ -432,6 +435,7 @@ export const translations = {
     role_external: 'External Staff',
     role_astronomer: 'In-House Astronomer',
     resort_profile: 'Resort Profile',
+    page_sky_calendar: 'PWA & Sky Calendar',
 
     // Header & Clock
     clock_wib: 'WIB',

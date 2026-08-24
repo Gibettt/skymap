@@ -156,6 +156,7 @@ export default function StaffHeader({ role = 'Internal', onNewBooking, onMenuTog
     if (pathname.endsWith('/bookings')) return { title: 'My Bookings', crumb: 'Reservasi' };
     if (pathname.endsWith('/payout')) return { title: t('nav_payout', 'Payout'), crumb: t('nav_payout', 'Payout') };
     if (pathname.endsWith('/jadwal')) return { title: t('nav_calendar', 'Calendar'), crumb: t('nav_calendar', 'Calendar') };
+    if (pathname.endsWith('/sky-events')) return { title: t('nav_sky_guide', 'Sky Guide'), crumb: t('page_sky_calendar', 'PWA & Kalender Langit') };
     if (pathname.endsWith('/package')) return { title: t('nav_package', 'Package'), crumb: t('nav_package', 'Package') };
     if (pathname.endsWith('/settings')) return { title: t('nav_settings', 'Settings'), crumb: t('nav_settings', 'Settings') };
     return { title: t('nav_dashboard', 'Overview'), crumb: t('nav_dashboard', 'Dasbor') };

@@ -1,5 +1,6 @@
 import { assertSameOrigin, jsonError, parseJsonBody, requireUser, writeAudit } from '@ephemeris/auth';
 import { query, transaction } from '@ephemeris/db';
+import { resortCoverageStatus } from '@ephemeris/db/resort-coverage';
 import { resortSchema } from '@ephemeris/db/validators/resort';
 
 function slugify(value) {
@@ -10,18 +11,31 @@ export async function GET() {
   try {
     await requireUser(['admin']);
     const { rows } = await query(`
-      SELECT 
+      SELECT
         r.*,
-        COUNT(DISTINCT u.id) FILTER (WHERE u.status = 'active') AS active_staff_count,
-        COUNT(DISTINCT b.id) AS total_bookings_count
+        (SELECT COUNT(*)::int FROM users u
+          WHERE u.resort_id = r.id AND u.status = 'active' AND u.role IN ('internal', 'external')) AS active_staff_count,
+        (SELECT COUNT(*)::int FROM users u
+          WHERE u.resort_id = r.id AND u.status = 'active' AND u.role = 'internal') AS active_internal_count,
+        (SELECT COUNT(*)::int FROM users u
+          WHERE u.resort_id = r.id AND u.status = 'active' AND u.role = 'external') AS active_external_count,
+        (SELECT COUNT(*)::int FROM bookings b WHERE b.resort_id = r.id) AS total_bookings_count,
+        (SELECT COUNT(*)::int FROM bookings b
+          WHERE b.resort_id = r.id AND b.status IN ('pending', 'active', 'rescheduled')) AS open_bookings_count
       FROM resorts r
-      LEFT JOIN users u ON u.resort_id = r.id
-      LEFT JOIN bookings b ON b.resort_id = r.id
-      GROUP BY r.id
       ORDER BY r.name ASC
     `);
 
-    return Response.json({ resorts: rows });
+    return Response.json({
+      resorts: rows.map((resort) => ({
+        ...resort,
+        coverage_status: resortCoverageStatus({
+          resortStatus: resort.status,
+          activeInternalCount: resort.active_internal_count,
+          activeExternalCount: resort.active_external_count,
+        }),
+      })),
+    });
   } catch (error) {
     return jsonError(error);
   }
@@ -42,7 +56,7 @@ export async function POST(request) {
          ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13) RETURNING *`,
         [data.name, data.code.toUpperCase(), data.slug || slugify(data.name), data.location, data.timezone,
          data.contactName, data.contactPhone, data.contactEmail, data.whatsappNumber, data.observationSpots,
-         data.latitude, data.longitude, data.status]
+         data.latitude, data.longitude, 'inactive']
       );
       await writeAudit(client, {
         actorId: user.id, action: 'resort.create', entityType: 'resort', entityId: rows[0].id,

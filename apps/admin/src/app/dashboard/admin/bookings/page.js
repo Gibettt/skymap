@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useQueryClient } from '@tanstack/react-query';
+import { CalendarClock, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Eye, Pencil, Trash2, X } from 'lucide-react';
 import { OBJECT_TYPES, PACKAGE_CATALOG, STATIONS } from '@/data/bookings';
 import { calculateBookingFinance, formatUsd } from '@/data/keuangan';
 import { useBookingsQuery, useUpdateBookingMutation, queryKeys, fetchApi } from '@/lib/apiQueries';
@@ -216,7 +217,6 @@ function normalizeBooking(data, id) {
 
 function BookingModal({ booking, onClose, onSave }) {
   const [form, setForm] = useState(booking ? { ...booking } : { ...EMPTY_FORM });
-  const finance = calculateBookingFinance(form);
 
   const set = (key, value) => setForm((prev) => ({ ...prev, [key]: value }));
 
@@ -248,14 +248,14 @@ function BookingModal({ booking, onClose, onSave }) {
 
   return (
     <div className="modal-backdrop">
-      <div className="modal" style={{ width: 760 }}>
+      <div className="modal booking-edit-modal" role="dialog" aria-modal="true" aria-labelledby="booking-edit-title">
         <div className="modal-header">
-          <span className="modal-title">{booking ? 'Edit Booking' : 'Booking Baru'}</span>
-          <button className="modal-close" onClick={onClose}>x</button>
+          <span className="modal-title" id="booking-edit-title">{booking ? 'Edit Booking' : 'Booking Baru'}</span>
+          <button type="button" className="modal-close" aria-label="Tutup" onClick={onClose}><X size={17} /></button>
         </div>
         <form onSubmit={handleSubmit}>
           <div className="modal-body">
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 16 }}>
+            <div className="booking-edit-grid">
               <div className="input-group">
                 <label className="input-label">Booking Date</label>
                 <input className="input" type="date" required value={form.bookingDate} onChange={(e) => set('bookingDate', e.target.value)} />
@@ -324,74 +324,13 @@ function BookingModal({ booking, onClose, onSave }) {
                 <label className="input-label">Field Tip / Incentive</label>
                 <input className="input" type="number" min="0" step="0.01" value={form.tipIncentiveUsd} onChange={(e) => set('tipIncentiveUsd', e.target.value)} />
               </div>
-              <label className="input-group" style={{ justifyContent: 'end', gap: 10 }}>
+              <label className="input-group booking-edit-checkbox">
                 <span className="input-label">Signed by Guest</span>
-                <input type="checkbox" checked={form.signedByGuest} onChange={(e) => set('signedByGuest', e.target.checked)} style={{ width: 22, height: 22 }} />
+                <input type="checkbox" checked={form.signedByGuest} onChange={(e) => set('signedByGuest', e.target.checked)} />
               </label>
-              <div className="input-group" style={{ gridColumn: '1 / -1' }}>
+              <div className="input-group booking-edit-notes">
                 <label className="input-label">Notes</label>
                 <textarea className="input" value={form.notes} onChange={(e) => set('notes', e.target.value)} />
-              </div>
-            </div>
-            <div className="form-grid">
-              <div className="form-group">
-                <label className="form-label">Tamu Utama</label>
-                <input className="input" value={form.clientName} onChange={(e) => setField('clientName', e.target.value)} required />
-              </div>
-              <div className="form-group">
-                <label className="form-label">Room / Villa</label>
-                <input className="input" value={form.roomNumber} onChange={(e) => setField('roomNumber', e.target.value)} required />
-              </div>
-              <div className="form-group">
-                <label className="form-label">Nationality</label>
-                <input className="input" value={form.nationality} onChange={(e) => setField('nationality', e.target.value)} required />
-              </div>
-              <div className="form-group">
-                <label className="form-label">Paket Observasi</label>
-                <select className="input" value={form.packageName} onChange={(e) => setField('packageName', e.target.value)}>
-                  {PACKAGE_CATALOG.map((p) => (
-                    <option key={p.name} value={p.name}>{p.name} (${p.adultPriceUsd})</option>
-                  ))}
-                </select>
-              </div>
-              <div className="form-group">
-                <label className="form-label">Tanggal Observasi</label>
-                <input type="date" className="input" value={form.date} onChange={(e) => setField('date', e.target.value)} required />
-              </div>
-              <div className="form-group">
-                <label className="form-label">Jam (Start - End)</label>
-                <div style={{ display: 'flex', gap: 8 }}>
-                  <input type="time" className="input" value={form.timeStart} onChange={(e) => setField('timeStart', e.target.value)} required />
-                  <input type="time" className="input" value={form.timeEnd} onChange={(e) => setField('timeEnd', e.target.value)} required />
-                </div>
-              </div>
-              <div className="form-group">
-                <label className="form-label">Adults (Dewasa)</label>
-                <input type="number" min="1" className="input" value={form.adultCount} onChange={(e) => setField('adultCount', Number(e.target.value))} required />
-              </div>
-              <div className="form-group">
-                <label className="form-label">Children (Anak)</label>
-                <input type="number" min="0" className="input" value={form.childCount} onChange={(e) => setField('childCount', Number(e.target.value))} />
-              </div>
-              <div className="form-group">
-                <label className="form-label">Staff Owner</label>
-                <select className="input" value={form.staffName} onChange={(e) => setField('staffName', e.target.value)}>
-                  {STAFF_OPTIONS.map((s) => (
-                    <option key={s.staffId} value={s.staffName}>{s.staffName} ({s.staffRole})</option>
-                  ))}
-                </select>
-              </div>
-              <div className="form-group">
-                <label className="form-label">Status</label>
-                <select className="input" value={form.status} onChange={(e) => setField('status', e.target.value)}>
-                  {STATUS_FILTERS.filter((s) => s !== 'Semua').map((s) => (
-                    <option key={s} value={s}>{s}</option>
-                  ))}
-                </select>
-              </div>
-              <div className="form-group full-width">
-                <label className="form-label">Catatan</label>
-                <textarea className="input" rows={3} value={form.notes} onChange={(e) => setField('notes', e.target.value)} placeholder="Catatan khusus..." />
               </div>
             </div>
           </div>
@@ -945,6 +884,136 @@ function AdminConfirmReviewModal({ modalData, onClose, onConfirm, loading }) {
   return createPortal(content, document.body);
 }
 
+function AdminRescheduleModal({ booking, onClose, onSubmit, loading }) {
+  const [form, setForm] = useState({
+    eventDate: dateValue(booking.date),
+    timeStart: timeValue(booking.timeStart),
+    timeEnd: timeValue(booking.timeEnd),
+    reason: 'Permintaan tamu',
+  });
+  const [validationError, setValidationError] = useState('');
+
+  useEffect(() => {
+    const handleEscape = (event) => {
+      if (event.key === 'Escape' && !loading) onClose();
+    };
+    document.addEventListener('keydown', handleEscape);
+    return () => document.removeEventListener('keydown', handleEscape);
+  }, [loading, onClose]);
+
+  const setField = (field, value) => {
+    setValidationError('');
+    setForm((current) => ({ ...current, [field]: value }));
+  };
+
+  const handleSubmit = (event) => {
+    event.preventDefault();
+    if (form.timeEnd <= form.timeStart) {
+      setValidationError('Waktu selesai harus setelah waktu mulai.');
+      return;
+    }
+    onSubmit(form);
+  };
+
+  const modal = (
+    <div
+      className="modal-backdrop admin-reschedule-backdrop"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget && !loading) onClose();
+      }}
+    >
+      <form
+        className="admin-reschedule-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="admin-reschedule-title"
+        onSubmit={handleSubmit}
+      >
+        <header className="admin-reschedule-header">
+          <div className="admin-reschedule-heading-icon" aria-hidden="true">
+            <CalendarClock size={20} strokeWidth={1.8} />
+          </div>
+          <div>
+            <h2 id="admin-reschedule-title">Jadwalkan ulang</h2>
+            <p>{booking.bookingCode} | {booking.clientName}</p>
+          </div>
+          <button type="button" className="admin-reschedule-close" aria-label="Tutup" disabled={loading} onClick={onClose}>
+            <X size={17} />
+          </button>
+        </header>
+
+        <div className="admin-reschedule-body">
+          <div className="admin-reschedule-current">
+            <CalendarClock size={18} strokeWidth={1.7} aria-hidden="true" />
+            <div>
+              <span>Jadwal saat ini</span>
+              <strong>{dateValue(booking.date)}</strong>
+              <small>{timeValue(booking.timeStart)} - {timeValue(booking.timeEnd)}</small>
+            </div>
+          </div>
+
+          <div className="admin-reschedule-form-grid">
+            <label className="admin-reschedule-field is-full">
+              <span>Tanggal baru</span>
+              <input
+                className="input"
+                type="date"
+                required
+                autoFocus
+                value={form.eventDate}
+                onChange={(event) => setField('eventDate', event.target.value)}
+              />
+            </label>
+            <label className="admin-reschedule-field">
+              <span>Waktu mulai</span>
+              <input
+                className="input"
+                type="time"
+                required
+                value={form.timeStart}
+                onChange={(event) => setField('timeStart', event.target.value)}
+              />
+            </label>
+            <label className="admin-reschedule-field">
+              <span>Waktu selesai</span>
+              <input
+                className="input"
+                type="time"
+                required
+                value={form.timeEnd}
+                onChange={(event) => setField('timeEnd', event.target.value)}
+              />
+            </label>
+            <label className="admin-reschedule-field is-full">
+              <span>Alasan reschedule</span>
+              <textarea
+                className="input"
+                rows={3}
+                maxLength={500}
+                value={form.reason}
+                onChange={(event) => setField('reason', event.target.value)}
+              />
+              <small>Alasan akan tersimpan di riwayat perubahan booking.</small>
+            </label>
+          </div>
+
+          {validationError && <p className="admin-reschedule-error" role="alert">{validationError}</p>}
+        </div>
+
+        <footer className="admin-reschedule-footer">
+          <button type="button" className="btn btn-secondary" disabled={loading} onClick={onClose}>Batal</button>
+          <button type="submit" className="btn btn-primary" disabled={loading}>
+            {loading ? 'Menyimpan...' : 'Simpan jadwal baru'}
+          </button>
+        </footer>
+      </form>
+    </div>
+  );
+
+  if (typeof document === 'undefined') return null;
+  return createPortal(modal, document.body);
+}
+
 const PER_PAGE = 10;
 
 export default function BookingsPage() {
@@ -960,6 +1029,8 @@ export default function BookingsPage() {
   const [editingBooking, setEditingBooking] = useState(null);
   const [viewingBooking, setViewingBooking] = useState(null);
   const [confirmReviewModal, setConfirmReviewModal] = useState(null);
+  const [rescheduleBooking, setRescheduleBooking] = useState(null);
+  const [rescheduleLoading, setRescheduleLoading] = useState(false);
   const [toast, setToast] = useState(null);
   const [reviewingId, setReviewingId] = useState(null);
 
@@ -1062,25 +1133,24 @@ export default function BookingsPage() {
     }
   };
 
-  const handleReschedule = async (booking) => {
-    const eventDate = window.prompt('Tanggal baru (YYYY-MM-DD)', String(booking.date).slice(0, 10));
-    if (!eventDate) return;
-    const timeStart = window.prompt('Waktu mulai (HH:MM)', String(booking.timeStart).slice(0, 5));
-    if (!timeStart) return;
-    const timeEnd = window.prompt('Waktu selesai (HH:MM)', String(booking.timeEnd).slice(0, 5));
-    if (!timeEnd) return;
-    const reason = window.prompt('Alasan reschedule', 'Permintaan tamu');
-    if (reason === null) return;
+  const handleReschedule = (booking) => setRescheduleBooking(booking);
+
+  const handleRescheduleSubmit = async ({ eventDate, timeStart, timeEnd, reason }) => {
+    if (!rescheduleBooking || rescheduleLoading) return;
+    setRescheduleLoading(true);
     try {
-      await fetchApi(`/api/bookings/${booking.id}/reschedule`, {
+      await fetchApi(`/api/bookings/${rescheduleBooking.id}/reschedule`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ eventDate, timeStart, timeEnd, reason }),
       });
       queryClient.invalidateQueries({ queryKey: queryKeys.bookings.all });
-      showToast(`Booking ${booking.bookingCode} berhasil dijadwalkan ulang.`);
+      showToast(`Booking ${rescheduleBooking.bookingCode} berhasil dijadwalkan ulang.`);
+      setRescheduleBooking(null);
     } catch (error) {
       showToast(error.message || 'Reschedule gagal.', 'error');
+    } finally {
+      setRescheduleLoading(false);
     }
   };
 
@@ -1098,8 +1168,7 @@ export default function BookingsPage() {
         </div>
         <div style={{ marginLeft: 'auto', display: 'flex', gap: 6, flexWrap: 'wrap' }}>
           {STATUS_FILTERS.filter((status) => status !== 'Semua').map((status) => {
-            const isPending = status === 'Pending';
-            const count = isPending ? bookings.filter((b) => b.rawStatus === 'pending').length : 0;
+            const count = bookings.filter((booking) => booking.status === status).length;
             return (
               <button 
                 key={status} 
@@ -1107,7 +1176,7 @@ export default function BookingsPage() {
                 onClick={() => { setStatusFilter(statusFilter === status ? 'Semua' : status); setPage(1); }}
               >
                 {status}
-                {isPending && count > 0 && (
+                {count > 0 && (
                   <span style={{ marginLeft: 6, background: '#ef4444', color: '#fff', borderRadius: '12px', padding: '2px 6px', fontSize: '10px', fontWeight: 'bold' }}>
                     {count}
                   </span>
@@ -1169,7 +1238,7 @@ export default function BookingsPage() {
                     <td data-label="Base" style={{ textAlign: 'right', fontWeight: 800 }}>{formatUsd(finance.baseTotalUsd)}</td>
                     <td data-label="Status"><span className={`tag ${getStatusClass(b.status)}`}>{b.status}</span></td>
                     <td data-label="Aksi" style={{ textAlign: 'center' }}>
-                      <div style={{ display: 'flex', gap: 4, justifyContent: 'center', flexWrap: 'wrap' }}>
+                      <div style={{ display: 'flex', gap: 4, justifyContent: 'center', flexWrap: 'nowrap' }}>
                         {['active', 'rescheduled'].includes(b.rawStatus) && (
                           <>
                             <button
@@ -1193,11 +1262,19 @@ export default function BookingsPage() {
                           </>
                         )}
                         {['active', 'rescheduled'].includes(b.rawStatus) && (
-                          <button className="btn-icon" style={{ fontSize: 12 }} title="Reschedule" onClick={() => handleReschedule(b)}>Schedule</button>
+                          <button className="btn-icon" title="Jadwalkan ulang" aria-label="Jadwalkan ulang" onClick={() => handleReschedule(b)}>
+                            <CalendarClock size={16} />
+                          </button>
                         )}
-                        <button className="btn-icon" style={{ fontSize: 12 }} title="Lihat" onClick={() => setViewingBooking(b)}>View</button>
-                        <button className="btn-icon" style={{ fontSize: 12 }} title="Edit" onClick={() => { setEditingBooking(b); setModalOpen(true); }}>Edit</button>
-                        <button className="btn-icon" style={{ fontSize: 12, color: 'var(--accent)' }} title="Hapus" onClick={() => handleDelete(b.id)}>Delete</button>
+                        <button className="btn-icon" title="Lihat detail" aria-label="Lihat detail" onClick={() => setViewingBooking(b)}>
+                          <Eye size={16} />
+                        </button>
+                        <button className="btn-icon" title="Edit booking" aria-label="Edit booking" onClick={() => { setEditingBooking(b); setModalOpen(true); }}>
+                          <Pencil size={16} />
+                        </button>
+                        <button className="btn-icon" style={{ color: 'var(--accent)' }} title="Hapus booking" aria-label="Hapus booking" onClick={() => handleDelete(b.id)}>
+                          <Trash2 size={16} />
+                        </button>
                       </div>
                     </td>
                   </tr>
@@ -1209,14 +1286,14 @@ export default function BookingsPage() {
             </tbody>
           </table>
         </div>
-        <div className="pagination" style={{ padding: '16px 20px' }}>
+        <div className="pagination" style={{ marginTop: 0, padding: '12px 16px', gap: 16 }}>
           <span className="pagination-info">Menampilkan {Math.min((page - 1) * PER_PAGE + 1, filtered.length)}-{Math.min(page * PER_PAGE, filtered.length)} dari {filtered.length}</span>
           <div className="pagination-controls">
-            <button className="page-btn" disabled={page === 1} onClick={() => setPage(1)}>First</button>
-            <button className="page-btn" disabled={page === 1} onClick={() => setPage((p) => p - 1)}>Prev</button>
-            <button className="page-btn active">{page}</button>
-            <button className="page-btn" disabled={page === totalPages} onClick={() => setPage((p) => p + 1)}>Next</button>
-            <button className="page-btn" disabled={page === totalPages} onClick={() => setPage(totalPages)}>Last</button>
+            <button className="page-btn" title="Halaman pertama" aria-label="Halaman pertama" disabled={page === 1} onClick={() => setPage(1)}><ChevronsLeft size={15} /></button>
+            <button className="page-btn" title="Halaman sebelumnya" aria-label="Halaman sebelumnya" disabled={page === 1} onClick={() => setPage((p) => p - 1)}><ChevronLeft size={15} /></button>
+            <button className="page-btn active" aria-current="page" aria-label={`Halaman ${page}`}>{page}</button>
+            <button className="page-btn" title="Halaman berikutnya" aria-label="Halaman berikutnya" disabled={page === totalPages} onClick={() => setPage((p) => p + 1)}><ChevronRight size={15} /></button>
+            <button className="page-btn" title="Halaman terakhir" aria-label="Halaman terakhir" disabled={page === totalPages} onClick={() => setPage(totalPages)}><ChevronsRight size={15} /></button>
           </div>
         </div>
       </div>
@@ -1239,6 +1316,15 @@ export default function BookingsPage() {
           onClose={() => setConfirmReviewModal(null)}
           onConfirm={handleReview}
           loading={Boolean(reviewingId)}
+        />
+      )}
+
+      {rescheduleBooking && (
+        <AdminRescheduleModal
+          booking={rescheduleBooking}
+          onClose={() => setRescheduleBooking(null)}
+          onSubmit={handleRescheduleSubmit}
+          loading={rescheduleLoading}
         />
       )}
 

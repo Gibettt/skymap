@@ -61,7 +61,8 @@ export function createLoginHandler({ allowedRoles = [] } = {}) {
       const { rows } = await query(
         `SELECT
           u.id, u.name, u.email, u.role, u.status, u.password_hash, u.resort_id,
-          r.name AS resort_name, r.code AS resort_code, r.location AS resort_location
+          r.name AS resort_name, r.code AS resort_code, r.location AS resort_location,
+          r.status AS resort_status
          FROM users u
          LEFT JOIN resorts r ON r.id = u.resort_id
          WHERE u.email = $1
@@ -70,7 +71,10 @@ export function createLoginHandler({ allowedRoles = [] } = {}) {
       );
       const user = rows[0];
 
-      if (!user || user.status !== 'active' || !verifyPassword(password, user.password_hash)) {
+      const inactiveStaffResort = user
+        && ['internal', 'external'].includes(user.role)
+        && user.resort_status !== 'active';
+      if (!user || user.status !== 'active' || inactiveStaffResort || !verifyPassword(password, user.password_hash)) {
         return Response.json({ error: 'Invalid login' }, { status: 401 });
       }
 

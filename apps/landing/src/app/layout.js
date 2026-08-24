@@ -1,5 +1,6 @@
 import localFont from 'next/font/local';
 import './globals.css';
+import './product.css';
 
 const inter = localFont({
   src: './fonts/inter-latin-variable.woff2',

@@ -2,7 +2,7 @@ BEGIN;
 
 INSERT INTO resorts (name, code, slug, location, timezone, contact_name, contact_phone, contact_email, whatsapp_number, status)
 VALUES
-  ('Le Meridien Maldives', 'LMM', 'le-meridien-maldives', 'Thilamaafushi, Maldives', 'Indian/Maldives', 'Resort Concierge', '+960-000-0100', 'concierge@lemeridien-maldives.example', '9600000100', 'active')
+  ('Le Meridien Maldives', 'LMM', 'le-meridien-maldives', 'Thilamaafushi, Maldives', 'Indian/Maldives', 'Resort Concierge', '+960-000-0100', 'concierge@lemeridien-maldives.example', '9600000100', 'inactive')
 ON CONFLICT (code) DO UPDATE SET
   name = EXCLUDED.name,
   slug = EXCLUDED.slug,
@@ -11,8 +11,7 @@ ON CONFLICT (code) DO UPDATE SET
   contact_name = EXCLUDED.contact_name,
   contact_phone = EXCLUDED.contact_phone,
   contact_email = EXCLUDED.contact_email,
-  whatsapp_number = EXCLUDED.whatsapp_number,
-  status = EXCLUDED.status;
+  whatsapp_number = EXCLUDED.whatsapp_number;
 
 INSERT INTO users (name, email, phone, role, resort_id, status, password_hash)
 VALUES
@@ -26,6 +25,8 @@ ON CONFLICT (email) DO UPDATE SET
   resort_id = EXCLUDED.resort_id,
   status = EXCLUDED.status,
   password_hash = EXCLUDED.password_hash;
+
+UPDATE resorts SET status = 'active' WHERE code = 'LMM' AND status <> 'active';
 
 INSERT INTO packages (name, package_type, experience_type, location, schedule, resort_id, is_chargeable, adult_price_usd, child_price_usd, child_age_range, is_active)
 VALUES

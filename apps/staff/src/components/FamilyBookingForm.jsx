@@ -47,6 +47,8 @@ function initialForm() {
   return {
     eventDate: '',
     timeSlot: '',
+    skyEventId: '',
+    observationSpot: '',
     preferredLanguage: 'English',
     roomNumber: '',
     nationality: '',
@@ -127,6 +129,7 @@ function statusLabel(status, lang = 'id') {
     pending: isEn ? 'Pending' : 'Menunggu',
     active: isEn ? 'Active' : 'Aktif',
     completed: isEn ? 'Completed' : 'Selesai',
+    rejected: isEn ? 'Rejected' : 'Ditolak',
     rescheduled: isEn ? 'Rescheduled' : 'Dijadwalkan ulang',
     cancelled_by_guest: isEn ? 'Cancelled by guest' : 'Dibatalkan tamu',
     cancelled_weather: isEn ? 'Cancelled by weather' : 'Dibatalkan karena cuaca',
@@ -136,7 +139,7 @@ function statusLabel(status, lang = 'id') {
 
 function statusClass(status) {
   if (['active', 'completed', 'rescheduled'].includes(status)) return 'tag-confirmed';
-  if (status?.startsWith('cancelled_')) return 'tag-cancelled';
+  if (status === 'rejected' || status?.startsWith('cancelled_')) return 'tag-cancelled';
   return 'tag-pending';
 }
 
@@ -157,6 +160,8 @@ export default function FamilyBookingForm({ basePath, fixedSlug = null, staticEx
   const router = useRouter();
   const { t, language, localizeApiError } = useLanguage();
   const [packages, setPackages] = useState([]);
+  const [skyEvents, setSkyEvents] = useState([]);
+  const [observationSpots, setObservationSpots] = useState([]);
   const [packagesLoaded, setPackagesLoaded] = useState(false);
   const [bookings, setBookings] = useState([]);
   const [bookingsLoaded, setBookingsLoaded] = useState(!listMode);
@@ -232,6 +237,17 @@ export default function FamilyBookingForm({ basePath, fixedSlug = null, staticEx
         setPackagesLoaded(true);
       });
   }, [language, fixedSlug, staticExperience]);
+
+  useEffect(() => {
+    Promise.all([
+      fetch('/api/sky-events').then((res) => res.ok ? res.json() : { events: [] }),
+      fetch('/api/resorts').then((res) => res.ok ? res.json() : { myResort: null }),
+    ]).then(([eventData, resortData]) => {
+      setSkyEvents((eventData.events || []).filter((event) => event.status === 'published'));
+      setObservationSpots(String(resortData.myResort?.observation_spots || '')
+        .split(',').map((spot) => spot.trim()).filter(Boolean));
+    }).catch(() => {});
+  }, []);
 
   const showToast = (type, msg) => {
     setToast({ type, msg });
@@ -495,6 +511,8 @@ export default function FamilyBookingForm({ basePath, fixedSlug = null, staticEx
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           packageId: submitPackage.id,
+          skyEventId: form.skyEventId || null,
+          observationSpot: form.observationSpot,
           eventDate: form.eventDate,
           timeStart: start,
           timeEnd: end,
@@ -640,6 +658,8 @@ export default function FamilyBookingForm({ basePath, fixedSlug = null, staticEx
       ...initialForm(),
       eventDate: dateValue(booking.event_date),
       timeSlot: `${timeValue(booking.time_start)} - ${timeValue(booking.time_end)}`,
+      skyEventId: booking.sky_event_id || '',
+      observationSpot: booking.observation_spot || '',
       preferredLanguage: booking.preferred_language || 'English',
       roomNumber: booking.room_number || '',
       nationality: booking.nationality || '',
@@ -818,6 +838,31 @@ export default function FamilyBookingForm({ basePath, fixedSlug = null, staticEx
 
               <Field label="Time">
                 <input className="input" value={selectedTimeSlot} onChange={(e) => setField('timeSlot', e.target.value)} placeholder={DEFAULT_TIME_SLOT} required />
+              </Field>
+
+              <Field label="Special Sky Event (Optional)">
+                <select className="input" value={form.skyEventId} onChange={(e) => {
+                  const event = skyEvents.find((item) => item.id === e.target.value);
+                  setForm((current) => ({
+                    ...current,
+                    skyEventId: e.target.value,
+                    eventDate: event ? String(event.startsAt).slice(0, 10) : current.eventDate,
+                    observationSpot: event?.observationSpot || current.observationSpot,
+                  }));
+                }}>
+                  <option value="">Regular activity / no special event</option>
+                  {skyEvents.filter((event) => !event.packageId || event.packageId === submitPackage?.id).map((event) => (
+                    <option value={event.id} key={event.id}>{event.title}</option>
+                  ))}
+                </select>
+              </Field>
+
+              <Field label="Observation Spot">
+                <input className="input" list="booking-observation-spots" value={form.observationSpot}
+                  onChange={(e) => setField('observationSpot', e.target.value)} />
+                <datalist id="booking-observation-spots">
+                  {observationSpots.map((spot) => <option value={spot} key={spot} />)}
+                </datalist>
               </Field>
 
               <Field label="Room / Villa">

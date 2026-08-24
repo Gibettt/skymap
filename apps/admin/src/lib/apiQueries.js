@@ -29,14 +29,6 @@ export const queryKeys = {
     all: ['audit-logs'],
     list: () => ['audit-logs', 'list'],
   },
-  skyEvents: {
-    all: ['sky-events'],
-    list: () => ['sky-events', 'list'],
-  },
-  skySettings: {
-    all: ['sky-settings'],
-    current: () => ['sky-settings', 'current'],
-  },
 };
 
 /* ── Fetchers ───────────────────────────────────────────── */

@@ -12,22 +12,15 @@ const EMPTY_EVENT = {
   sourceName: 'NASA GSFC / IAU',
   sourceUrl: '',
   visibility: 'both',
-  isPublished: true,
+  packageId: '',
+  observationSpot: '',
+  capacity: '',
+  priceOverrideUsd: '',
+  imageUrl: '',
+  status: 'published',
 };
 
-const DEFAULT_LOCATION = {
-  name: 'Jakarta, Indonesia',
-  latitude: -6.2088,
-  longitude: 106.8456,
-  timezone: 'Asia/Jakarta',
-};
-
-const LOCATION_PRESETS = [
-  { name: 'Jakarta (Ephemeris Pilot HQ)', latitude: -6.2088, longitude: 106.8456, timezone: 'Asia/Jakarta' },
-  { name: 'Bosscha Observatory, Lembang', latitude: -6.8247, longitude: 107.6167, timezone: 'Asia/Jakarta' },
-  { name: 'Bali Coastal Observatory', latitude: -8.7482, longitude: 115.1672, timezone: 'Asia/Makassar' },
-  { name: 'Le Meridien Maldives (Thilamaafushi)', latitude: 5.3725, longitude: 73.4912, timezone: 'Indian/Maldives' },
-];
+const DEFAULT_LOCATION = { name: '', latitude: null, longitude: null, timezone: '', observationSpots: '' };
 
 const METEOR_CATALOG = [
   { name: 'Quadrantids', peakDate: '03–04 Jan', zhr: '110 meteor/jam', radiant: 'Boötes', parent: 'Asteroid 2003 EH1', active: '28 Des – 12 Jan', desc: 'Hujan meteor awal tahun berintensitas sangat tinggi dengan durasi puncak singkat.', source: 'IMO / IAU' },
@@ -81,7 +74,7 @@ function formatDateShort(value) {
   }
 }
 
-export default function SkyEventsAdminPage() {
+export default function SkyEventsInternalPage() {
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('calendar');
@@ -94,6 +87,7 @@ export default function SkyEventsAdminPage() {
   const [editingEvent, setEditingEvent] = useState(null);
   const [eventForm, setEventForm] = useState(EMPTY_EVENT);
   const [location, setLocation] = useState(DEFAULT_LOCATION);
+  const [packages, setPackages] = useState([]);
   const [submitting, setSubmitting] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [toast, setToast] = useState(null);
@@ -106,14 +100,17 @@ export default function SkyEventsAdminPage() {
   const loadData = useCallback(async () => {
     try {
       setLoading(true);
-      const [eventRes, settingsRes] = await Promise.all([
-        fetch('/api/sky-events?scope=admin&from=2020-01-01&to=2035-12-31', { cache: 'no-store' }),
+      const [eventRes, settingsRes, packageRes] = await Promise.all([
+        fetch('/api/sky-events?from=2020-01-01&to=2035-12-31', { cache: 'no-store' }),
         fetch('/api/sky-settings', { cache: 'no-store' }),
+        fetch('/api/packages', { cache: 'no-store' }),
       ]);
       const eventData = eventRes.ok ? await eventRes.json() : { events: [] };
       const settingsData = settingsRes.ok ? await settingsRes.json() : {};
+      const packageData = packageRes.ok ? await packageRes.json() : {};
       
       setEvents(eventData.events || []);
+      setPackages(packageData.packages || []);
       if (settingsData.location) {
         setLocation(settingsData.location);
       }
@@ -125,7 +122,8 @@ export default function SkyEventsAdminPage() {
   }, [showToast]);
 
   useEffect(() => {
-    loadData();
+    const timer = setTimeout(loadData, 0);
+    return () => clearTimeout(timer);
   }, [loadData]);
 
   // Quick 1-Click Sync from NASA / IAU / IMO
@@ -184,7 +182,12 @@ export default function SkyEventsAdminPage() {
       sourceName: item.sourceName || '',
       sourceUrl: item.sourceUrl || '',
       visibility: item.visibility || 'both',
-      isPublished: item.isPublished !== false,
+      packageId: item.packageId || '',
+      observationSpot: item.observationSpot || '',
+      capacity: item.capacity ?? '',
+      priceOverrideUsd: item.priceOverrideUsd ?? '',
+      imageUrl: item.imageUrl || '',
+      status: item.status || (item.isPublished ? 'published' : 'draft'),
     });
     setEventModalOpen(true);
   };
@@ -229,11 +232,15 @@ export default function SkyEventsAdminPage() {
       const response = await fetch(`/api/sky-events/${item.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ isPublished: !item.isPublished }),
+        body: JSON.stringify({ status: item.isPublished ? 'draft' : 'published' }),
       });
       if (!response.ok) throw new Error('Gagal memperbarui status event.');
       
-      setEvents((prev) => prev.map((evt) => evt.id === item.id ? { ...evt, isPublished: !evt.isPublished } : evt));
+      setEvents((prev) => prev.map((evt) => evt.id === item.id ? {
+        ...evt,
+        status: item.isPublished ? 'draft' : 'published',
+        isPublished: !evt.isPublished,
+      } : evt));
       showToast(item.isPublished ? 'Event disembunyikan dari tamu.' : 'Event berhasil dipublikasikan ke tamu.');
     } catch (err) {
       showToast(err.message, 'error');
@@ -258,12 +265,12 @@ export default function SkyEventsAdminPage() {
       const response = await fetch('/api/sky-settings', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(location),
+        body: JSON.stringify({ observationSpots: location.observationSpots }),
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || 'Gagal menyimpan lokasi.');
       setLocation(data.location);
-      showToast('Koordinat observatori pilot berhasil disimpan.', 'success');
+      showToast('Titik observasi resort berhasil disimpan.', 'success');
     } catch (err) {
       showToast(err.message, 'error');
     }
@@ -276,9 +283,9 @@ export default function SkyEventsAdminPage() {
       list = list.filter((e) => e.eventType === categoryFilter);
     }
     if (statusFilter === 'published') {
-      list = list.filter((e) => e.isPublished);
+      list = list.filter((e) => e.status === 'published');
     } else if (statusFilter === 'draft') {
-      list = list.filter((e) => !e.isPublished);
+      list = list.filter((e) => e.status === 'draft');
     }
     if (searchQuery) {
       const q = searchQuery.toLowerCase().trim();
@@ -715,28 +722,8 @@ export default function SkyEventsAdminPage() {
             </div>
             <form className="card-body" onSubmit={handleSaveLocation}>
               <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 16 }}>
-                Koordinat GPS ini digunakan oleh mesin kalkulasi astronomi (Astronomy Engine & NASA Algorithms) untuk menghitung waktu terbit/terbenam matahari, sudut iluminasi bulan, serta elevasi benda langit secara presisi.
+                Data utama resort dan koordinat ditetapkan Admin. Internal staff hanya mengelola titik observasi operasional di resort yang ditugaskan.
               </p>
-
-              {/* Preset Selector */}
-              <div style={{ marginBottom: 16 }}>
-                <label className="input-label" style={{ fontSize: 12, fontWeight: 700, marginBottom: 6, display: 'block' }}>
-                  Pilih Preset Observatori / Resort:
-                </label>
-                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                  {LOCATION_PRESETS.map((p, idx) => (
-                    <button
-                      key={idx}
-                      type="button"
-                      className="btn btn-secondary btn-sm"
-                      style={{ fontSize: 11 }}
-                      onClick={() => setLocation(p)}
-                    >
-                      {p.name}
-                    </button>
-                  ))}
-                </div>
-              </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 14 }}>
                 <label className="input-group">
@@ -744,8 +731,7 @@ export default function SkyEventsAdminPage() {
                   <input
                     className="input"
                     value={location.name}
-                    onChange={(e) => setLocation({ ...location, name: e.target.value })}
-                    required
+                    readOnly
                   />
                 </label>
                 <label className="input-group">
@@ -755,8 +741,7 @@ export default function SkyEventsAdminPage() {
                     type="number"
                     step="any"
                     value={location.latitude}
-                    onChange={(e) => setLocation({ ...location, latitude: Number(e.target.value) })}
-                    required
+                    readOnly
                   />
                 </label>
                 <label className="input-group">
@@ -766,8 +751,7 @@ export default function SkyEventsAdminPage() {
                     type="number"
                     step="any"
                     value={location.longitude}
-                    onChange={(e) => setLocation({ ...location, longitude: Number(e.target.value) })}
-                    required
+                    readOnly
                   />
                 </label>
                 <label className="input-group">
@@ -775,15 +759,25 @@ export default function SkyEventsAdminPage() {
                   <input
                     className="input"
                     value={location.timezone}
-                    onChange={(e) => setLocation({ ...location, timezone: e.target.value })}
-                    required
+                    readOnly
                   />
                 </label>
               </div>
 
+              <label className="input-group" style={{ marginTop: 16 }}>
+                <span className="input-label">Titik Observasi (pisahkan dengan koma)</span>
+                <textarea
+                  className="input"
+                  rows={3}
+                  value={location.observationSpots || ''}
+                  onChange={(e) => setLocation({ ...location, observationSpots: e.target.value })}
+                  placeholder="Sunset Beach, Helipad, Water Villa Jetty"
+                />
+              </label>
+
               <div style={{ marginTop: 20 }}>
                 <button className="btn btn-primary" type="submit">
-                  Simpan Koordinat Observatori
+                  Simpan Titik Observasi
                 </button>
               </div>
             </form>
@@ -873,6 +867,57 @@ export default function SkyEventsAdminPage() {
 
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 12 }}>
                   <label className="input-group">
+                    <span className="input-label">Paket Terkait (Opsional)</span>
+                    <select
+                      className="input"
+                      value={eventForm.packageId}
+                      onChange={(e) => setEventForm({ ...eventForm, packageId: e.target.value })}
+                    >
+                      <option value="">Tanpa paket</option>
+                      {packages.map((pkg) => <option value={pkg.id} key={pkg.id}>{pkg.name}</option>)}
+                    </select>
+                  </label>
+                  <label className="input-group">
+                    <span className="input-label">Titik Observasi</span>
+                    <input
+                      className="input"
+                      list="observation-spots"
+                      value={eventForm.observationSpot}
+                      onChange={(e) => setEventForm({ ...eventForm, observationSpot: e.target.value })}
+                    />
+                    <datalist id="observation-spots">
+                      {(location.observationSpots || '').split(',').map((spot) => spot.trim()).filter(Boolean).map((spot) => (
+                        <option value={spot} key={spot} />
+                      ))}
+                    </datalist>
+                  </label>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 12 }}>
+                  <label className="input-group">
+                    <span className="input-label">Kapasitas (Opsional)</span>
+                    <input className="input" type="number" min="1" value={eventForm.capacity}
+                      onChange={(e) => setEventForm({ ...eventForm, capacity: e.target.value })} />
+                  </label>
+                  <label className="input-group">
+                    <span className="input-label">Harga Override USD</span>
+                    <input className="input" type="number" min="0" step="0.01" value={eventForm.priceOverrideUsd}
+                      onChange={(e) => setEventForm({ ...eventForm, priceOverrideUsd: e.target.value })} />
+                  </label>
+                  <label className="input-group">
+                    <span className="input-label">Status</span>
+                    <select className="input" value={eventForm.status}
+                      onChange={(e) => setEventForm({ ...eventForm, status: e.target.value })}>
+                      <option value="draft">Draft</option>
+                      <option value="published">Published</option>
+                      <option value="cancelled">Cancelled</option>
+                      <option value="sold_out">Sold out</option>
+                    </select>
+                  </label>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 12 }}>
+                  <label className="input-group">
                     <span className="input-label">Sumber Ilmiah</span>
                     <input
                       className="input"
@@ -903,16 +948,12 @@ export default function SkyEventsAdminPage() {
                   />
                 </label>
 
-                <div style={{ padding: '8px 0' }}>
-                  <label style={{ fontSize: 13, display: 'flex', gap: 8, alignItems: 'center', cursor: 'pointer' }}>
-                    <input
-                      type="checkbox"
-                      checked={eventForm.isPublished}
-                      onChange={(e) => setEventForm({ ...eventForm, isPublished: e.target.checked })}
-                    />
-                    <span>Tampilkan ke tamu di aplikasi publik (PWA Sky Guide)</span>
-                  </label>
-                </div>
+                <label className="input-group">
+                  <span className="input-label">URL Foto Event (Opsional)</span>
+                  <input className="input" type="url" placeholder="https://example.com/event.webp"
+                    value={eventForm.imageUrl}
+                    onChange={(e) => setEventForm({ ...eventForm, imageUrl: e.target.value })} />
+                </label>
               </div>
 
               <div style={{ marginTop: 20, display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
@@ -938,4 +979,3 @@ export default function SkyEventsAdminPage() {
     </div>
   );
 }
-

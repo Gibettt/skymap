@@ -1,5 +1,14 @@
 import { z } from 'zod';
 
+const timezoneSchema = z.string().trim().max(80).refine((value) => {
+  try {
+    new Intl.DateTimeFormat('en', { timeZone: value });
+    return true;
+  } catch {
+    return false;
+  }
+}, 'Timezone IANA tidak valid');
+
 const optionalEmail = z.preprocess(
   (value) => value === '' || value == null ? null : value,
   z.string().trim().email().max(254).nullable(),
@@ -10,7 +19,7 @@ export const resortSchema = z.object({
   code: z.string().trim().min(2).max(20).regex(/^[A-Za-z0-9-]+$/),
   slug: z.string().trim().min(2).max(120).regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/).optional(),
   location: z.string().trim().max(200).default('Maldives'),
-  timezone: z.string().trim().max(80).default('Indian/Maldives'),
+  timezone: timezoneSchema.default('Indian/Maldives'),
   contactName: z.string().trim().max(120).default(''),
   contactPhone: z.string().trim().max(40).default(''),
   contactEmail: optionalEmail.default(null),
@@ -22,3 +31,7 @@ export const resortSchema = z.object({
 });
 
 export const updateResortSchema = resortSchema.partial();
+
+export const updateObservationSpotsSchema = z.object({
+  observationSpots: z.string().trim().max(1000),
+});

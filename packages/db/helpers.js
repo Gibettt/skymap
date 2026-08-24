@@ -31,6 +31,7 @@ export const bookingSelectQuery = `
     p.location,
     u.name AS staff_name,
     u.role AS staff_role,
+    assigned_user.name AS assigned_internal_name,
     r.name AS resort_name,
     r.code AS resort_code,
     r.location AS resort_location,
@@ -41,6 +42,7 @@ export const bookingSelectQuery = `
   FROM bookings b
   JOIN packages p ON p.id = b.package_id
   JOIN users u ON u.id = b.staff_id
+  LEFT JOIN users assigned_user ON assigned_user.id = b.assigned_internal_id
   LEFT JOIN resorts r ON r.id = b.resort_id
   LEFT JOIN feedback_tokens ft ON ft.booking_id = b.id
   LEFT JOIN feedback_submissions fs ON fs.booking_id = b.id

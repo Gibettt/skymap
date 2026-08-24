@@ -1,0 +1,2487 @@
+/* Ephemeris public UI
+   Soft, layered public presentation based on the Circle repository's dark UI. */
+
+:root {
+  color-scheme: dark;
+  --font-heading: var(--font-inter, "Segoe UI", sans-serif);
+  --font-body: var(--font-inter, "Segoe UI", sans-serif);
+  --bg-primary: #191a1f;
+  --bg-secondary: #1f2126;
+  --bg-card: #22242a;
+  --bg-card-hover: #292b32;
+  --bg-elevated: #2b2d34;
+  --bg-modal: rgba(10, 11, 14, 0.72);
+  --accent: #6469d7;
+  --accent-hover: #767be2;
+  --accent-muted: rgba(100, 105, 215, 0.16);
+  --accent-glow: transparent;
+  --accent-dark: #565bbc;
+  --text-primary: #eef0f3;
+  --text-secondary: #c4c7ce;
+  --text-muted: #8a8f98;
+  --text-dim: #6b6f78;
+  --border: #2c2e35;
+  --border-subtle: #272930;
+  --border-accent: rgba(100, 105, 215, 0.56);
+  --shadow-sm: 0 1px 2px rgba(5, 6, 8, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.025);
+  --shadow-md: 0 12px 32px rgba(5, 6, 8, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.03);
+  --shadow-lg: 0 24px 72px rgba(5, 6, 8, 0.48), inset 0 1px 0 rgba(255, 255, 255, 0.035);
+}
+
+html {
+  background: var(--bg-primary);
+}
+
+body {
+  min-height: 100dvh;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  line-height: 1.5;
+}
+
+::selection {
+  background: rgba(100, 105, 215, 0.38);
+  color: var(--text-primary);
+}
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+[tabindex]:focus-visible {
+  outline: 2px solid var(--accent-hover);
+  outline-offset: 2px;
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-thumb {
+  border: 2px solid transparent;
+  border-radius: 999px;
+  background: #3a3b43;
+  background-clip: padding-box;
+}
+
+.stargazing-page {
+  --stargazing-ink: var(--text-primary);
+  --stargazing-muted: var(--text-muted);
+  --stargazing-line: var(--accent);
+  --stargazing-paper: var(--bg-primary);
+  --stargazing-panel: var(--bg-card);
+  min-height: 100dvh;
+  background:
+    radial-gradient(circle at 76% 0%, rgba(100, 105, 215, 0.09), transparent 34rem),
+    var(--bg-primary);
+  color: var(--text-primary);
+}
+
+.stargazing-nav {
+  top: 8px;
+  z-index: 40;
+  width: min(1440px, calc(100% - 16px));
+  height: 54px;
+  margin: 0 auto;
+  padding: 0 14px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: rgba(31, 33, 38, 0.9);
+  box-shadow: var(--shadow-sm);
+  backdrop-filter: blur(18px) saturate(120%);
+}
+
+.stargazing-brand {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+  text-transform: none;
+}
+
+.stargazing-brand span {
+  color: var(--text-primary);
+  font-size: 14px;
+  font-weight: 650;
+  letter-spacing: -0.02em;
+  text-transform: none;
+}
+
+.stargazing-brand::before {
+  display: grid;
+  width: 28px;
+  height: 28px;
+  place-items: center;
+  border-radius: 9px;
+  background: #d9824f;
+  color: #fff8f3;
+  content: "EP";
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: 700;
+}
+
+.stargazing-brand small {
+  color: var(--text-dim);
+  font-size: 10px;
+  font-weight: 450;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.stargazing-nav-links {
+  gap: 4px;
+}
+
+.stargazing-nav-links a {
+  padding: 6px 9px;
+  border-radius: 8px;
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 520;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.stargazing-nav-links a:hover {
+  background: var(--bg-elevated);
+  color: var(--text-primary);
+}
+
+.stargazing-hero {
+  width: min(1440px, calc(100% - 16px));
+  min-height: calc(100dvh - 78px);
+  margin: 16px auto 0;
+  padding: 8px;
+  gap: 8px;
+  grid-template-columns: minmax(320px, 0.82fr) minmax(0, 1.18fr);
+  grid-template-rows: minmax(0, 1fr) auto;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  background: var(--bg-secondary);
+  box-shadow: var(--shadow-md);
+}
+
+.stargazing-hero-copy,
+.stargazing-hero-image {
+  min-width: 0;
+  min-height: min(690px, calc(100dvh - 86px));
+  border: 0;
+  border-radius: 14px;
+  background: transparent;
+}
+
+.stargazing-hero-copy {
+  justify-content: center;
+  padding: clamp(34px, 5vw, 72px);
+}
+
+.stargazing-hero-copy::before {
+  display: none;
+}
+
+.stargazing-kicker {
+  margin-bottom: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--text-secondary);
+  font-family: var(--font-body);
+  font-size: 10px;
+  font-weight: 540;
+  letter-spacing: 0.04em;
+  text-transform: none;
+}
+
+.stargazing-hero h1 {
+  max-width: 12ch;
+  margin-top: 12px;
+  color: var(--text-primary);
+  font-family: var(--font-heading);
+  font-size: clamp(40px, 5vw, 64px);
+  font-weight: 620;
+  letter-spacing: -0.06em;
+  line-height: 0.98;
+  text-transform: none;
+}
+
+.stargazing-hero-copy > p:not(.stargazing-kicker) {
+  max-width: 42ch;
+  margin-top: 18px;
+  color: var(--text-muted);
+  font-size: 14px;
+  font-weight: 450;
+  line-height: 1.65;
+}
+
+.stargazing-actions {
+  gap: 8px;
+  margin-top: 24px;
+}
+
+.stargazing-button,
+.experience-toggle,
+.experience-picker button,
+.wa-panel-button {
+  min-height: 36px;
+  padding: 8px 13px;
+  border: 1px solid var(--accent);
+  border-radius: 8px;
+  background: var(--accent);
+  color: #fff8f3;
+  font-size: 11px;
+  font-weight: 590;
+  letter-spacing: 0;
+  text-transform: none;
+  white-space: nowrap;
+  box-shadow: var(--shadow-sm);
+  transition: background-color 140ms ease, border-color 140ms ease, color 140ms ease, transform 140ms ease;
+}
+
+.stargazing-button:hover,
+.experience-toggle:hover,
+.experience-picker button:hover,
+.wa-panel-button:hover {
+  background: var(--accent-hover);
+  border-color: var(--accent-hover);
+  transform: none;
+}
+
+.stargazing-button:active,
+.experience-toggle:active,
+.experience-picker button:active,
+.wa-panel-button:active {
+  transform: scale(0.98);
+}
+
+.stargazing-button.secondary,
+.experience-picker button:not(.active) {
+  border-color: var(--border);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-secondary);
+}
+
+.stargazing-button.secondary:hover,
+.experience-picker button:not(.active):hover {
+  border-color: #3a3b43;
+  background: var(--bg-card-hover);
+  color: var(--text-primary);
+}
+
+.stargazing-hero-image {
+  overflow: hidden;
+  background: #15161b;
+}
+
+.stargazing-hero-image::after,
+.experience-feature-image::after,
+.experience-image::after {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to top, rgba(8, 9, 11, 0.34), transparent 46%);
+  content: "";
+  pointer-events: none;
+}
+
+.stargazing-hero-details {
+  grid-column: 1 / -1;
+  min-height: 46px;
+  margin: 0 4px 4px;
+  border: 0;
+  border-top: 1px solid var(--border-subtle);
+  border-radius: 0;
+  background: transparent;
+}
+
+.stargazing-hero-details span {
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 14px;
+  border-color: var(--border);
+  color: var(--text-muted);
+  font-size: 10px;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.stargazing-proof {
+  width: min(1100px, calc(100% - 32px));
+  margin: 72px auto;
+  gap: 8px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+.stargazing-proof > div {
+  padding: 22px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 14px;
+  background: var(--bg-card);
+  box-shadow: var(--shadow-sm);
+}
+
+.stargazing-proof strong {
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-size: 16px;
+  font-weight: 590;
+}
+
+.stargazing-proof span {
+  color: var(--text-dim);
+  font-size: 10px;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.stargazing-section,
+.masterclass-section,
+.stargazing-note {
+  width: min(1200px, calc(100% - 32px));
+  margin: 0 auto;
+  padding: 72px 0;
+}
+
+.stargazing-section-head {
+  max-width: 720px;
+  margin: 0 0 34px;
+  text-align: left;
+}
+
+.stargazing-section-head .stargazing-kicker {
+  display: none;
+}
+
+.stargazing-section-head h2,
+.masterclass-section h2 {
+  color: var(--text-primary);
+  font-size: clamp(30px, 4vw, 48px);
+  font-weight: 610;
+  letter-spacing: -0.05em;
+  line-height: 1.04;
+}
+
+.stargazing-section-head > p:last-child,
+.masterclass-section > div > p:last-child {
+  max-width: 62ch;
+  margin-top: 14px;
+  color: var(--text-muted);
+  font-size: 13px;
+  line-height: 1.65;
+}
+
+.experience-stage,
+.experience-feature,
+.experience-card,
+.masterclass-section,
+.stargazing-note,
+.wa-panel {
+  border-color: var(--border);
+  border-radius: 16px;
+  background: var(--bg-card);
+  box-shadow: var(--shadow-sm);
+}
+
+.experience-feature {
+  overflow: hidden;
+}
+
+.experience-feature-image,
+.experience-image {
+  position: relative;
+  overflow: hidden;
+  border-color: var(--border);
+  background: #090a0c;
+}
+
+.experience-feature-copy,
+.experience-copy {
+  color: var(--text-secondary);
+}
+
+.experience-title,
+.experience-feature-copy h3,
+.experience-copy h3 {
+  color: var(--text-primary);
+  font-weight: 600;
+  letter-spacing: -0.025em;
+}
+
+.experience-carousel {
+  position: relative;
+  left: 50%;
+  width: min(1400px, calc(100vw - 32px));
+  margin-top: 12px;
+  transform: translateX(-50%);
+}
+
+.experience-carousel-viewport {
+  position: relative;
+  height: clamp(520px, 68dvh, 740px);
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  background: #0b0c10;
+  box-shadow: var(--shadow-lg);
+}
+
+.experience-slide {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  overflow: hidden;
+  border: 0;
+  background: #0b0c10;
+  color: var(--text-primary);
+  cursor: pointer;
+  opacity: 0;
+  pointer-events: none;
+  text-align: left;
+  transform: translate3d(100%, 0, 0);
+  transition: opacity 700ms ease, transform 800ms cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: opacity, transform;
+}
+
+.experience-slide.is-before {
+  transform: translate3d(-100%, 0, 0);
+}
+
+.experience-slide.is-after {
+  transform: translate3d(100%, 0, 0);
+}
+
+.experience-slide.is-active {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translate3d(0, 0, 0);
+}
+
+.experience-slide:focus-visible {
+  outline-offset: -5px;
+}
+
+.experience-slide img {
+  object-fit: cover;
+}
+
+.experience-slide-shade {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(90deg, rgba(6, 7, 10, 0.82) 0%, rgba(6, 7, 10, 0.2) 58%, transparent 80%),
+    linear-gradient(0deg, rgba(6, 7, 10, 0.72) 0%, transparent 45%);
+  pointer-events: none;
+}
+
+.experience-slide-copy {
+  position: absolute;
+  bottom: clamp(28px, 5vw, 64px);
+  left: clamp(24px, 5vw, 68px);
+  z-index: 1;
+  display: grid;
+  width: min(590px, calc(100% - 48px));
+  gap: 14px;
+}
+
+.experience-slide-title {
+  max-width: 14ch;
+  font-family: var(--font-heading);
+  font-size: clamp(40px, 5.5vw, 72px);
+  font-weight: 630;
+  letter-spacing: -0.055em;
+  line-height: 0.98;
+}
+
+.experience-slide-schedule {
+  color: rgba(238, 240, 243, 0.76);
+  font-size: clamp(12px, 1.35vw, 15px);
+}
+
+.experience-slide-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  margin-top: 12px;
+  padding-top: 18px;
+  border-top: 1px solid rgba(255, 255, 255, 0.22);
+}
+
+.experience-slide-footer strong {
+  color: #f4f5f7;
+  font-size: 14px;
+  font-weight: 620;
+}
+
+.experience-slide-footer > span {
+  padding-bottom: 3px;
+  border-bottom: 1px solid currentColor;
+  color: #f4f5f7;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.experience-carousel-controls {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 18px;
+  padding: 18px 4px 0;
+}
+
+.experience-carousel-controls button {
+  min-height: 44px;
+  padding: 0 16px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: var(--bg-card);
+  color: var(--text-secondary);
+  font: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.experience-carousel-controls button:hover {
+  border-color: var(--border-accent);
+  color: var(--text-primary);
+}
+
+.experience-carousel-controls p {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 10px;
+  min-width: 0;
+  color: var(--text-secondary);
+  text-align: center;
+}
+
+.experience-carousel-controls strong {
+  overflow: hidden;
+  font-size: 12px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.experience-carousel-controls span {
+  flex: none;
+  color: var(--text-dim);
+  font-size: 10px;
+}
+
+.experience-facts,
+.masterclass-row {
+  border-color: var(--border);
+}
+
+.experience-facts span,
+.masterclass-row span {
+  color: var(--text-muted);
+}
+
+.masterclass-row strong {
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+}
+
+.stargazing-note {
+  margin-bottom: 72px;
+  padding: 22px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 16px;
+  background: var(--bg-card);
+  box-shadow: var(--shadow-sm);
+}
+
+.stargazing-note p {
+  color: var(--text-secondary);
+}
+
+.stargazing-footer {
+  width: min(1440px, calc(100% - 16px));
+  min-height: 58px;
+  margin: 0 auto 8px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 14px;
+  background: transparent;
+  color: var(--text-dim);
+  font-size: 10px;
+}
+
+.stargazing-mobile-nav-panel,
+.wa-panel {
+  border-color: var(--border);
+  background: #15161a;
+  box-shadow: var(--shadow-lg);
+}
+
+.wa-fab {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--bg-elevated);
+  color: var(--text-primary);
+  box-shadow: var(--shadow-md);
+}
+
+.wa-panel-textarea,
+.feedback-field input,
+.feedback-field select,
+.feedback-field textarea {
+  min-height: 38px;
+  padding: 8px 11px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: #191a1f;
+  color: var(--text-primary);
+  outline: none;
+}
+
+.wa-panel-textarea:focus,
+.feedback-field input:focus,
+.feedback-field select:focus,
+.feedback-field textarea:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-muted);
+}
+
+.feedback-page {
+  display: grid;
+  min-height: 100dvh;
+  place-items: center;
+  padding: 24px;
+  background:
+    radial-gradient(circle at 50% 8%, rgba(100, 105, 215, 0.1), transparent 34rem),
+    var(--bg-primary);
+}
+
+.feedback-card {
+  width: min(560px, 100%);
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--bg-card);
+  box-shadow: var(--shadow-lg);
+}
+
+.feedback-header {
+  padding: 15px 18px;
+  border-bottom: 1px solid var(--border);
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 610;
+}
+
+.feedback-body {
+  padding: 20px;
+}
+
+.feedback-booking {
+  margin-bottom: 20px;
+}
+
+.feedback-booking strong {
+  display: block;
+  color: var(--text-primary);
+  font-size: 22px;
+  font-weight: 610;
+  letter-spacing: -0.035em;
+}
+
+.feedback-booking span,
+.feedback-message {
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.feedback-form {
+  display: grid;
+  gap: 15px;
+}
+
+.feedback-field {
+  display: grid;
+  gap: 6px;
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-weight: 540;
+}
+
+.feedback-field textarea {
+  min-height: 112px;
+  resize: vertical;
+}
+
+.feedback-submit {
+  justify-self: start;
+  min-height: 36px;
+  padding: 8px 13px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--accent);
+  color: #fff8f3;
+  font-size: 11px;
+  font-weight: 590;
+}
+
+.feedback-submit:hover {
+  background: var(--accent-hover);
+}
+
+@media (max-width: 900px) {
+  .stargazing-hero {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto;
+  }
+
+  .stargazing-hero-copy,
+  .stargazing-hero-image {
+    min-height: auto;
+  }
+
+  .stargazing-hero-copy {
+    min-height: 460px;
+  }
+
+  .stargazing-hero-image {
+    min-height: 58dvh;
+  }
+}
+
+@media (max-width: 768px) {
+  .stargazing-nav {
+    top: 0;
+    width: 100%;
+    height: 58px;
+    border-width: 0 0 1px;
+    border-radius: 0;
+  }
+
+  .stargazing-brand small {
+    display: none;
+  }
+
+  .stargazing-hero {
+    width: 100%;
+    margin-top: 0;
+    padding: 8px;
+  }
+
+  .stargazing-hero-copy {
+    min-height: calc(100dvh - 74px);
+    padding: 28px 22px;
+  }
+
+  .stargazing-hero h1 {
+    max-width: 100%;
+    font-size: clamp(36px, 10.5vw, 48px);
+    overflow-wrap: anywhere;
+  }
+
+  .stargazing-kicker,
+  .stargazing-hero-copy > p:not(.stargazing-kicker) {
+    width: auto;
+    max-width: 100%;
+    overflow-wrap: anywhere;
+  }
+
+  .stargazing-hero-image {
+    min-height: 56dvh;
+  }
+
+  .stargazing-hero-details,
+  .stargazing-proof,
+  .experience-grid,
+  .experience-facts,
+  .masterclass-row,
+  .resort-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .stargazing-hero-details span {
+    min-height: 36px;
+  }
+
+  .stargazing-proof {
+    margin: 42px auto;
+  }
+
+  .stargazing-proof > div {
+    padding: 16px;
+    border-right: 0;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .stargazing-proof > div:last-child {
+    border-bottom: 0;
+  }
+
+  .stargazing-section,
+  .masterclass-section,
+  .stargazing-note {
+    width: calc(100% - 24px);
+    padding: 48px 0;
+  }
+
+  .masterclass-section,
+  .stargazing-note {
+    padding: 20px;
+  }
+
+  .stargazing-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .stargazing-actions .stargazing-button {
+    width: 100%;
+  }
+
+  .experience-carousel {
+    width: calc(100vw - 24px);
+  }
+
+  .experience-carousel-viewport {
+    height: min(68dvh, 590px);
+    min-height: 480px;
+  }
+
+  .experience-slide-shade {
+    background: linear-gradient(0deg, rgba(6, 7, 10, 0.84) 0%, rgba(6, 7, 10, 0.12) 70%);
+  }
+
+  .experience-slide-copy {
+    bottom: 26px;
+    left: 22px;
+    width: calc(100% - 44px);
+  }
+
+  .experience-slide-title {
+    font-size: clamp(36px, 11vw, 52px);
+  }
+
+  .experience-carousel-controls {
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+
+  .experience-carousel-controls p {
+    grid-column: 1 / -1;
+    grid-row: 1;
+  }
+
+  .experience-carousel-controls button {
+    width: 100%;
+  }
+
+  button,
+  input,
+  select,
+  textarea {
+    min-height: 44px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Home page: cinematic resort editorial with a direct path to booking. */
+.home-page {
+  --home-bg: #0b1016;
+  --home-surface: #121923;
+  --home-surface-soft: #18212c;
+  --home-text: #f1f3f6;
+  --home-muted: #a9b1bc;
+  --home-dim: #747f8d;
+  --home-border: rgba(221, 228, 238, 0.14);
+  --home-accent: #9ea5ea;
+  color-scheme: dark;
+  background: var(--home-bg);
+  color: var(--home-text);
+  font-family: var(--font-space-grotesk), sans-serif;
+}
+
+.home-page .home-nav {
+  position: sticky;
+  top: 12px;
+  z-index: 20;
+  display: flex;
+  width: min(1320px, calc(100% - 32px));
+  height: 64px;
+  align-items: center;
+  justify-content: space-between;
+  margin: 0 auto;
+  padding: 0 12px 0 16px;
+  border-color: rgba(230, 234, 241, 0.16);
+  border-radius: 16px;
+  background: rgba(11, 16, 22, 0.86);
+  box-shadow: 0 12px 42px rgba(2, 5, 9, 0.22);
+  backdrop-filter: blur(18px) saturate(125%);
+}
+
+.home-page .stargazing-brand::before {
+  border: 1px solid rgba(241, 243, 246, 0.2);
+  background: var(--home-accent);
+  color: #111522;
+}
+
+.home-page .stargazing-brand small,
+.home-page .stargazing-nav-links a {
+  color: var(--home-muted);
+}
+
+.home-page .stargazing-nav-links .home-nav-cta {
+  margin-left: 8px;
+  padding: 9px 14px;
+  background: var(--home-accent);
+  color: #111522;
+}
+
+.home-page .stargazing-nav-links .home-nav-cta:hover {
+  background: #b3b9f2;
+  color: #111522;
+}
+
+.home-hero {
+  position: relative;
+  display: flex;
+  width: min(1440px, calc(100% - 24px));
+  min-height: calc(100dvh - 88px);
+  align-items: center;
+  margin: 12px auto 0;
+  overflow: hidden;
+  border: 1px solid var(--home-border);
+  border-radius: 20px;
+  background: #111924;
+  isolation: isolate;
+}
+
+.home-hero-media {
+  z-index: -2;
+  object-fit: cover;
+  object-position: center;
+}
+
+.home-hero-shade {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background:
+    linear-gradient(90deg, rgba(5, 10, 16, 0.94) 0%, rgba(5, 10, 16, 0.7) 37%, rgba(5, 10, 16, 0.08) 70%),
+    linear-gradient(0deg, rgba(5, 10, 16, 0.56), transparent 44%);
+}
+
+.home-hero-copy {
+  width: min(610px, 52%);
+  padding: clamp(32px, 7vw, 104px);
+}
+
+.home-page .stargazing-kicker {
+  color: var(--home-accent);
+  font-size: 11px;
+  font-weight: 650;
+  letter-spacing: 0.08em;
+}
+
+.home-hero-copy h1 {
+  max-width: 10ch;
+  margin-top: 16px;
+  color: var(--home-text);
+  font-family: var(--font-space-grotesk), sans-serif;
+  font-size: clamp(48px, 6.2vw, 88px);
+  font-weight: 520;
+  letter-spacing: -0.065em;
+  line-height: 0.94;
+}
+
+.home-hero-copy > p:not(.stargazing-kicker) {
+  max-width: 42ch;
+  margin-top: 24px;
+  color: #c6ccd4;
+  font-size: clamp(15px, 1.4vw, 18px);
+  line-height: 1.55;
+}
+
+.home-page .stargazing-button {
+  min-height: 46px;
+  padding: 12px 18px;
+  border-color: var(--home-accent);
+  border-radius: 10px;
+  background: var(--home-accent);
+  color: #111522;
+  font-size: 13px;
+  font-weight: 680;
+}
+
+.home-page .stargazing-button:hover {
+  border-color: #b3b9f2;
+  background: #b3b9f2;
+  color: #111522;
+  transform: translateY(-2px);
+}
+
+.home-page .stargazing-button.secondary {
+  border-color: rgba(241, 243, 246, 0.24);
+  background: rgba(11, 16, 22, 0.46);
+  color: var(--home-text);
+  backdrop-filter: blur(10px);
+}
+
+.home-page .stargazing-button.secondary:hover {
+  border-color: rgba(241, 243, 246, 0.42);
+  background: rgba(23, 31, 42, 0.86);
+  color: var(--home-text);
+}
+
+.home-facts {
+  display: grid;
+  width: min(1180px, calc(100% - 40px));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin: 0 auto;
+  padding: 38px 0;
+  border-bottom: 1px solid var(--home-border);
+}
+
+.home-facts p {
+  display: grid;
+  gap: 5px;
+  padding: 0 26px;
+  border-right: 1px solid var(--home-border);
+}
+
+.home-facts p:first-child {
+  padding-left: 0;
+}
+
+.home-facts p:last-child {
+  padding-right: 0;
+  border-right: 0;
+}
+
+.home-facts strong {
+  color: var(--home-text);
+  font-size: clamp(18px, 2vw, 25px);
+  font-weight: 570;
+  letter-spacing: -0.035em;
+}
+
+.home-facts span {
+  color: var(--home-dim);
+  font-size: 12px;
+}
+
+.home-resorts,
+.home-story,
+.home-booking {
+  width: min(1180px, calc(100% - 40px));
+  margin: 0 auto;
+}
+
+.home-resorts {
+  display: grid;
+  grid-template-columns: minmax(0, 0.8fr) minmax(420px, 1.2fr);
+  gap: clamp(48px, 8vw, 120px);
+  align-items: start;
+  padding: clamp(100px, 12vw, 164px) 0;
+  scroll-margin-top: 92px;
+}
+
+.home-section-heading h2,
+.home-story h2,
+.home-booking h2 {
+  margin-top: 14px;
+  color: var(--home-text);
+  font-size: clamp(34px, 4.6vw, 58px);
+  font-weight: 520;
+  letter-spacing: -0.055em;
+  line-height: 1;
+}
+
+.home-section-heading > p:last-child,
+.home-story-copy > p,
+.home-booking p {
+  max-width: 52ch;
+  margin-top: 20px;
+  color: var(--home-muted);
+  font-size: 15px;
+  line-height: 1.7;
+}
+
+.home-resort-panel {
+  overflow: hidden;
+  border: 1px solid var(--home-border);
+  border-radius: 18px;
+  background: var(--home-surface);
+}
+
+.home-resort-panel .resort-locator {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 18px;
+  border-bottom: 1px solid var(--home-border);
+}
+
+.home-resort-panel .resort-locator span {
+  color: var(--home-muted);
+  font-size: 12px;
+}
+
+.home-resort-list {
+  display: grid;
+}
+
+.home-resort-link {
+  display: flex;
+  min-height: 86px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 18px 22px;
+  border-bottom: 1px solid var(--home-border);
+  transition: background-color 220ms ease, padding 220ms ease;
+}
+
+.home-resort-link:last-child {
+  border-bottom: 0;
+}
+
+.home-resort-link:hover,
+.home-resort-link:focus-visible {
+  padding-left: 28px;
+  background: var(--home-surface-soft);
+}
+
+.home-resort-link > span:first-child {
+  display: grid;
+  gap: 4px;
+}
+
+.home-resort-link strong {
+  color: var(--home-text);
+  font-size: 17px;
+  font-weight: 570;
+}
+
+.home-resort-link small,
+.home-resort-link > span:last-child {
+  color: var(--home-dim);
+  font-size: 11px;
+}
+
+.home-resort-link > span:last-child {
+  flex: none;
+  color: var(--home-accent);
+}
+
+.home-page .home-experiences {
+  width: min(1180px, calc(100% - 40px));
+  padding: clamp(80px, 10vw, 140px) 0;
+  scroll-margin-top: 72px;
+}
+
+.home-page .stargazing-section-head {
+  max-width: 680px;
+  margin-bottom: 42px;
+}
+
+.home-page .stargazing-section-head .stargazing-kicker {
+  display: block;
+}
+
+.home-page .stargazing-section-head h2,
+.home-page .home-masterclass h2 {
+  margin-top: 14px;
+  color: var(--home-text);
+  font-size: clamp(38px, 5vw, 62px);
+  font-weight: 520;
+  letter-spacing: -0.06em;
+}
+
+.home-page .stargazing-section-head > p:last-child,
+.home-page .home-masterclass > div > p:last-child {
+  color: var(--home-muted);
+  font-size: 15px;
+}
+
+.home-page .experience-carousel-viewport {
+  border-color: var(--home-border);
+  border-radius: 20px;
+  background: var(--home-surface);
+}
+
+.home-page .experience-carousel-controls button {
+  border-color: var(--home-border);
+  border-radius: 10px;
+  background: var(--home-surface);
+  color: var(--home-muted);
+}
+
+.home-page .experience-carousel-controls button:hover {
+  border-color: var(--home-accent);
+  color: var(--home-text);
+}
+
+.home-page .experience-carousel-controls span {
+  color: var(--home-dim);
+}
+
+.home-story {
+  display: grid;
+  min-height: 680px;
+  grid-template-columns: 1.15fr 0.85fr;
+  overflow: hidden;
+  border: 1px solid var(--home-border);
+  border-radius: 20px;
+  background: var(--home-surface);
+}
+
+.home-story-image {
+  position: relative;
+  min-height: 520px;
+  overflow: hidden;
+}
+
+.home-story-image img {
+  object-fit: cover;
+}
+
+.home-story-copy {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: clamp(34px, 5vw, 72px);
+}
+
+.home-story-copy dl {
+  display: grid;
+  gap: 22px;
+  margin-top: 44px;
+}
+
+.home-story-copy dl div {
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--home-border);
+}
+
+.home-story-copy dl div:last-child {
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+
+.home-story-copy dt {
+  color: var(--home-text);
+  font-size: 14px;
+  font-weight: 620;
+}
+
+.home-story-copy dd {
+  margin-top: 5px;
+  color: var(--home-dim);
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.home-page .home-masterclass {
+  display: grid;
+  width: min(1180px, calc(100% - 40px));
+  grid-template-columns: minmax(0, 0.78fr) minmax(460px, 1.22fr);
+  gap: clamp(48px, 8vw, 110px);
+  margin: 0 auto;
+  padding: clamp(110px, 12vw, 170px) 0;
+  border: 0;
+  background: transparent;
+  scroll-margin-top: 72px;
+}
+
+.home-page .masterclass-list {
+  border-top: 1px solid var(--home-border);
+}
+
+.home-page .masterclass-row {
+  grid-template-columns: minmax(0, 1.3fr) 0.55fr 1fr;
+  min-height: 84px;
+  align-items: center;
+  padding: 18px 4px;
+  border-bottom: 1px solid var(--home-border);
+  background: transparent;
+}
+
+.home-page .masterclass-row span,
+.home-page .masterclass-row strong {
+  color: var(--home-muted);
+  font-family: inherit;
+  font-size: 12px;
+}
+
+.home-page .masterclass-row span:first-child {
+  color: var(--home-text);
+  font-size: 15px;
+  font-weight: 560;
+}
+
+.home-page .masterclass-row strong {
+  color: var(--home-accent);
+  text-align: right;
+}
+
+.home-booking {
+  display: flex;
+  min-height: 310px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 48px;
+  padding: clamp(36px, 6vw, 80px);
+  border: 1px solid var(--home-border);
+  border-radius: 20px;
+  background:
+    linear-gradient(110deg, rgba(158, 165, 234, 0.15), transparent 48%),
+    var(--home-surface);
+}
+
+.home-booking h2 {
+  max-width: 15ch;
+}
+
+.home-booking .stargazing-button {
+  flex: none;
+}
+
+.home-page .home-footer {
+  width: min(1180px, calc(100% - 40px));
+  min-height: 110px;
+  margin-top: 64px;
+  border-top: 1px solid var(--home-border);
+  border-radius: 0;
+  color: var(--home-dim);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .home-hero-copy {
+    animation: home-reveal 750ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+
+  .home-hero-media {
+    animation: home-image-reveal 1200ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+}
+
+@keyframes home-reveal {
+  from { opacity: 0; transform: translateY(24px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes home-image-reveal {
+  from { opacity: 0.6; transform: scale(1.025); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@media (max-width: 900px) {
+  .home-hero-copy {
+    width: min(620px, 72%);
+  }
+
+  .home-facts {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .home-facts p:nth-child(2) {
+    border-right: 0;
+  }
+
+  .home-facts p:nth-child(-n + 2) {
+    padding-bottom: 24px;
+  }
+
+  .home-facts p:nth-child(n + 3) {
+    padding-top: 24px;
+    border-top: 1px solid var(--home-border);
+  }
+
+  .home-facts p:nth-child(3) {
+    padding-left: 0;
+  }
+
+  .home-resorts,
+  .home-page .home-masterclass {
+    grid-template-columns: 1fr;
+  }
+
+  .home-story {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .home-page .home-nav {
+    top: 0;
+    width: 100%;
+    height: 60px;
+    border-width: 0 0 1px;
+    border-radius: 0;
+  }
+
+  .home-hero {
+    width: 100%;
+    min-height: calc(100dvh - 60px);
+    margin-top: 0;
+    align-items: flex-end;
+    border-width: 0 0 1px;
+    border-radius: 0;
+  }
+
+  .home-hero-media {
+    object-position: 68% center;
+  }
+
+  .home-hero-shade {
+    background: linear-gradient(0deg, rgba(5, 10, 16, 0.96) 0%, rgba(5, 10, 16, 0.65) 52%, rgba(5, 10, 16, 0.08) 82%);
+  }
+
+  .home-hero-copy {
+    width: 100%;
+    padding: 42px 20px;
+  }
+
+  .home-hero-copy h1 {
+    max-width: 11ch;
+    font-size: clamp(44px, 14vw, 64px);
+  }
+
+  .home-hero-copy > p:not(.stargazing-kicker) {
+    font-size: 15px;
+  }
+
+  .home-facts,
+  .home-resorts,
+  .home-story,
+  .home-booking,
+  .home-page .home-experiences,
+  .home-page .home-masterclass,
+  .home-page .home-footer {
+    width: calc(100% - 32px);
+  }
+
+  .home-facts {
+    grid-template-columns: 1fr;
+    padding: 26px 0;
+  }
+
+  .home-facts p,
+  .home-facts p:first-child,
+  .home-facts p:nth-child(3) {
+    padding: 17px 0;
+    border-top: 0;
+    border-right: 0;
+    border-bottom: 1px solid var(--home-border);
+  }
+
+  .home-facts p:last-child {
+    border-bottom: 0;
+  }
+
+  .home-resorts,
+  .home-page .home-masterclass {
+    min-width: 0;
+    padding: 82px 0;
+  }
+
+  .home-resort-panel .resort-locator {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .home-resort-link {
+    min-height: 82px;
+    padding: 16px;
+  }
+
+  .home-resort-link:hover,
+  .home-resort-link:focus-visible {
+    padding-left: 20px;
+  }
+
+  .home-resort-link > span:last-child {
+    display: none;
+  }
+
+  .home-page .home-experiences {
+    padding: 80px 0;
+  }
+
+  .home-story {
+    min-height: 0;
+  }
+
+  .home-story-image {
+    min-height: 68vw;
+  }
+
+  .home-story-copy {
+    padding: 34px 24px;
+  }
+
+  .home-page .masterclass-row {
+    grid-template-columns: 1fr auto;
+    gap: 8px;
+  }
+
+  .home-page .masterclass-row span:nth-child(2) {
+    grid-column: 1;
+    grid-row: 2;
+  }
+
+  .home-page .masterclass-row strong {
+    grid-column: 2;
+    grid-row: 1 / span 2;
+    max-width: 14ch;
+  }
+
+  .home-booking {
+    min-height: 360px;
+    align-items: flex-start;
+    flex-direction: column;
+    justify-content: center;
+    padding: 32px 24px;
+  }
+
+  .home-booking .stargazing-button {
+    width: 100%;
+  }
+
+  .home-page .home-footer {
+    align-items: flex-start;
+    flex-direction: column;
+    justify-content: center;
+    gap: 8px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .home-page *,
+  .home-page *::before,
+  .home-page *::after {
+    animation: none !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* NASA-inspired editorial direction. Ephemeris branding and content remain original. */
+.home-page {
+  --home-bg: #05070a;
+  --home-surface: #0d1117;
+  --home-surface-soft: #151a22;
+  --home-text: #f5f7fa;
+  --home-muted: #b6bdc8;
+  --home-dim: #7f8997;
+  --home-border: rgba(235, 239, 245, 0.2);
+  --home-accent: #e33d34;
+  overflow: hidden;
+  background: var(--home-bg);
+  color: var(--home-text);
+  color-scheme: dark;
+}
+
+.home-site-header {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  height: 72px;
+  border-bottom: 1px solid var(--home-border);
+  background: rgba(5, 7, 10, 0.96);
+  backdrop-filter: blur(14px);
+}
+
+.home-page .home-nav {
+  position: static;
+  display: flex;
+  width: min(1440px, 100%);
+  height: 100%;
+  align-items: center;
+  justify-content: space-between;
+  gap: 32px;
+  margin: 0 auto;
+  padding: 0 clamp(20px, 4vw, 56px);
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
+}
+
+.home-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--home-text);
+  white-space: nowrap;
+}
+
+.home-brand-mark {
+  display: block;
+  flex: 0 0 auto;
+  width: 66px;
+  height: 44px;
+  overflow: hidden;
+  border-radius: 8px;
+  background: #030609;
+}
+
+.home-brand-mark img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.home-brand > span:last-child {
+  display: grid;
+  line-height: 1;
+}
+
+.home-brand strong {
+  font-size: 18px;
+  font-weight: 720;
+  letter-spacing: -0.03em;
+}
+
+.home-brand small {
+  margin-top: 5px;
+  color: var(--home-dim);
+  font-size: 9px;
+  font-weight: 650;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.home-nav-links {
+  display: flex;
+  height: 100%;
+  align-items: center;
+  gap: clamp(16px, 2vw, 32px);
+}
+
+.home-nav-links a {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  color: var(--home-text);
+  font-size: 13px;
+  font-weight: 650;
+  white-space: nowrap;
+}
+
+.home-nav-links a:hover,
+.home-nav-links a:focus-visible {
+  color: #ff756c;
+}
+
+.home-nav-links .home-nav-cta {
+  min-height: 40px;
+  padding: 0 18px;
+  border: 1px solid var(--home-text);
+}
+
+.home-nav-links .home-nav-cta:hover,
+.home-nav-links .home-nav-cta:focus-visible {
+  border-color: var(--home-accent);
+  background: var(--home-accent);
+  color: var(--home-text);
+}
+
+.home-mobile-nav {
+  display: none;
+  position: relative;
+}
+
+.home-mobile-nav summary {
+  display: grid;
+  width: 44px;
+  height: 44px;
+  place-content: center;
+  gap: 5px;
+  border: 1px solid var(--home-border);
+  list-style: none;
+  cursor: pointer;
+}
+
+.home-mobile-nav summary::-webkit-details-marker {
+  display: none;
+}
+
+.home-mobile-nav summary span {
+  display: block;
+  width: 20px;
+  height: 2px;
+  background: var(--home-text);
+}
+
+.home-mobile-nav-panel {
+  position: absolute;
+  top: calc(100% + 13px);
+  right: 0;
+  display: grid;
+  width: min(320px, calc(100vw - 32px));
+  border: 1px solid var(--home-border);
+  background: #080b10;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.48);
+}
+
+.home-mobile-nav-panel a {
+  min-height: 52px;
+  padding: 0 18px;
+  display: flex;
+  align-items: center;
+  border-bottom: 1px solid var(--home-border);
+  color: var(--home-text);
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.home-mobile-nav-panel a:last-child {
+  border-bottom: 0;
+  background: var(--home-accent);
+}
+
+.home-hero {
+  position: relative;
+  display: flex;
+  width: 100%;
+  min-height: calc(100dvh - 72px);
+  align-items: center;
+  margin: 0;
+  overflow: hidden;
+  border: 0;
+  border-radius: 0;
+  isolation: isolate;
+}
+
+.home-hero-media {
+  z-index: -2;
+  object-fit: cover;
+  object-position: center;
+}
+
+.home-hero-shade {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background:
+    linear-gradient(90deg, rgba(2, 5, 9, 0.94) 0%, rgba(2, 5, 9, 0.68) 38%, rgba(2, 5, 9, 0.04) 72%),
+    linear-gradient(0deg, rgba(2, 5, 9, 0.58), transparent 46%);
+}
+
+.home-hero-copy {
+  width: min(1440px, 100%);
+  padding: clamp(36px, 6vw, 86px) clamp(20px, 7vw, 112px);
+}
+
+.home-eyebrow,
+.home-story-label {
+  color: var(--home-text);
+  font-size: 12px;
+  font-weight: 760;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.home-hero-copy h1 {
+  max-width: 16ch;
+  margin-top: 18px;
+  color: var(--home-text);
+  font-size: clamp(48px, 6.4vw, 92px);
+  font-weight: 650;
+  letter-spacing: -0.065em;
+  line-height: 0.94;
+}
+
+.home-hero-copy > p:not(.home-eyebrow) {
+  max-width: 38ch;
+  margin-top: 24px;
+  color: #d6dbe2;
+  font-size: clamp(16px, 1.45vw, 20px);
+  line-height: 1.5;
+}
+
+.home-hero-action,
+.home-booking-action {
+  display: inline-flex;
+  min-height: 52px;
+  align-items: center;
+  gap: 13px;
+  margin-top: 30px;
+  color: var(--home-text);
+  font-size: 15px;
+  font-weight: 720;
+}
+
+.home-hero-action strong,
+.home-booking-action strong {
+  display: grid;
+  width: 48px;
+  height: 48px;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--home-accent);
+  color: var(--home-text);
+  font-family: Arial, sans-serif;
+  font-size: 22px;
+  transition: transform 180ms ease, background-color 180ms ease;
+}
+
+.home-hero-action:hover strong,
+.home-hero-action:focus-visible strong,
+.home-booking-action:hover strong,
+.home-booking-action:focus-visible strong {
+  transform: translate(2px, -2px);
+  background: #ff564d;
+}
+
+.home-facts {
+  display: grid;
+  width: min(1240px, calc(100% - 48px));
+  grid-template-columns: repeat(4, 1fr);
+  margin: 0 auto;
+  padding: 0;
+  border-bottom: 1px solid var(--home-border);
+}
+
+.home-facts p,
+.home-facts p:first-child,
+.home-facts p:last-child {
+  display: grid;
+  min-width: 0;
+  min-height: 134px;
+  align-content: center;
+  gap: 7px;
+  padding: 24px 30px;
+  border-right: 1px solid var(--home-border);
+}
+
+.home-facts p:first-child {
+  padding-left: 0;
+}
+
+.home-facts p:last-child {
+  border-right: 0;
+}
+
+.home-facts strong {
+  color: var(--home-text);
+  font-size: clamp(24px, 2.5vw, 36px);
+  font-weight: 620;
+  letter-spacing: -0.05em;
+}
+
+.home-facts span {
+  color: var(--home-dim);
+  font-size: 11px;
+  font-weight: 650;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  overflow-wrap: anywhere;
+}
+
+.home-featured,
+.home-resorts,
+.home-masterclass {
+  width: min(1240px, calc(100% - 48px));
+  margin: 0 auto;
+  scroll-margin-top: 84px;
+}
+
+.home-featured {
+  padding: clamp(84px, 10vw, 140px) 0;
+}
+
+.home-featured-heading {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 32px;
+  margin-bottom: 38px;
+}
+
+.home-featured-heading h2,
+.home-section-heading h2,
+.home-image-story h2,
+.home-masterclass h2,
+.home-booking h2 {
+  color: var(--home-text);
+  font-size: clamp(38px, 5vw, 68px);
+  font-weight: 620;
+  letter-spacing: -0.06em;
+  line-height: 0.98;
+}
+
+.home-featured-heading p,
+.home-section-heading p,
+.home-masterclass > div > p,
+.home-story-copy > p:not(.home-story-label),
+.home-booking p {
+  max-width: 54ch;
+  margin-top: 16px;
+  color: var(--home-muted);
+  font-size: 15px;
+  line-height: 1.65;
+}
+
+.home-featured-heading > a {
+  flex: none;
+  padding-bottom: 7px;
+  border-bottom: 2px solid var(--home-accent);
+  color: var(--home-text);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.home-featured-heading > a span {
+  margin-left: 7px;
+  color: #ff655c;
+}
+
+.home-page .experience-carousel-viewport,
+.home-page .experience-feature {
+  min-height: min(68vw, 690px);
+  border: 1px solid var(--home-border);
+  border-radius: 0;
+  background: var(--home-surface);
+  box-shadow: none;
+}
+
+.home-page .experience-slide-shade {
+  background: linear-gradient(0deg, rgba(3, 6, 10, 0.94), rgba(3, 6, 10, 0.04) 70%);
+}
+
+.home-page .experience-slide-copy {
+  padding: clamp(24px, 5vw, 64px);
+}
+
+.home-page .experience-slide-title {
+  max-width: 14ch;
+  color: var(--home-text);
+  font-size: clamp(38px, 5vw, 70px);
+  font-weight: 620;
+  letter-spacing: -0.055em;
+  line-height: 0.98;
+}
+
+.home-page .experience-slide-schedule,
+.home-page .experience-carousel-controls span {
+  color: var(--home-muted);
+}
+
+.home-page .experience-slide-footer > span,
+.home-page .experience-slide-footer strong {
+  color: var(--home-text);
+}
+
+.home-page .experience-carousel-controls {
+  margin-top: 14px;
+}
+
+.home-page .experience-carousel-controls button,
+.home-page .experience-back,
+.home-page .experience-picker button {
+  border: 1px solid var(--home-border);
+  border-radius: 0;
+  background: transparent;
+  color: var(--home-text);
+}
+
+.home-page .experience-carousel-controls button:hover,
+.home-page .experience-back:hover,
+.home-page .experience-picker button:hover,
+.home-page .experience-picker button.active {
+  border-color: var(--home-accent);
+  background: var(--home-accent);
+  color: var(--home-text);
+}
+
+.home-page .experience-feature-copy,
+.home-page .experience-facts div {
+  background: var(--home-surface);
+  color: var(--home-text);
+}
+
+.home-page .experience-feature-copy h3,
+.home-page .experience-feature-copy p,
+.home-page .experience-facts strong {
+  color: var(--home-text);
+}
+
+.home-resorts {
+  display: grid;
+  grid-template-columns: minmax(0, 0.8fr) minmax(440px, 1.2fr);
+  gap: clamp(52px, 9vw, 130px);
+  align-items: start;
+  padding: clamp(100px, 12vw, 170px) 0;
+  border-top: 1px solid var(--home-border);
+}
+
+.home-resort-panel {
+  overflow: hidden;
+  border: 1px solid var(--home-border);
+  border-radius: 0;
+  background: transparent;
+}
+
+.home-resort-panel .resort-locator {
+  margin: 0;
+  padding: 20px;
+  border-bottom: 1px solid var(--home-border);
+  background: var(--home-surface);
+}
+
+.home-page .stargazing-button {
+  min-height: 46px;
+  padding: 0 18px;
+  border: 1px solid var(--home-accent);
+  border-radius: 0;
+  background: var(--home-accent);
+  color: var(--home-text);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.home-page .stargazing-button:hover,
+.home-page .stargazing-button:focus-visible {
+  border-color: #ff564d;
+  background: #ff564d;
+  color: var(--home-text);
+  transform: translateY(-1px);
+}
+
+.home-resort-list {
+  display: grid;
+}
+
+.home-resort-link {
+  display: flex;
+  min-height: 96px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 20px 24px;
+  border-bottom: 1px solid var(--home-border);
+  transition: background-color 180ms ease;
+}
+
+.home-resort-link:last-child {
+  border-bottom: 0;
+}
+
+.home-resort-link:hover,
+.home-resort-link:focus-visible {
+  padding-left: 24px;
+  background: var(--home-surface-soft);
+}
+
+.home-resort-link > span:first-child {
+  display: grid;
+  gap: 5px;
+}
+
+.home-resort-link strong {
+  color: var(--home-text);
+  font-size: 18px;
+  font-weight: 650;
+}
+
+.home-resort-link small {
+  color: var(--home-dim);
+  font-size: 11px;
+}
+
+.home-resort-link > span:last-child {
+  color: #ff655c;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.home-image-story {
+  display: grid;
+  width: 100%;
+  min-height: 720px;
+  grid-template-columns: minmax(0, 1.25fr) minmax(380px, 0.75fr);
+  overflow: hidden;
+  border: 0;
+  border-radius: 0;
+  background: var(--home-surface);
+}
+
+.home-story-image {
+  position: relative;
+  min-height: 560px;
+  overflow: hidden;
+}
+
+.home-story-image img {
+  object-fit: cover;
+}
+
+.home-story-copy {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: clamp(38px, 6vw, 92px);
+}
+
+.home-story-label {
+  margin-bottom: 18px;
+  color: #ff655c;
+}
+
+.home-story-copy dl {
+  display: grid;
+  gap: 0;
+  margin-top: 42px;
+  border-top: 1px solid var(--home-border);
+}
+
+.home-story-copy dl div {
+  display: grid;
+  grid-template-columns: 86px 1fr;
+  gap: 16px;
+  padding: 17px 0;
+  border-bottom: 1px solid var(--home-border);
+}
+
+.home-story-copy dt {
+  color: var(--home-text);
+  font-size: 12px;
+  font-weight: 720;
+}
+
+.home-story-copy dd {
+  margin: 0;
+  color: var(--home-dim);
+  font-size: 11px;
+  line-height: 1.55;
+}
+
+.home-page .home-masterclass {
+  display: grid;
+  grid-template-columns: minmax(0, 0.75fr) minmax(480px, 1.25fr);
+  gap: clamp(52px, 9vw, 130px);
+  padding: clamp(110px, 12vw, 170px) 0;
+  border: 0;
+  background: transparent;
+}
+
+.home-page .masterclass-list {
+  border-top: 1px solid var(--home-border);
+  border-radius: 0;
+}
+
+.home-page .masterclass-row {
+  min-height: 94px;
+  grid-template-columns: minmax(0, 1.3fr) 0.55fr 1fr;
+  align-items: center;
+  padding: 18px 2px;
+  border-bottom: 1px solid var(--home-border);
+  background: transparent;
+}
+
+.home-page .masterclass-row span,
+.home-page .masterclass-row strong {
+  color: var(--home-muted);
+  font-family: inherit;
+  font-size: 12px;
+}
+
+.home-page .masterclass-row span:first-child {
+  color: var(--home-text);
+  font-size: 16px;
+  font-weight: 650;
+}
+
+.home-page .masterclass-row strong {
+  color: #ff655c;
+  text-align: right;
+}
+
+.home-booking {
+  display: flex;
+  width: 100%;
+  min-height: 380px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 56px;
+  margin: 0;
+  padding: clamp(44px, 7vw, 110px) max(24px, calc((100vw - 1240px) / 2));
+  border: 0;
+  border-radius: 0;
+  background: var(--home-accent);
+}
+
+.home-booking h2 {
+  max-width: 14ch;
+}
+
+.home-booking p {
+  color: #f7d7d5;
+}
+
+.home-booking-action {
+  flex: none;
+  margin-top: 0;
+}
+
+.home-booking-action strong {
+  background: var(--home-text);
+  color: var(--home-accent);
+}
+
+.home-booking-action:hover strong,
+.home-booking-action:focus-visible strong {
+  background: #ffffff;
+  color: var(--home-accent);
+}
+
+.home-footer {
+  display: grid;
+  width: min(1240px, calc(100% - 48px));
+  min-height: 280px;
+  grid-template-columns: 1.2fr 0.8fr;
+  align-content: center;
+  gap: 52px;
+  margin: 0 auto;
+  padding: 54px 0;
+  color: var(--home-dim);
+}
+
+.home-footer > div > p {
+  max-width: 42ch;
+  margin-top: 20px;
+  color: var(--home-muted);
+  font-size: 14px;
+}
+
+.home-footer nav {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-content: center;
+  gap: 16px 28px;
+}
+
+.home-footer nav a {
+  color: var(--home-text);
+  font-size: 13px;
+  font-weight: 620;
+}
+
+.home-footer nav a:hover,
+.home-footer nav a:focus-visible {
+  color: #ff655c;
+}
+
+.home-footer > small {
+  grid-column: 1 / -1;
+  padding-top: 24px;
+  border-top: 1px solid var(--home-border);
+  font-size: 10px;
+}
+
+@media (max-width: 960px) {
+  .home-nav-links {
+    gap: 15px;
+  }
+
+  .home-nav-links a {
+    font-size: 12px;
+  }
+
+  .home-resorts,
+  .home-page .home-masterclass,
+  .home-image-story {
+    grid-template-columns: 1fr;
+  }
+
+  .home-story-image {
+    min-height: 64vw;
+  }
+}
+
+@media (max-width: 768px) {
+  .home-site-header {
+    height: 64px;
+  }
+
+  .home-nav {
+    padding: 0 16px;
+  }
+
+  .home-brand-mark {
+    width: 60px;
+    height: 40px;
+  }
+
+  .home-nav-links {
+    display: none;
+  }
+
+  .home-mobile-nav {
+    display: block;
+  }
+
+  .home-hero {
+    min-height: calc(100dvh - 64px);
+    align-items: flex-end;
+  }
+
+  .home-hero-media {
+    object-position: 64% center;
+  }
+
+  .home-hero-shade {
+    background: linear-gradient(0deg, rgba(2, 5, 9, 0.98) 0%, rgba(2, 5, 9, 0.66) 53%, rgba(2, 5, 9, 0.06) 84%);
+  }
+
+  .home-hero-copy {
+    padding: 44px 20px;
+  }
+
+  .home-hero-copy h1 {
+    max-width: 13ch;
+    font-size: clamp(43px, 13vw, 62px);
+  }
+
+  .home-facts,
+  .home-featured,
+  .home-resorts,
+  .home-page .home-masterclass,
+  .home-footer {
+    width: calc(100% - 32px);
+  }
+
+  .home-facts {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .home-facts p,
+  .home-facts p:first-child,
+  .home-facts p:last-child {
+    min-height: 112px;
+    padding: 18px 14px;
+    border-right: 1px solid var(--home-border);
+    border-bottom: 1px solid var(--home-border);
+  }
+
+  .home-facts p:nth-child(2n) {
+    border-right: 0;
+  }
+
+  .home-featured-heading {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .home-page .experience-carousel-viewport,
+  .home-page .experience-feature {
+    min-height: 68dvh;
+  }
+
+  .home-resorts,
+  .home-page .home-masterclass {
+    min-width: 0;
+    padding: 88px 0;
+  }
+
+  .home-resort-panel .resort-locator {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .home-resort-link > span:last-child {
+    display: none;
+  }
+
+  .home-image-story {
+    min-height: 0;
+  }
+
+  .home-story-image {
+    min-height: 76vw;
+  }
+
+  .home-story-copy {
+    padding: 46px 24px 56px;
+  }
+
+  .home-page .masterclass-row {
+    grid-template-columns: 1fr auto;
+    gap: 8px;
+  }
+
+  .home-page .masterclass-row span:nth-child(2) {
+    grid-column: 1;
+    grid-row: 2;
+  }
+
+  .home-page .masterclass-row strong {
+    grid-column: 2;
+    grid-row: 1 / span 2;
+    max-width: 14ch;
+  }
+
+  .home-booking {
+    min-height: 420px;
+    align-items: flex-start;
+    flex-direction: column;
+    justify-content: center;
+    padding: 54px 24px;
+  }
+
+  .home-footer {
+    grid-template-columns: 1fr;
+    gap: 38px;
+  }
+
+  .home-footer > small {
+    grid-column: 1;
+  }
+}
+
+@media (max-width: 460px) {
+  .home-brand small {
+    display: none;
+  }
+
+  .home-facts {
+    grid-template-columns: 1fr;
+  }
+
+  .home-facts p,
+  .home-facts p:first-child,
+  .home-facts p:last-child,
+  .home-facts p:nth-child(2n) {
+    min-height: 96px;
+    border-right: 0;
+  }
+
+  .home-story-copy dl div {
+    grid-template-columns: 68px 1fr;
+  }
+}

@@ -26,9 +26,6 @@ importers:
       '@ephemeris/finance':
         specifier: workspace:*
         version: link:../../packages/finance
-      '@ephemeris/sky':
-        specifier: workspace:*
-        version: link:../../packages/sky
       '@ephemeris/ui':
         specifier: workspace:*
         version: link:../../packages/ui
@@ -112,6 +109,9 @@ importers:
       '@ephemeris/finance':
         specifier: workspace:*
         version: link:../../packages/finance
+      '@ephemeris/sky':
+        specifier: workspace:*
+        version: link:../../packages/sky
       '@ephemeris/ui':
         specifier: workspace:*
         version: link:../../packages/ui

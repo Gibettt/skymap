@@ -14,6 +14,8 @@
     "./commands": "./commands.js",
     "./bookings": "./bookings.js",
     "./package-content": "./package-content.js",
+    "./presence": "./presence.js",
+    "./resort-coverage": "./resort-coverage.js",
     "./scopes": "./scopes.js",
     "./validators/*": "./validators/*.js"
   },

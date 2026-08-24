@@ -3,7 +3,6 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { STATION_DATA } from '@/data/stations';
 import { useAdminLanguage } from '@/context/AdminLanguageContext';
 
 const NAV_ITEMS = [
@@ -103,15 +102,6 @@ const NAV_ITEMS = [
     ),
   },
   {
-    href: '/dashboard/admin/sky-events',
-    label: 'Sky Guide',
-    icon: (
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
-      </svg>
-    ),
-  },
-  {
     href: '/dashboard/admin/alerts',
     label: 'Peringatan',
     icon: (
@@ -143,7 +133,6 @@ const NAV_LABEL_KEYS = {
   '/dashboard/admin/pengguna': 'nav_users',
   '/dashboard/admin/audit': 'nav_audit',
   '/dashboard/admin/jadwal': 'nav_calendar',
-  '/dashboard/admin/sky-events': 'nav_sky_guide',
   '/dashboard/admin/alerts': 'nav_alerts',
   '/dashboard/admin/pengaturan': 'nav_settings',
 };
@@ -341,25 +330,8 @@ export default function AdminSidebar({ alertCount = 0, bookingCount = 0, isOpen 
           )}
         </div>
 
-        {/* Station Status & User */}
+        {/* User */}
         <div className="sidebar-footer">
-          <div className="sidebar-collapsible-text sidebar-section-label" style={{ padding: '0 0 8px' }}>
-            {t('active_stations', 'Stasiun Aktif')}
-          </div>
-          <div className="sidebar-stations">
-            {STATION_DATA.slice(0, 4).map((s, i) => (
-              <div key={i} className="sidebar-station" title={`${s.name} (${s.status}) - Seeing: ${s.seeing}`}>
-                <span className={`station-dot ${s.status}`} />
-                <span className="sidebar-collapsible-text" style={{ flex: 1, fontSize: 11 }}>
-                  {s.name.replace(/^(Obs\.|ESO |SAAO,) ?/, '')}
-                </span>
-                <span className="sidebar-collapsible-text" style={{ fontSize: 10, color: 'var(--text-dim)', fontVariantNumeric: 'tabular-nums' }}>
-                  {s.seeing}
-                </span>
-              </div>
-            ))}
-          </div>
-
           <div className="sidebar-user-box">
             <div
               className="sidebar-avatar-wrap"

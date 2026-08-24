@@ -1117,3 +1117,45 @@ button {
     min-height: 48px;
   }
 }
+.resort-locator {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin: 16px 0;
+}
+
+.resort-locator span { color: var(--color-muted, #a9afb9); font-size: 0.9rem; }
+
+.resort-event-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 18px;
+}
+
+.resort-event-card {
+  display: grid;
+  gap: 10px;
+  padding: 20px;
+  border: 1px solid rgba(255,255,255,.15);
+  background: rgba(255,255,255,.05);
+}
+
+.resort-event-card img { width: 100%; aspect-ratio: 16 / 9; object-fit: cover; }
+.resort-event-card h3, .resort-event-card p { margin: 0; }
+.resort-event-card small { display: block; color: var(--color-muted, #a9afb9); }
+
+.event-reminder {
+  position: fixed;
+  z-index: 50;
+  right: 24px;
+  bottom: 24px;
+  width: min(390px, calc(100vw - 32px));
+  padding: 24px;
+  color: #fff;
+  background: #12151d;
+  border: 1px solid rgba(255,255,255,.22);
+  box-shadow: 0 18px 60px rgba(0,0,0,.45);
+}
+
+.event-reminder > button { float: right; color: inherit; background: none; border: 0; font-size: 1.5rem; cursor: pointer; }

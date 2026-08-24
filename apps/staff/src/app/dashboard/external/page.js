@@ -36,51 +36,36 @@ function statusClass(status) {
   return 'tag-info';
 }
 
-function StarIcon({ size = 20 }) {
-  return (
-    <svg
-      className="external-star-icon"
-      width={size}
-      height={size}
-      viewBox="0 0 24 24"
-      fill="none"
-      aria-hidden="true"
-      focusable="false"
-    >
-      <path
-        d="M12 2.75 14.78 8.4l6.22.9-4.5 4.39 1.06 6.2L12 16.96l-5.56 2.93 1.06-6.2L3 9.3l6.22-.9L12 2.75Z"
-        fill="currentColor"
-        stroke="currentColor"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
-
-function FiveStarProgress({ points, threshold, language }) {
+function ConstellationProgress({ points, threshold, language }) {
   const pointsPerStar = Math.max(Number(threshold) || 10, 0.01);
   const starProgress = Math.min(points / pointsPerStar, 5);
   const completedStars = Math.min(Math.floor(starProgress), 5);
+  const progressPercent = Math.min((starProgress / 5) * 100, 100);
   const ariaLabel = language === 'en'
     ? `${starProgress.toFixed(1)} of 5 stars, ${points.toFixed(1)} points`
     : `${starProgress.toFixed(1)} dari 5 bintang, ${points.toFixed(1)} poin`;
 
   return (
-    <div className="external-five-star-wrap">
-      <div className="external-five-star-meter" role="img" aria-label={ariaLabel}>
-        {[0, 1, 2, 3, 4].map((index) => {
-          const fillPercent = Math.max(0, Math.min(1, starProgress - index)) * 100;
-          return (
-            <span className="external-progress-star" key={index}>
-              <StarIcon size={32} />
-              <span className="external-progress-star-fill" style={{ width: `${fillPercent}%` }}>
-                <StarIcon size={32} />
-              </span>
+    <div className="external-constellation" role="img" aria-label={ariaLabel}>
+      <span className="external-constellation-track" aria-hidden="true">
+        <span style={{ width: `${progressPercent}%` }} />
+      </span>
+      <span className="external-constellation-origin" aria-hidden="true" />
+      {[0, 1, 2, 3, 4].map((index) => {
+        const fillPercent = Math.max(0, Math.min(1, starProgress - index)) * 100;
+        const target = pointsPerStar * (index + 1);
+        return (
+          <span className="external-constellation-milestone" key={index} aria-hidden="true">
+            <span className="external-constellation-star">
+              <span style={{ width: `${fillPercent}%` }} />
             </span>
-          );
-        })}
-      </div>
-      <span className="external-five-star-caption">
+            <span className="external-constellation-target">
+              {target.toFixed(0)} <span>{language === 'en' ? 'pts' : 'poin'}</span>
+            </span>
+          </span>
+        );
+      })}
+      <span className="external-constellation-count">
         {completedStars}/5 {language === 'en' ? 'stars' : 'bintang'}
       </span>
     </div>
@@ -105,7 +90,6 @@ export default function ExternalStaffPage() {
   const starUnits = Number(rewardSummary?.starUnits || 0);
   const threshold = Math.max(Number(rewardSummary?.starThreshold || 10), 0.01);
   const fiveStarTarget = threshold * 5;
-  const progressPercent = Math.min((starUnits / fiveStarTarget) * 100, 100);
 
   useEffect(() => {
     let alive = true;
@@ -164,9 +148,6 @@ export default function ExternalStaffPage() {
         <div className="card-body">
           <div className="external-star-summary">
             <div className="external-star-main">
-              <span className="external-star-icon-wrap">
-                <StarIcon size={28} />
-              </span>
               <div>
                 <div className="kpi-label">{t('dashboard_star_progress')}</div>
                 <div className="external-star-value">
@@ -174,16 +155,17 @@ export default function ExternalStaffPage() {
                 </div>
               </div>
             </div>
-            <FiveStarProgress points={starUnits} threshold={threshold} language={language} />
+            <div className="external-star-reward">
+              <strong>{`$${Number(rewardSummary?.starRewardUsd || 0).toFixed(2)}`}</strong>
+              <span>{language === 'en' ? 'reward this month' : 'reward bulan ini'}</span>
+            </div>
           </div>
-          <div className="progress-bar external-star-progress">
-            <div className="progress-fill" style={{ width: `${progressPercent}%` }} />
-          </div>
-          <div className="external-star-note">
-            <span>
+          <ConstellationProgress points={starUnits} threshold={threshold} language={language} />
+          <div className="external-star-total">
+            <span aria-hidden="true" />
+            <p>
               {Math.min(starUnits, fiveStarTarget).toFixed(1)} / {fiveStarTarget.toFixed(0)} {language === 'en' ? 'points to 5 stars' : 'poin menuju 5 bintang'}
-            </span>
-            <span>{t('dashboard_monthly_reward_amount').replace('{amount}', `$${Number(rewardSummary?.starRewardUsd || 0).toFixed(2)}`)}</span>
+            </p>
           </div>
           {loadError && <div className="external-star-error">{loadError}</div>}
         </div>

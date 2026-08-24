@@ -14,6 +14,7 @@
     "@ephemeris/db": "workspace:*",
     "@ephemeris/events": "workspace:*",
     "@ephemeris/finance": "workspace:*",
+    "@ephemeris/sky": "workspace:*",
     "@ephemeris/ui": "workspace:*",
     "@tanstack/react-query": "^5.101.4",
     "next": "16.2.12",

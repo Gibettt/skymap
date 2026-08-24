@@ -5,7 +5,7 @@ const optionalEmailSchema = z
   .preprocess((value) => (value === '' ? null : value), emailSchema.optional().nullable())
   .transform((value) => value || null);
 
-const bookingStatusSchema = z.enum(['pending', 'active', 'completed', 'cancelled_by_guest', 'cancelled_weather', 'rescheduled']);
+const bookingStatusSchema = z.enum(['pending', 'active', 'completed', 'rejected', 'cancelled_by_guest', 'cancelled_weather', 'rescheduled']);
 const payoutStatusSchema = z.enum(['commission_pending', 'commission_approved', 'commission_paid']);
 const countSchema = z.coerce.number().int().min(0);
 
@@ -24,6 +24,8 @@ const createShape = {
   childCount: countSchema,
   fieldTipIncentiveUsd: moneySchema,
   resortId: uuidSchema.optional().nullable(),
+  skyEventId: uuidSchema.optional().nullable(),
+  observationSpot: cleanTextSchema(120),
   preferredLanguage: cleanTextSchema(40),
   childAges: cleanTextSchema(500),
   specialOccasion: cleanTextSchema(500),

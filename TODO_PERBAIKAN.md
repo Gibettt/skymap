@@ -134,9 +134,9 @@ const { data } = parsed; // ← type-safe & sudah di-sanitize
 - `apps/admin/src/app/api/packages/route.js` — POST
 - `apps/admin/src/app/api/packages/[id]/route.js` — PATCH
 - `apps/admin/src/app/api/payouts/[id]/route.js` — PATCH
-- `apps/admin/src/app/api/sky-events/route.js` — POST
-- `apps/admin/src/app/api/sky-events/[id]/route.js` — PATCH
-- `apps/admin/src/app/api/sky-settings/route.js` — PUT
+- `apps/staff/src/app/api/sky-events/route.js` — POST (staff internal)
+- `apps/staff/src/app/api/sky-events/[id]/route.js` — PATCH (staff internal)
+- `apps/staff/src/app/api/sky-settings/route.js` — PUT (staff internal)
 - `apps/staff/src/app/api/bookings/route.js` — POST
 - `apps/staff/src/app/api/bookings/[id]/route.js` — PATCH
 - `apps/staff/src/app/api/payouts/route.js` — POST
@@ -420,7 +420,7 @@ export const bookingSelectQuery = `
 - `apps/admin/src/app/api/bookings/[id]/route.js`
 - `apps/admin/src/app/api/packages/[id]/route.js`
 - `apps/admin/src/app/api/payouts/[id]/route.js`
-- `apps/admin/src/app/api/sky-events/[id]/route.js`
+- `apps/staff/src/app/api/sky-events/[id]/route.js`
 - `apps/staff/src/app/api/bookings/[id]/route.js`
 
 **Fix — Tambahkan di awal setiap handler `[id]`:**

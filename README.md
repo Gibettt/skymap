@@ -7,8 +7,8 @@ Sistem manajemen Observatorium Nasional / resort stargazing, disusun sebagai **m
 ```
 ├── apps/
 │   ├── landing/   → Domain publik (ephemeris.id): landing page, Sky Guide PWA (/sky), halaman feedback
-│   ├── admin/     → admin.ephemeris.id: dashboard admin (booking, keuangan, pengguna, audit, sky guide)
-│   └── staff/     → staff.ephemeris.id: dashboard staff internal & external (booking, jadwal, observasi)
+│   ├── admin/     → admin.ephemeris.id: dashboard admin (booking, keuangan, pengguna, audit)
+│   └── staff/     → staff.ephemeris.id: dashboard staff internal & external; Sky Guide dikelola staff internal
 ├── packages/
 │   ├── auth/      → @ephemeris/auth: sesi, login/logout handler per role, audit log
 │   ├── db/        → @ephemeris/db: koneksi PostgreSQL (pool, query, transaction)

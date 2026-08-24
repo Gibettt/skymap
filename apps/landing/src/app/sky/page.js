@@ -1,10 +1,17 @@
-import SkyExperience from '@/components/SkyExperience';
+import { redirect } from 'next/navigation';
+  import SkyExperience from '@/components/SkyExperience';
 
-export const metadata = {
-  title: 'Ephemeris Sky Guide',
-  description: 'Peta langit dan kalender astronomi untuk tamu resort.',
-};
+  export const metadata = {
+    title: 'Ephemeris Sky Guide',
+    description: 'Peta langit dan kalender astronomi untuk tamu resort.',
+  };
 
-export default function SkyPage() {
-  return <SkyExperience />;
-}
+  export default function SkyPage() {
+    const stellariumUrl = process.env.STELLARIUM_URL;
+
+    if (stellariumUrl) {
+      redirect(stellariumUrl);
+    }
+
+    return <SkyExperience />;
+  }

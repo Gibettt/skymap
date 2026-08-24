@@ -1,7 +1,6 @@
 import { jsonError } from '@ephemeris/auth';
 import { query } from '@ephemeris/db';
-import { calculatedSkyEvents } from '@ephemeris/sky';
-import { filterPublicEvents } from '@ephemeris/sky';
+import { calculatedSkyEvents, filterPublicEvents, rollingDateWindow } from '@ephemeris/sky';
 
 const FALLBACK_LOCATION = { latitude: -6.2088, longitude: 106.8456 };
 
@@ -16,16 +15,22 @@ function mapEvent(row) {
     sourceName: row.source_name || '',
     sourceUrl: row.source_url || null,
     visibility: row.visibility,
+    resortId: row.resort_id,
+    observationSpot: row.observation_spot || '',
+    capacity: row.capacity,
+    priceOverrideUsd: row.price_override_usd == null ? null : Number(row.price_override_usd),
+    imageUrl: row.image_url || null,
+    status: row.status,
     isPublished: row.is_published,
     calculated: false,
   };
 }
 
-function dates(request) {
+function dates(request, timeZone) {
   const url = new URL(request.url);
-  const today = new Date();
-  const fallbackFrom = today.toISOString().slice(0, 10);
-  const fallbackTo = new Date(today.getTime() + 90 * 86400000).toISOString().slice(0, 10);
+  const window = rollingDateWindow(timeZone);
+  const fallbackFrom = window.from;
+  const fallbackTo = window.to;
   const from = url.searchParams.get('from') || fallbackFrom;
   const to = url.searchParams.get('to') || fallbackTo;
   if (Number.isNaN(new Date(`${from}T00:00:00Z`).getTime()) || Number.isNaN(new Date(`${to}T00:00:00Z`).getTime()) || from > to) {
@@ -34,27 +39,41 @@ function dates(request) {
   return { from, to };
 }
 
-async function location() {
+async function resortForRequest(request) {
   try {
-    const { rows } = await query('SELECT latitude, longitude FROM sky_app_settings WHERE id = true');
-    return rows[0] ? { latitude: Number(rows[0].latitude), longitude: Number(rows[0].longitude) } : FALLBACK_LOCATION;
+    const slug = new URL(request.url).searchParams.get('resort');
+    const { rows } = await query(
+      `SELECT id, latitude, longitude, timezone FROM resorts
+       WHERE status = 'active' AND ($1::text IS NULL OR slug = $1)
+       ORDER BY created_at LIMIT 1`,
+      [slug]
+    );
+    return rows[0] ? {
+      id: rows[0].id,
+      latitude: Number(rows[0].latitude ?? FALLBACK_LOCATION.latitude),
+      longitude: Number(rows[0].longitude ?? FALLBACK_LOCATION.longitude),
+      timezone: rows[0].timezone || 'UTC',
+    } : { ...FALLBACK_LOCATION, id: null, timezone: 'UTC' };
   } catch {
-    return FALLBACK_LOCATION;
+    return { ...FALLBACK_LOCATION, id: null, timezone: 'UTC' };
   }
 }
 
 export async function GET(request) {
   try {
-    const { from, to } = dates(request);
+    const resort = await resortForRequest(request);
+    const { from, to } = dates(request, resort.timezone);
     let rows = [];
     try {
       const result = await query(
         `SELECT * FROM sky_events
          WHERE is_published = true
-           AND starts_at >= $1::timestamptz
-           AND starts_at < ($2::date + INTERVAL '1 day')
+           AND status = 'published'
+           AND resort_id = $1
+           AND (starts_at AT TIME ZONE $2)::date BETWEEN $3::date AND $4::date
+           AND COALESCE(ends_at, starts_at) >= now()
          ORDER BY starts_at ASC`,
-        [from, to]
+        [resort.id, resort.timezone, from, to]
       );
       rows = result.rows;
     } catch {
@@ -62,7 +81,6 @@ export async function GET(request) {
     }
 
     const stored = rows.map(mapEvent);
-    const resort = await location();
     const calculated = calculatedSkyEvents({ from, to, ...resort });
     const events = filterPublicEvents([...stored, ...calculated], from, to)
       .sort((a, b) => new Date(a.startsAt) - new Date(b.startsAt));

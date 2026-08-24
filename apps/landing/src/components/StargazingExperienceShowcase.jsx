@@ -1,7 +1,7 @@
 'use client';
 
 import Image from 'next/image';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { buildLandingExperiences } from '@/lib/packagePresentation';
 
 const experiences = [
@@ -65,8 +65,28 @@ const defaultWhatsappLink = 'https://wa.me/6285179546466?text=Hello%2C%20I%20wou
 
 export default function StargazingExperienceShowcase({ packages = [], contactLink = defaultWhatsappLink }) {
   const displayExperiences = buildLandingExperiences(packages, experiences);
+  const [activeIndex, setActiveIndex] = useState(0);
+  const [slideDirection, setSlideDirection] = useState('next');
   const [selectedIndex, setSelectedIndex] = useState(null);
   const selected = selectedIndex === null ? null : displayExperiences[selectedIndex];
+
+  useEffect(() => {
+    if (displayExperiences.length < 2 || selectedIndex !== null) {
+      return undefined;
+    }
+
+    const interval = window.setInterval(() => {
+      setSlideDirection('next');
+      setActiveIndex((current) => (current + 1) % displayExperiences.length);
+    }, 5000);
+
+    return () => window.clearInterval(interval);
+  }, [displayExperiences.length, selectedIndex]);
+
+  function openExperience(index) {
+    setActiveIndex(index);
+    setSelectedIndex(index);
+  }
 
   if (!displayExperiences.length) {
     return <div className="stargazing-note"><p>No active packages are currently published.</p></div>;
@@ -85,8 +105,6 @@ export default function StargazingExperienceShowcase({ packages = [], contactLin
           </div>
 
           <article className="experience-feature-copy">
-            <div className="flyer-rule" />
-            <p className="stargazing-kicker">Selected experience</p>
             <h3>{selected.title}</h3>
             <p>{selected.description}</p>
 
@@ -122,9 +140,9 @@ export default function StargazingExperienceShowcase({ packages = [], contactLin
           {displayExperiences.map((item, index) => (
             <button
               className={index === selectedIndex ? 'active' : ''}
-              key={item.title}
+              key={`${item.title}-${index}`}
               type="button"
-              onClick={() => setSelectedIndex(index)}
+              onClick={() => openExperience(index)}
             >
               {item.title}
             </button>
@@ -135,22 +153,76 @@ export default function StargazingExperienceShowcase({ packages = [], contactLin
   }
 
   return (
-    <div className="experience-grid">
-      {displayExperiences.map((item, index) => (
-        <button className="experience-card" key={item.title} type="button" onClick={() => setSelectedIndex(index)}>
-          <span className="experience-image">
-            <Image src={item.image} alt={item.title} fill sizes="(max-width: 900px) 100vw, 33vw" />
-          </span>
-          <span className="experience-copy">
-            <span className="flyer-rule" />
-            <span className="experience-title">{item.title}</span>
-            <span className="experience-schedule">{item.schedule}</span>
-            <span>{item.includes}. Location: {item.venue}.</span>
-            <strong>{item.price}</strong>
-            <span className="experience-toggle">Open experience</span>
-          </span>
-        </button>
-      ))}
+    <div
+      aria-label="Stargazing package carousel"
+      aria-roledescription="carousel"
+      className="experience-carousel"
+      role="region"
+    >
+      <div className="experience-carousel-viewport">
+        {displayExperiences.map((item, index) => {
+          const outgoingIndex = slideDirection === 'next'
+            ? (activeIndex - 1 + displayExperiences.length) % displayExperiences.length
+            : (activeIndex + 1) % displayExperiences.length;
+          const slideState = index === activeIndex
+            ? 'is-active'
+            : index === outgoingIndex
+              ? slideDirection === 'next' ? 'is-before' : 'is-after'
+              : slideDirection === 'next' ? 'is-after' : 'is-before';
+
+          return (
+            <button
+              aria-hidden={index !== activeIndex}
+              aria-label={`Open details for ${item.title}`}
+              className={`experience-slide ${slideState}`}
+              key={`${item.title}-${index}`}
+              onClick={() => openExperience(index)}
+              tabIndex={index === activeIndex ? 0 : -1}
+              type="button"
+            >
+              <Image src={item.image} alt="" fill sizes="(max-width: 768px) 100vw, 1400px" />
+              <span className="experience-slide-shade" />
+              <span className="experience-slide-copy">
+                <span className="experience-slide-title">{item.title}</span>
+                <span className="experience-slide-schedule">{item.schedule}</span>
+                <span className="experience-slide-footer">
+                  <strong>{item.price}</strong>
+                  <span>View details</span>
+                </span>
+              </span>
+            </button>
+          );
+        })}
+      </div>
+
+      {displayExperiences.length > 1 && (
+        <div className="experience-carousel-controls">
+          <button
+            aria-label="Show previous experience"
+            type="button"
+            onClick={() => {
+              setSlideDirection('previous');
+              setActiveIndex((current) => (current - 1 + displayExperiences.length) % displayExperiences.length);
+            }}
+          >
+            Previous
+          </button>
+          <p>
+            <strong>{displayExperiences[activeIndex].title}</strong>
+            <span>{activeIndex + 1} of {displayExperiences.length}</span>
+          </p>
+          <button
+            aria-label="Show next experience"
+            type="button"
+            onClick={() => {
+              setSlideDirection('next');
+              setActiveIndex((current) => (current + 1) % displayExperiences.length);
+            }}
+          >
+            Next
+          </button>
+        </div>
+      )}
     </div>
   );
 }

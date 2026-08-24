@@ -1,13 +1,22 @@
 'use client';
 
-import { useState, useMemo } from 'react';
-import { PENGGUNA, ROLE_CONFIG } from '@/data/pengguna';
+import { useCallback, useEffect, useState, useMemo } from 'react';
+import { ROLE_CONFIG } from '@/data/pengguna';
 
 /* ── helpers ── */
 function formatDate(dateStr) {
   if (!dateStr) return '—';
   const d = new Date(dateStr);
   return d.toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' });
+}
+
+function formatLastSeen(dateStr) {
+  if (!dateStr) return 'Belum terdeteksi';
+  const elapsed = Math.max(0, Date.now() - new Date(dateStr).getTime());
+  if (elapsed < 60_000) return 'Baru saja';
+  if (elapsed < 3_600_000) return `${Math.floor(elapsed / 60_000)} menit lalu`;
+  if (elapsed < 86_400_000) return `${Math.floor(elapsed / 3_600_000)} jam lalu`;
+  return formatDate(dateStr);
 }
 
 function getInitials(nama) {
@@ -94,6 +103,37 @@ function StatusBadge({ status }) {
         }}
       />
       {status}
+    </span>
+  );
+}
+
+function PresenceBadge({ presence }) {
+  if (!presence) return <span style={{ color: 'var(--text-dim)', fontSize: 12 }}>Tidak dipantau</span>;
+  const config = {
+    online: { label: 'Online', color: 'var(--emerald)', background: 'var(--emerald-muted)' },
+    idle: { label: 'Idle', color: 'var(--amber)', background: 'var(--amber-muted)' },
+    offline: { label: 'Offline', color: 'var(--text-dim)', background: 'var(--bg-elevated)' },
+  }[presence];
+
+  return (
+    <span
+      style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: 6,
+        padding: '3px 9px',
+        border: `1px solid ${config.color}`,
+        background: config.background,
+        color: config.color,
+        fontSize: 10,
+        fontWeight: 700,
+        letterSpacing: '0.08em',
+        textTransform: 'uppercase',
+        whiteSpace: 'nowrap',
+      }}
+    >
+      <span style={{ width: 6, height: 6, borderRadius: '50%', background: config.color }} />
+      {config.label}
     </span>
   );
 }
@@ -186,16 +226,20 @@ const EMPTY_FORM = {
   status: 'Aktif',
   warna: '#0891b2',
   avatar: '',
+  resortId: '',
 };
 
 /* ════════════════════════════════════════════
    MAIN PAGE
    ════════════════════════════════════════════ */
 export default function PenggunaPage() {
-  const [users, setUsers] = useState(PENGGUNA);
+  const [users, setUsers] = useState([]);
+  const [resorts, setResorts] = useState([]);
   const [search, setSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState('Semua');
   const [statusFilter, setStatusFilter] = useState('Semua');
+  const [selectedResort, setSelectedResort] = useState('all');
+  const [presenceConnection, setPresenceConnection] = useState('polling');
 
   // modal state
   const [modalOpen, setModalOpen] = useState(false);
@@ -209,6 +253,85 @@ export default function PenggunaPage() {
 
   // toasts
   const [toasts, setToasts] = useState([]);
+
+  const loadUsers = useCallback(async () => {
+    const response = await fetch('/api/users', { cache: 'no-store' });
+    if (!response.ok) throw new Error('Gagal memuat pengguna');
+    const data = await response.json();
+    setResorts(data.resorts || []);
+    setUsers((data.users || []).map((user) => ({
+      id: user.id,
+      nama: user.name,
+      email: user.email,
+      phone: user.phone || '',
+      role: user.role[0].toUpperCase() + user.role.slice(1),
+      status: user.status === 'active' ? 'Aktif' : 'Nonaktif',
+      resortId: user.resort_id || '',
+      institusi: user.resort_name || 'Ephemeris',
+      kota: user.resort_location || '-',
+      createdAt: user.created_at,
+      presence: user.presence,
+      lastSeenAt: user.last_seen_at,
+      totalBooking: user.total_booking || 0,
+    })));
+  }, []);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      loadUsers().catch(() => setToasts((prev) => [...prev, {
+        id: Date.now(), message: 'Gagal memuat data pengguna', type: 'error',
+      }]));
+    }, 0);
+    return () => clearTimeout(timer);
+  }, [loadUsers]);
+
+  useEffect(() => {
+    let pollInterval;
+    const startPolling = () => {
+      if (pollInterval) return;
+      pollInterval = window.setInterval(() => loadUsers().catch(() => {}), 15_000);
+    };
+
+    if (!('EventSource' in window)) {
+      startPolling();
+      return () => window.clearInterval(pollInterval);
+    }
+
+    const source = new EventSource('/api/presence/stream');
+    source.onopen = () => {
+      setPresenceConnection('live');
+      if (pollInterval) {
+        window.clearInterval(pollInterval);
+        pollInterval = undefined;
+      }
+    };
+    source.addEventListener('presence', (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        if (!Array.isArray(data.users)) return;
+        const presenceById = new Map(data.users.map((user) => [user.id, user]));
+        setUsers((current) => current.map((user) => {
+          const update = presenceById.get(user.id);
+          return update ? {
+            ...user,
+            presence: update.presence,
+            lastSeenAt: update.last_seen_at,
+          } : user;
+        }));
+      } catch {
+        // Abaikan event yang tidak lengkap dan tunggu snapshot berikutnya.
+      }
+    });
+    source.onerror = () => {
+      setPresenceConnection('polling');
+      startPolling();
+    };
+
+    return () => {
+      source.close();
+      if (pollInterval) window.clearInterval(pollInterval);
+    };
+  }, [loadUsers]);
 
   /* ── toast helpers ── */
   const addToast = (message, type = 'success') => {
@@ -229,6 +352,25 @@ export default function PenggunaPage() {
     [users]
   );
 
+  const resortPresence = useMemo(() => {
+    const staff = users.filter((user) => ['Internal', 'External'].includes(user.role));
+    const summarize = (members) => ({
+      total: members.length,
+      online: members.filter((user) => user.presence === 'online').length,
+      idle: members.filter((user) => user.presence === 'idle').length,
+      offline: members.filter((user) => user.presence === 'offline').length,
+      activeInternal: members.filter((user) => user.role === 'Internal' && user.status === 'Aktif').length,
+      activeExternal: members.filter((user) => user.role === 'External' && user.status === 'Aktif').length,
+    });
+    return [
+      { id: 'all', name: 'Semua Resort', ...summarize(staff) },
+      ...resorts.map((resort) => ({
+        ...resort,
+        ...summarize(staff.filter((user) => user.resortId === resort.id)),
+      })),
+    ];
+  }, [resorts, users]);
+
   /* ── filtering ── */
   const filtered = useMemo(() => {
     return users.filter((u) => {
@@ -241,9 +383,10 @@ export default function PenggunaPage() {
         u.kota.toLowerCase().includes(q);
       const matchRole = roleFilter === 'Semua' || u.role === roleFilter;
       const matchStatus = statusFilter === 'Semua' || u.status === statusFilter;
-      return matchSearch && matchRole && matchStatus;
+      const matchResort = selectedResort === 'all' || u.resortId === selectedResort;
+      return matchSearch && matchRole && matchStatus && matchResort;
     });
-  }, [users, search, roleFilter, statusFilter]);
+  }, [users, search, roleFilter, statusFilter, selectedResort]);
 
   /* ── form handlers ── */
   const openAdd = () => {
@@ -267,6 +410,7 @@ export default function PenggunaPage() {
       status: user.status,
       warna: user.warna || '#0891b2',
       avatar: user.avatar || '',
+      resortId: user.resortId || '',
     });
     setFormErrors({});
     setModalOpen(true);
@@ -284,41 +428,36 @@ export default function PenggunaPage() {
     if (!form.email.trim()) errs.email = 'Email wajib diisi';
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email))
       errs.email = 'Format email tidak valid';
-    if (!form.institusi.trim()) errs.institusi = 'Institusi wajib diisi';
+    if (form.role !== 'Admin' && !form.resortId) errs.resortId = 'Resort wajib dipilih untuk staff';
     setFormErrors(errs);
     return Object.keys(errs).length === 0;
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!validateForm()) return;
-    const roleWarna = { Admin: '#e51c1c', Internal: '#0891b2', External: '#7c3aed' };
     if (modalMode === 'add') {
-      const newUser = {
-        id: Math.max(...users.map((u) => u.id)) + 1,
-        ...form,
-        avatar: form.avatar || getInitials(form.nama),
-        warna: roleWarna[form.role],
-        createdAt: new Date().toISOString().split('T')[0],
-        lastLogin: null,
-        totalBooking: 0,
-      };
-      setUsers((prev) => [newUser, ...prev]);
-      addToast(`Pengguna "${form.nama}" berhasil ditambahkan`, 'success');
-    } else {
-      setUsers((prev) =>
-        prev.map((u) =>
-          u.id === editingUser.id
-            ? {
-                ...u,
-                ...form,
-                warna: roleWarna[form.role],
-                avatar: form.avatar || getInitials(form.nama),
-              }
-            : u
-        )
-      );
-      addToast(`Data "${form.nama}" berhasil diperbarui`, 'success');
+      addToast('Pembuatan akun baru belum tersedia di halaman ini', 'error');
+      return;
     }
+    const response = await fetch(`/api/users/${editingUser.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name: form.nama,
+        email: form.email,
+        phone: form.phone || null,
+        role: form.role.toLowerCase(),
+        status: form.status === 'Aktif' ? 'active' : 'inactive',
+        resortId: form.role === 'Admin' ? null : form.resortId,
+      }),
+    });
+    const data = await response.json();
+    if (!response.ok) {
+      addToast(data.error || 'Gagal memperbarui pengguna', 'error');
+      return;
+    }
+    await loadUsers();
+    addToast(`Data "${form.nama}" berhasil diperbarui`, 'success');
     closeModal();
   };
 
@@ -382,10 +521,6 @@ export default function PenggunaPage() {
               Kelola akun, peran, dan hak akses seluruh pengguna sistem Ephemeris.
             </p>
           </div>
-          <button className="btn btn-primary" onClick={openAdd} style={{ flexShrink: 0 }}>
-            <span style={{ fontSize: 16 }}>+</span>
-            Tambah Pengguna
-          </button>
         </div>
 
         {/* ── KPI Row ── */}
@@ -468,6 +603,79 @@ export default function PenggunaPage() {
             </div>
           </div>
         </div>
+
+        <section className="card" style={{ marginBottom: 24 }} aria-labelledby="presence-title">
+          <div className="card-header">
+            <div>
+              <span className="card-title" id="presence-title">Presence Staff per Resort</span>
+              <div style={{ marginTop: 3, color: 'var(--text-muted)', fontSize: 11 }}>
+                Pilih resort untuk memfilter staff internal dan external.
+              </div>
+            </div>
+            <span
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 6,
+                color: presenceConnection === 'live' ? 'var(--emerald)' : 'var(--amber)',
+                fontSize: 10,
+                fontWeight: 700,
+                letterSpacing: '0.08em',
+                textTransform: 'uppercase',
+              }}
+            >
+              <span style={{ width: 7, height: 7, borderRadius: '50%', background: 'currentColor' }} />
+              {presenceConnection === 'live' ? 'Realtime tersambung' : 'Mode polling'}
+            </span>
+          </div>
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+              gap: 10,
+              padding: 16,
+            }}
+          >
+            {resortPresence.map((resort) => {
+              const selected = selectedResort === resort.id;
+              return (
+                <button
+                  aria-pressed={selected}
+                  key={resort.id}
+                  onClick={() => setSelectedResort(resort.id)}
+                  type="button"
+                  style={{
+                    minHeight: 94,
+                    padding: '14px 16px',
+                    border: selected ? '1px solid var(--accent)' : '1px solid var(--border)',
+                    background: selected ? 'var(--accent-muted)' : 'var(--bg-primary)',
+                    color: 'var(--text-primary)',
+                    cursor: 'pointer',
+                    textAlign: 'left',
+                  }}
+                >
+                  <span style={{ display: 'block', fontSize: 13, fontWeight: 700 }}>
+                    {resort.name}
+                  </span>
+                  <span style={{ display: 'block', marginTop: 3, color: 'var(--text-dim)', fontSize: 10 }}>
+                    {resort.total} staff terdaftar
+                  </span>
+                  {resort.id !== 'all' && (
+                    <span style={{ display: 'block', marginTop: 7, color: resort.activeInternal > 0 && resort.activeExternal > 0 ? 'var(--emerald)' : 'var(--amber)', fontSize: 10, fontWeight: 700 }}>
+                      {resort.activeInternal} Internal · {resort.activeExternal} External
+                      {' · '}{resort.activeInternal > 0 && resort.activeExternal > 0 ? 'Coverage Ready' : 'Butuh Staff'}
+                    </span>
+                  )}
+                  <span style={{ display: 'flex', flexWrap: 'wrap', gap: 10, marginTop: 12, fontSize: 10 }}>
+                    <span style={{ color: 'var(--emerald)' }}>● {resort.online} Online</span>
+                    <span style={{ color: 'var(--amber)' }}>● {resort.idle} Idle</span>
+                    <span style={{ color: 'var(--text-dim)' }}>● {resort.offline} Offline</span>
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </section>
 
         {/* ── Search + Filters ── */}
         <div className="card" style={{ marginBottom: 2 }}>
@@ -584,16 +792,17 @@ export default function PenggunaPage() {
                   <th>Nama &amp; Email</th>
                   <th>Institusi</th>
                   <th>Peran</th>
-                  <th>Status</th>
+                  <th>Akun</th>
+                  <th>Presence</th>
                   <th style={{ textAlign: 'center' }}>Booking</th>
-                  <th>Last Login</th>
+                  <th>Terakhir Aktif</th>
                   <th style={{ textAlign: 'center' }}>Aksi</th>
                 </tr>
               </thead>
               <tbody>
                 {filtered.length === 0 ? (
                   <tr>
-                    <td colSpan={8}>
+                    <td colSpan={9}>
                       <div className="empty-state">
                         <h3>Tidak Ada Pengguna</h3>
                         <p>
@@ -659,6 +868,11 @@ export default function PenggunaPage() {
                         <StatusBadge status={user.status} />
                       </td>
 
+                      {/* Realtime Presence */}
+                      <td>
+                        <PresenceBadge presence={user.presence} />
+                      </td>
+
                       {/* Total Booking */}
                       <td style={{ textAlign: 'center' }}>
                         <div
@@ -685,14 +899,16 @@ export default function PenggunaPage() {
                         </div>
                       </td>
 
-                      {/* Last Login */}
+                      {/* Last Seen */}
                       <td style={{ color: 'var(--text-muted)', fontSize: 13 }}>
-                        {user.lastLogin ? (
+                        {user.lastSeenAt ? (
                           <div style={{ color: 'var(--text-secondary)', fontWeight: 500 }}>
-                            {formatDate(user.lastLogin)}
+                            {formatLastSeen(user.lastSeenAt)}
                           </div>
                         ) : (
-                          <span style={{ color: 'var(--text-dim)', fontSize: 12 }}>Belum pernah</span>
+                          <span style={{ color: 'var(--text-dim)', fontSize: 12 }}>
+                            {user.role === 'Admin' ? 'Tidak dipantau' : 'Belum terdeteksi'}
+                          </span>
                         )}
                       </td>
 
@@ -713,7 +929,7 @@ export default function PenggunaPage() {
                             hoverBg="var(--accent-muted)"
                             hoverBorder="var(--accent)"
                             hoverColor="var(--accent)"
-                            onClick={() => setDeleteTarget(user)}
+                            onClick={() => addToast('Nonaktifkan akun melalui Edit Pengguna agar riwayat booking tetap aman', 'info')}
                           />
                         </div>
                       </td>
@@ -879,23 +1095,30 @@ export default function PenggunaPage() {
                   />
                 </div>
 
-                {/* Institusi */}
+                {/* Resort assignment */}
                 <div className="input-group">
                   <label className="input-label">
-                    Institusi <span style={{ color: 'var(--accent)' }}>*</span>
+                    Resort Staff {form.role !== 'Admin' && <span style={{ color: 'var(--accent)' }}>*</span>}
                   </label>
-                  <input
+                  <select
                     className="input"
-                    placeholder="Nama institusi atau lembaga"
-                    value={form.institusi}
+                    value={form.resortId}
+                    disabled={form.role === 'Admin'}
                     onChange={(e) => {
-                      setForm((f) => ({ ...f, institusi: e.target.value }));
-                      setFormErrors((fe) => ({ ...fe, institusi: '' }));
+                      setForm((f) => ({ ...f, resortId: e.target.value }));
+                      setFormErrors((fe) => ({ ...fe, resortId: '' }));
                     }}
-                    style={{ borderColor: formErrors.institusi ? 'var(--accent)' : undefined }}
-                  />
-                  {formErrors.institusi && (
-                    <span style={{ fontSize: 11, color: 'var(--accent)' }}>{formErrors.institusi}</span>
+                    style={{ borderColor: formErrors.resortId ? 'var(--accent)' : undefined }}
+                  >
+                    <option value="">Pilih resort</option>
+                    {resorts.map((resort) => (
+                      <option value={resort.id} key={resort.id}>
+                        {resort.name}{resort.status === 'inactive' ? ' (Persiapan)' : ''}
+                      </option>
+                    ))}
+                  </select>
+                  {formErrors.resortId && (
+                    <span style={{ fontSize: 11, color: 'var(--accent)' }}>{formErrors.resortId}</span>
                   )}
                 </div>
 
@@ -904,9 +1127,9 @@ export default function PenggunaPage() {
                   <label className="input-label">Kota</label>
                   <input
                     className="input"
-                    placeholder="Kota domisili"
+                    placeholder="Mengikuti resort"
                     value={form.kota}
-                    onChange={(e) => setForm((f) => ({ ...f, kota: e.target.value }))}
+                    readOnly
                   />
                 </div>
               </div>

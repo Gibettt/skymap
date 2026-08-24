@@ -1,13 +1,14 @@
 import { assertSameOrigin, ApiError, jsonError, parseJsonBody, requireUser, writeAudit } from '@ephemeris/auth';
 import { transaction, refreshAfterBookingChange } from '@ephemeris/db';
 import { bookingSelectQuery, cleanText } from '@ephemeris/db/helpers';
+import { assignedInternalAfterUpdate } from '@ephemeris/db/bookings';
 import { updateBookingSchema } from '@ephemeris/db/validators/booking';
 import { uuidSchema } from '@ephemeris/db/validators/common';
 import { canManageBooking } from '@ephemeris/db/scopes';
 import { emit, EventTypes } from '@ephemeris/events';
 import { calculateBookingTotals } from '@ephemeris/finance';
 
-const INTERNAL_STATUS_UPDATES = new Set(['pending', 'active', 'completed', 'cancelled_by_guest', 'cancelled_weather']);
+const INTERNAL_STATUS_UPDATES = new Set(['pending', 'active', 'completed', 'rejected', 'cancelled_by_guest', 'cancelled_weather']);
 
 export async function PATCH(request, { params }) {
   try {
@@ -55,6 +56,23 @@ export async function PATCH(request, { params }) {
         isChargeable = pkg.rows[0].is_chargeable;
       }
 
+      const nextSkyEventId = body.skyEventId === undefined ? before.sky_event_id : body.skyEventId;
+      if (nextSkyEventId) {
+        const eventResult = await client.query(
+          `SELECT price_override_usd FROM sky_events
+           WHERE id = $1 AND resort_id = $2 AND status = 'published'
+             AND (package_id IS NULL OR package_id = $3)`,
+          [nextSkyEventId, before.resort_id, packageId]
+        );
+        if (!eventResult.rows[0]) throw new ApiError(400, 'Sky event is not available for this resort and package');
+        if (eventResult.rows[0].price_override_usd != null) {
+          adultPriceUsd = Number(eventResult.rows[0].price_override_usd);
+          childPriceUsd = adultPriceUsd * 0.5;
+          newBookedAdultPriceUsd = adultPriceUsd;
+          newBookedChildPriceUsd = childPriceUsd;
+        }
+      }
+
       const staffResult = await client.query('SELECT role FROM users WHERE id = $1', [before.staff_id]);
       const staffRole = staffResult.rows[0]?.role || user.role;
 
@@ -74,6 +92,12 @@ export async function PATCH(request, { params }) {
       });
 
       const nextStatus = body.status ?? before.status;
+      const assignedInternalId = assignedInternalAfterUpdate({
+        previousAssignedInternalId: before.assigned_internal_id,
+        previousStatus: before.status,
+        nextStatus,
+        internalUserId: user.id,
+      });
       const signedByGuest = Boolean(body.signedByGuest ?? before.signed_by_guest);
       const addOns = body.addOns === undefined ? null : body.addOns;
       const guestEmail = body.guestEmail === undefined ? before.guest_email : cleanText(body.guestEmail);
@@ -142,7 +166,10 @@ export async function PATCH(request, { params }) {
           tip_recipient = $48,
           tip_notes = $49,
           payout_status = $50,
-          updated_by = $51
+          updated_by = $51,
+          assigned_internal_id = $52,
+          sky_event_id = $53,
+          observation_spot = $54
          WHERE id = $1
          RETURNING *`,
         [
@@ -197,6 +224,9 @@ export async function PATCH(request, { params }) {
           body.tipNotes === undefined ? before.tip_notes : cleanText(body.tipNotes),
           user.role === 'admin' ? (body.payoutStatus ?? before.payout_status) : before.payout_status,
           user.id,
+          assignedInternalId,
+          nextSkyEventId,
+          body.observationSpot === undefined ? before.observation_spot : cleanText(body.observationSpot, 120),
         ]
       );
 

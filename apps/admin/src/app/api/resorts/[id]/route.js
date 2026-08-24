@@ -1,10 +1,33 @@
-import { assertSameOrigin, jsonError, parseJsonBody, requireUser, writeAudit } from '@ephemeris/auth';
+import { ApiError, assertSameOrigin, jsonError, parseJsonBody, requireUser, writeAudit } from '@ephemeris/auth';
 import { query, transaction } from '@ephemeris/db';
 import { uuidSchema } from '@ephemeris/db/validators/common';
 import { updateResortSchema } from '@ephemeris/db/validators/resort';
 
 function slugify(value) {
   return String(value).toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+}
+
+async function getOperationalState(client, resortId) {
+  const { rows } = await client.query(`
+    SELECT
+      COUNT(*) FILTER (WHERE role = 'internal' AND status = 'active')::int AS active_internal_count,
+      COUNT(*) FILTER (WHERE role = 'external' AND status = 'active')::int AS active_external_count,
+      (SELECT COUNT(*)::int FROM bookings
+        WHERE resort_id = $1 AND status IN ('pending', 'active', 'rescheduled')) AS open_bookings_count
+    FROM users
+    WHERE resort_id = $1
+  `, [resortId]);
+  return rows[0];
+}
+
+function assertStatusTransition(currentStatus, nextStatus, state) {
+  if (currentStatus !== 'active' && nextStatus === 'active'
+    && (!state.active_internal_count || !state.active_external_count)) {
+    throw new ApiError(409, 'Resort membutuhkan minimal 1 staff Internal dan 1 staff External aktif sebelum diaktifkan.');
+  }
+  if (currentStatus === 'active' && nextStatus === 'inactive' && state.open_bookings_count > 0) {
+    throw new ApiError(409, 'Resort masih memiliki booking terbuka. Selesaikan atau pindahkan booking sebelum menonaktifkan resort.');
+  }
 }
 
 export async function GET(request, { params }) {
@@ -61,6 +84,10 @@ export async function PATCH(request, { params }) {
       if (!current) return null;
       const body = parsed.data;
       const name = body.name ?? current.name;
+      const nextStatus = body.status ?? current.status;
+      if (nextStatus !== current.status) {
+        assertStatusTransition(current.status, nextStatus, await getOperationalState(client, id));
+      }
       const { rows } = await client.query(
         `UPDATE resorts SET
            name=$2, code=$3, slug=$4, location=$5, timezone=$6, contact_name=$7,
@@ -72,7 +99,7 @@ export async function PATCH(request, { params }) {
          body.contactName ?? current.contact_name, body.contactPhone ?? current.contact_phone,
          body.contactEmail === undefined ? current.contact_email : body.contactEmail,
          body.whatsappNumber ?? current.whatsapp_number, body.observationSpots ?? current.observation_spots,
-         body.latitude ?? current.latitude, body.longitude ?? current.longitude, body.status ?? current.status]
+         body.latitude ?? current.latitude, body.longitude ?? current.longitude, nextStatus]
       );
       await writeAudit(client, {
         actorId: user.id, action: 'resort.update', entityType: 'resort', entityId: id,
@@ -85,6 +112,9 @@ export async function PATCH(request, { params }) {
   } catch (error) {
     if (error.code === '23505') {
       return Response.json({ error: 'Kode resort sudah digunakan oleh resort lain.' }, { status: 409 });
+    }
+    if (error.code === '23514') {
+      return Response.json({ error: 'Perubahan status resort ditolak karena coverage staff atau booking terbuka.' }, { status: 409 });
     }
     return jsonError(error);
   }
@@ -99,6 +129,7 @@ export async function DELETE(request, { params }) {
     const result = await transaction(async (client) => {
       const beforeResult = await client.query('SELECT * FROM resorts WHERE id = $1 FOR UPDATE', [id]);
       if (!beforeResult.rows[0]) return null;
+      assertStatusTransition(beforeResult.rows[0].status, 'inactive', await getOperationalState(client, id));
       const { rows } = await client.query("UPDATE resorts SET status = 'inactive' WHERE id = $1 RETURNING *", [id]);
       await writeAudit(client, {
         actorId: user.id, action: 'resort.deactivate', entityType: 'resort', entityId: id,
@@ -109,6 +140,9 @@ export async function DELETE(request, { params }) {
     if (!result) return Response.json({ error: 'Resort tidak ditemukan.' }, { status: 404 });
     return Response.json({ success: true, resort: result, message: 'Resort dinonaktifkan.' });
   } catch (error) {
+    if (error.code === '23514') {
+      return Response.json({ error: 'Resort masih memiliki booking terbuka dan belum dapat dinonaktifkan.' }, { status: 409 });
+    }
     return jsonError(error);
   }
 }

@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { useResortsQuery, queryKeys } from '@/lib/apiQueries';
@@ -17,7 +17,7 @@ const EMPTY_RESORT = {
   contactPhone: '',
   contactEmail: '',
   whatsappNumber: '',
-  status: 'active',
+  status: 'inactive',
 };
 
 const TIMEZONES = [
@@ -30,6 +30,36 @@ const TIMEZONES = [
   'Asia/Dubai',
   'UTC',
 ];
+
+function hasStaffCoverage(resort) {
+  return Number(resort.active_internal_count) > 0 && Number(resort.active_external_count) > 0;
+}
+
+function CoverageBadge({ resort }) {
+  const ready = hasStaffCoverage(resort);
+  const label = ready
+    ? (resort.status === 'active' ? 'Coverage Ready' : 'Siap Diaktifkan')
+    : 'Butuh Staff';
+  const color = ready ? 'var(--emerald)' : 'var(--amber)';
+  return (
+    <span
+      title={ready ? 'Minimal 1 Internal dan 1 External aktif tersedia' : 'Lengkapi staff Internal dan External aktif'}
+      style={{
+        display: 'inline-flex',
+        marginTop: 6,
+        padding: '3px 7px',
+        border: `1px solid ${color}`,
+        color,
+        fontSize: 9,
+        fontWeight: 800,
+        letterSpacing: '0.06em',
+        textTransform: 'uppercase',
+      }}
+    >
+      {label}
+    </span>
+  );
+}
 
 export default function ResortsPage() {
   const queryClient = useQueryClient();
@@ -47,6 +77,7 @@ export default function ResortsPage() {
 
   const [deleteModal, setDeleteModal] = useState(null);
   const [deleting, setDeleting] = useState(false);
+  const [staffModal, setStaffModal] = useState(null);
 
   const showToast = useCallback((msg, type = 'success') => {
     setToast({ msg, type });
@@ -58,10 +89,11 @@ export default function ResortsPage() {
     return resorts.reduce((acc, r) => {
       acc.total += 1;
       acc.active += r.status === 'active' ? 1 : 0;
-      acc.staff += Number(r.active_staff_count || 0);
+      acc.ready += hasStaffCoverage(r) ? 1 : 0;
+      acc.needsStaff += hasStaffCoverage(r) ? 0 : 1;
       acc.bookings += Number(r.total_bookings_count || 0);
       return acc;
-    }, { total: 0, active: 0, staff: 0, bookings: 0 });
+    }, { total: 0, active: 0, ready: 0, needsStaff: 0, bookings: 0 });
   }, [resorts]);
 
   const filtered = useMemo(() => {
@@ -196,7 +228,8 @@ export default function ResortsPage() {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16, marginBottom: 22 }}>
         <KpiCard label="Total Resort Mitra" value={stats.total} />
         <KpiCard label="Resort Aktif" value={stats.active} accent="#059669" />
-        <KpiCard label="Total Staf External" value={stats.staff} accent="#7c3aed" />
+        <KpiCard label="Coverage Ready" value={stats.ready} accent="#059669" />
+        <KpiCard label="Butuh Staff" value={stats.needsStaff} accent="#d97706" />
         <KpiCard label="Total Booking Resort" value={stats.bookings} accent="#0891b2" />
       </div>
 
@@ -324,13 +357,22 @@ export default function ResortsPage() {
                     <span style={{ fontSize: 11, color: 'var(--text-dim)' }}>{r.contact_phone || '-'}</span>
                   </td>
                   <td style={{ textAlign: 'center' }}>
-                    <span style={{ fontWeight: 700, color: '#7c3aed' }}>{r.active_staff_count || 0}</span> Staf<br />
-                    <span style={{ fontSize: 11, color: 'var(--text-dim)' }}>{r.total_bookings_count || 0} Booking</span>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--cyan)' }}>
+                      {r.active_internal_count || 0} Internal
+                    </div>
+                    <div style={{ marginTop: 2, fontSize: 11, fontWeight: 700, color: 'var(--violet)' }}>
+                      {r.active_external_count || 0} External
+                    </div>
+                    <div style={{ marginTop: 5, fontSize: 10, color: 'var(--text-dim)' }}>
+                      {r.open_bookings_count || 0} terbuka · {r.total_bookings_count || 0} total
+                    </div>
                   </td>
                   <td>
                     <span className={`tag ${r.status === 'active' ? 'tag-completed' : 'tag-cancelled'}`}>
                       {r.status === 'active' ? 'Aktif' : 'Nonaktif'}
                     </span>
+                    <br />
+                    <CoverageBadge resort={r} />
                   </td>
                   <td style={{ textAlign: 'center' }}>
                     <div style={{ display: 'flex', gap: 6, justifyContent: 'center', flexWrap: 'wrap' }}>
@@ -345,12 +387,26 @@ export default function ResortsPage() {
                       <button
                         type="button"
                         className="btn btn-secondary btn-sm"
+                        onClick={() => setStaffModal(r)}
+                        title={`Kelola staff ${r.name}`}
+                        style={{ color: 'var(--cyan)', borderColor: 'rgba(8, 145, 178, 0.35)' }}
+                      >
+                        Kelola Staff
+                      </button>
+                      <button
+                        type="button"
+                        className="btn btn-secondary btn-sm"
                         style={{
                           color: r.status === 'active' ? 'var(--accent)' : 'var(--emerald)',
                           borderColor: r.status === 'active' ? 'rgba(220, 38, 38, 0.3)' : 'rgba(5, 150, 105, 0.3)',
                         }}
                         onClick={() => handleToggleStatus(r)}
-                        title={r.status === 'active' ? 'Nonaktifkan Resort' : 'Aktifkan Resort'}
+                        disabled={r.status !== 'active' && !hasStaffCoverage(r)}
+                        title={r.status === 'active'
+                          ? 'Nonaktifkan Resort'
+                          : hasStaffCoverage(r)
+                            ? 'Aktifkan Resort'
+                            : 'Tambahkan minimal 1 Internal dan 1 External aktif'}
                       >
                         {r.status === 'active' ? 'Nonaktifkan' : 'Aktifkan'}
                       </button>
@@ -401,6 +457,15 @@ export default function ResortsPage() {
         />
       )}
 
+      {staffModal && (
+        <StaffManagementModal
+          resort={staffModal}
+          onClose={() => setStaffModal(null)}
+          onChanged={() => queryClient.invalidateQueries({ queryKey: queryKeys.resorts.all })}
+          showToast={showToast}
+        />
+      )}
+
       {/* Toast Notification */}
       {toast && (
         <div className="toast-container">
@@ -418,6 +483,248 @@ function KpiCard({ label, value, accent = 'var(--accent)' }) {
       <div className="kpi-value" style={{ fontSize: 26, color: accent }}>{value}</div>
     </div>
   );
+}
+
+function StaffManagementModal({ resort, onClose, onChanged, showToast }) {
+  const modalRef = useRef(null);
+  const previousFocusRef = useRef(null);
+  const [users, setUsers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [busy, setBusy] = useState('');
+  const [error, setError] = useState('');
+  const [selected, setSelected] = useState({ internal: '', external: '' });
+  const [createForm, setCreateForm] = useState({
+    name: '',
+    email: '',
+    phone: '',
+    role: 'internal',
+    password: '',
+  });
+
+  const loadStaff = useCallback(async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const response = await fetch('/api/users', { cache: 'no-store' });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Gagal memuat staff.');
+      setUsers(data.users || []);
+    } catch (loadError) {
+      setError(loadError.message);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadStaff();
+  }, [loadStaff]);
+
+  useEffect(() => {
+    previousFocusRef.current = document.activeElement;
+    modalRef.current?.focus();
+    return () => previousFocusRef.current?.focus();
+  }, []);
+
+  const assigned = useMemo(
+    () => users.filter((user) => user.resort_id === resort.id && ['internal', 'external'].includes(user.role)),
+    [resort.id, users]
+  );
+  const activeInternal = assigned.filter((user) => user.role === 'internal' && user.status === 'active').length;
+  const activeExternal = assigned.filter((user) => user.role === 'external' && user.status === 'active').length;
+  const ready = activeInternal > 0 && activeExternal > 0;
+
+  const assignStaff = async (role) => {
+    const user = users.find((item) => item.id === selected[role]);
+    if (!user) return;
+    setBusy(`assign-${role}`);
+    setError('');
+    try {
+      const response = await fetch(`/api/users/${user.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: user.name,
+          email: user.email,
+          phone: user.phone || null,
+          role: user.role,
+          status: user.status,
+          resortId: resort.id,
+        }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Gagal menetapkan staff.');
+      setSelected((current) => ({ ...current, [role]: '' }));
+      await loadStaff();
+      onChanged();
+      showToast(`${user.name} ditetapkan ke ${resort.name}.`);
+    } catch (assignError) {
+      setError(assignError.message);
+    } finally {
+      setBusy('');
+    }
+  };
+
+  const createStaff = async (event) => {
+    event.preventDefault();
+    setBusy('create');
+    setError('');
+    try {
+      const response = await fetch('/api/users', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...createForm,
+          phone: createForm.phone || null,
+          status: 'active',
+          resortId: resort.id,
+        }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Gagal membuat akun staff.');
+      setCreateForm({ name: '', email: '', phone: '', role: 'internal', password: '' });
+      await loadStaff();
+      onChanged();
+      showToast(`Akun ${data.user.name} dibuat dan ditetapkan ke ${resort.name}.`);
+    } catch (createError) {
+      setError(createError.message);
+    } finally {
+      setBusy('');
+    }
+  };
+
+  const content = (
+    <div
+      className="resort-staff-backdrop"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget && !busy) onClose();
+      }}
+    >
+      <div
+        ref={modalRef}
+        className="resort-staff-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="staff-management-title"
+        aria-describedby="staff-management-description"
+        tabIndex={-1}
+        onKeyDown={(event) => {
+          if (event.key === 'Escape' && !busy) onClose();
+        }}
+      >
+        <header className="resort-staff-header">
+          <div className="resort-staff-heading">
+            <span className="resort-staff-kicker">Resort staffing</span>
+            <h3 id="staff-management-title">Kelola Staff Resort</h3>
+            <p id="staff-management-description">
+              <span className="resort-staff-code">{resort.code}</span>
+              {resort.name}
+            </p>
+          </div>
+          <button type="button" className="resort-staff-close" onClick={onClose} disabled={Boolean(busy)} aria-label="Tutup modal">×</button>
+        </header>
+
+        <div className="resort-staff-body">
+          <section className={`resort-staff-readiness ${ready ? 'is-ready' : 'is-pending'}`} aria-label="Status coverage staff">
+            <div className="resort-staff-readiness-copy">
+              <span className="resort-staff-readiness-icon" aria-hidden="true">{ready ? '✓' : '!'}</span>
+              <div>
+                <strong>{ready ? 'Coverage siap' : 'Coverage belum lengkap'}</strong>
+                <p>{ready ? 'Tim resort lengkap dan siap menerima operasional.' : 'Lengkapi kedua peran agar resort dapat diaktifkan.'}</p>
+              </div>
+            </div>
+            <div className="resort-staff-coverage-counts">
+              <span className={activeInternal > 0 ? 'is-complete' : ''}>Internal <strong>{activeInternal}/1</strong></span>
+              <span className={activeExternal > 0 ? 'is-complete' : ''}>External <strong>{activeExternal}/1</strong></span>
+            </div>
+          </section>
+
+          {error && <div className="resort-staff-error" role="alert">{error}</div>}
+
+          {loading ? (
+            <div className="resort-staff-loading">Memuat staff...</div>
+          ) : (
+            <div className="resort-staff-role-grid">
+              {['internal', 'external'].map((role) => {
+                const members = assigned.filter((user) => user.role === role);
+                const candidates = users.filter((user) => user.role === role && user.status === 'active' && user.resort_id !== resort.id);
+                const label = role === 'internal' ? 'Staff Internal' : 'Staff External';
+                return (
+                  <section key={role} className={`resort-staff-role-card is-${role}`}>
+                    <div className="resort-staff-role-heading">
+                      <span className="resort-staff-role-mark" aria-hidden="true">{role === 'internal' ? 'IN' : 'EX'}</span>
+                      <div>
+                        <h4>{label}</h4>
+                        <p>{role === 'internal' ? 'Pemandu dan tim operasional' : 'Tim reservasi dari pihak resort'}</p>
+                      </div>
+                      <span className="resort-staff-role-count">{members.filter((user) => user.status === 'active').length} aktif</span>
+                    </div>
+
+                    <div className="resort-staff-member-list">
+                      {members.length === 0 ? (
+                        <div className="resort-staff-empty">
+                          <span aria-hidden="true">+</span>
+                          <p>Belum ada staff yang ditetapkan</p>
+                        </div>
+                      ) : members.map((user) => (
+                        <div className="resort-staff-member" key={user.id}>
+                          <span className="resort-staff-avatar" aria-hidden="true">{user.name.slice(0, 1).toUpperCase()}</span>
+                          <span className="resort-staff-member-copy"><strong>{user.name}</strong><small>{user.email}</small></span>
+                          <span className={`resort-staff-member-status ${user.status === 'active' ? 'is-active' : ''}`}>{user.status === 'active' ? 'Aktif' : 'Nonaktif'}</span>
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="resort-staff-assignment">
+                      <label className="input-group">
+                        <span className="input-label">Pindahkan staff aktif</span>
+                        <select className="input" value={selected[role]} onChange={(event) => setSelected((current) => ({ ...current, [role]: event.target.value }))}>
+                          <option value="">Pilih staff</option>
+                          {candidates.map((user) => (
+                            <option key={user.id} value={user.id}>{user.name} — {user.resort_name || 'Belum ada resort'}</option>
+                          ))}
+                        </select>
+                      </label>
+                      <button type="button" className="btn btn-secondary" disabled={!selected[role] || Boolean(busy)} onClick={() => assignStaff(role)}>
+                        {busy === `assign-${role}` ? 'Menetapkan...' : 'Tetapkan'}
+                      </button>
+                    </div>
+                  </section>
+                );
+              })}
+            </div>
+          )}
+
+          <form className="resort-staff-create" onSubmit={createStaff}>
+            <div className="resort-staff-create-heading">
+              <div>
+                <span className="resort-staff-kicker">Akun baru</span>
+                <h4>Buat akun staff baru</h4>
+                <p>Akun langsung aktif dan otomatis terhubung ke {resort.name}.</p>
+              </div>
+              <span className="resort-staff-create-badge">Login siap setelah aktivasi</span>
+            </div>
+
+            <div className="resort-staff-create-grid">
+              <label className="input-group"><span className="input-label">Nama lengkap *</span><input className="input" placeholder="Nama staff" required value={createForm.name} onChange={(event) => setCreateForm((current) => ({ ...current, name: event.target.value }))} /></label>
+              <label className="input-group"><span className="input-label">Email *</span><input className="input" type="email" placeholder="staff@resort.com" required value={createForm.email} onChange={(event) => setCreateForm((current) => ({ ...current, email: event.target.value }))} /></label>
+              <label className="input-group"><span className="input-label">Telepon</span><input className="input" type="tel" placeholder="+960..." value={createForm.phone} onChange={(event) => setCreateForm((current) => ({ ...current, phone: event.target.value }))} /></label>
+              <label className="input-group"><span className="input-label">Role *</span><select className="input" value={createForm.role} onChange={(event) => setCreateForm((current) => ({ ...current, role: event.target.value }))}><option value="internal">Internal</option><option value="external">External</option></select></label>
+              <label className="input-group"><span className="input-label">Password awal *</span><input className="input" type="password" minLength={8} maxLength={128} autoComplete="new-password" placeholder="Minimal 8 karakter" required value={createForm.password} onChange={(event) => setCreateForm((current) => ({ ...current, password: event.target.value }))} /></label>
+            </div>
+
+            <div className="resort-staff-create-footer">
+              <small>Password dapat diganti staff setelah login pertama.</small>
+              <button type="submit" className="btn btn-primary" disabled={Boolean(busy)}>{busy === 'create' ? 'Membuat akun...' : 'Buat dan Tetapkan'}</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  );
+
+  if (typeof document === 'undefined') return null;
+  return createPortal(content, document.body);
 }
 
 function ResortModal({ formData, setFormData, isEditing, onClose, onSave, saving }) {
@@ -612,9 +919,12 @@ function ResortModal({ formData, setFormData, isEditing, onClose, onSave, saving
                 value={formData.status}
                 onChange={(e) => setFormData({ ...formData, status: e.target.value })}
               >
-                <option value="active">Aktif (Menerima Reservasi)</option>
-                <option value="inactive">Nonaktif</option>
-              </select>
+                    {isEditing && <option value="active">Aktif (Menerima Reservasi)</option>}
+                    <option value="inactive">Nonaktif</option>
+                  </select>
+                  <span style={{ fontSize: 11, color: 'var(--text-dim)' }}>
+                    Resort baru disimpan nonaktif. Tetapkan minimal 1 Internal dan 1 External aktif sebelum aktivasi.
+                  </span>
             </div>
           </div>
 

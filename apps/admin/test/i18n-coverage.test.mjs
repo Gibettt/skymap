@@ -5,7 +5,7 @@ import test from 'node:test';
 
 const contextPath = fileURLToPath(new URL('../src/context/AdminLanguageContext.jsx', import.meta.url));
 
-test('admin language dictionary covers recently added package, resort, booking, and sky-event UI', async () => {
+test('admin language dictionary covers package, resort, booking, and audit UI', async () => {
   const source = await readFile(contextPath, 'utf8');
   const requiredLiterals = [
     'Kembali ke daftar package',
@@ -13,8 +13,6 @@ test('admin language dictionary covers recently added package, resort, booking, 
     'Kelola nama package, harga, status aktif, dan estimasi umur anak.',
     'Nama Resort Mitra *',
     'Status Operasional',
-    'Semua Kategori',
-    'Deskripsi Edukasi & Pengamatan',
     'Tanggal baru (YYYY-MM-DD)',
     'Alasan reschedule',
     'Gagal memuat audit log.',

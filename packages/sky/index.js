@@ -8,6 +8,8 @@ export {
 } from './calendar.js';
 export {
   normalizeSkyEventInput,
+  rollingDateWindow,
+  nearestResort,
   validateResortLocation,
   filterPublicEvents,
 } from './events.js';

@@ -43,6 +43,7 @@ function statusLabel(status, lang = 'id') {
     pending: isEn ? 'Pending' : 'Menunggu',
     active: isEn ? 'Active' : 'Aktif',
     completed: isEn ? 'Completed' : 'Selesai',
+    rejected: isEn ? 'Rejected' : 'Ditolak',
     rescheduled: isEn ? 'Rescheduled' : 'Dijadwalkan ulang',
     cancelled_by_guest: isEn ? 'Cancelled by guest' : 'Dibatalkan tamu',
     cancelled_weather: isEn ? 'Cancelled by weather' : 'Dibatalkan karena cuaca',
@@ -55,6 +56,7 @@ function statusClass(status) {
     pending: 'tag-pending',
     active: 'tag-confirmed',
     completed: 'tag-completed',
+    rejected: 'tag-cancelled',
     rescheduled: 'tag-confirmed',
     cancelled_by_guest: 'tag-cancelled',
     cancelled_weather: 'tag-cancelled',
@@ -68,6 +70,10 @@ function canOperate(booking) {
 
 function canToggleSigned(booking) {
   return ['active', 'rescheduled', 'completed'].includes(booking.status);
+}
+
+function hasBookingActions(booking) {
+  return booking.status === 'pending' || canOperate(booking) || canToggleSigned(booking);
 }
 
 export default function StaffBookingsClient({ role }) {
@@ -132,7 +138,7 @@ export default function StaffBookingsClient({ role }) {
     acc.commission += Number(booking.staff_commission_5_usd || 0);
     acc.pending += booking.status === 'pending' ? 1 : 0;
     acc.accepted += ['active', 'rescheduled'].includes(booking.status) ? 1 : 0;
-    acc.rejected += booking.status.startsWith('cancelled_') ? 1 : 0;
+    acc.rejected += booking.status === 'rejected' || booking.status.startsWith('cancelled_') ? 1 : 0;
     acc.invoice += Number(booking.invoice_total_usd || 0);
     acc.finished += booking.status === 'completed' ? 1 : 0;
     acc.signed += booking.signed_by_guest ? 1 : 0;
@@ -225,7 +231,7 @@ export default function StaffBookingsClient({ role }) {
     if (!confirmModal || actionLoading) return;
     setActionLoading(true);
     try {
-      await updateBooking(confirmModal.booking, { status: confirmModal.type === 'accept' ? 'active' : 'cancelled_by_guest' });
+      await updateBooking(confirmModal.booking, { status: confirmModal.type === 'accept' ? 'active' : 'rejected' });
       setConfirmModal(null);
     } finally {
       setActionLoading(false);
@@ -262,8 +268,8 @@ export default function StaffBookingsClient({ role }) {
             ? 'All bookings shown here belong to your resort. You can complete, cancel, sign, or reschedule them.'
             : 'Semua booking di sini khusus resort Anda. Anda dapat menyelesaikan, membatalkan, menandatangani, atau menjadwalkan ulang.')
           : (language === 'en'
-            ? 'New bookings are saved immediately and visible only to you, your resort operations team, and admins.'
-            : 'Booking baru langsung tersimpan dan hanya terlihat oleh Anda, tim operasional resort, serta admin.')}
+            ? 'New bookings wait for approval by the internal operations team at your resort.'
+            : 'Booking baru menunggu persetujuan staff internal di resort Anda.')}
       </div>
 
       {error && (
@@ -328,8 +334,8 @@ export default function StaffBookingsClient({ role }) {
         </div>
       )}
 
-      <div className="card">
-        <div className="table-container">
+      <div className="card staff-bookings-card">
+        <div className="table-container staff-bookings-table">
           <table>
             <thead>
               <tr>
@@ -341,7 +347,7 @@ export default function StaffBookingsClient({ role }) {
                 <th>{t('common_status')}</th>
                 <th>{t('common_signed')}</th>
                 <th style={{ textAlign: 'right' }}>{t('common_commission')}</th>
-                {role === 'internal' && <th style={{ textAlign: 'center', minWidth: 160 }}>{t('common_action')}</th>}
+                {role === 'internal' && <th className="booking-action-column">{t('common_action')}</th>}
               </tr>
             </thead>
             <tbody>
@@ -391,14 +397,58 @@ export default function StaffBookingsClient({ role }) {
                   <td><span className={`tag ${booking.signed_by_guest ? 'tag-completed' : 'tag-pending'}`}>{booking.signed_by_guest ? t('common_yes') : t('common_no')}</span></td>
                   <td style={{ textAlign: 'right', fontWeight: 800 }}>{formatUsd(booking.staff_commission_5_usd)}</td>
                   {role === 'internal' && (
-                    <td style={{ textAlign: 'center' }}>
-                      <div style={{ display: 'flex', justifyContent: 'center', gap: 6, flexWrap: 'wrap' }}>
-                        {canOperate(booking) && <button className="btn btn-secondary btn-sm" onClick={() => updateBooking(booking, { status: 'completed' })}>{t('booking_complete')}</button>}
-                        {canOperate(booking) && <button className="btn btn-secondary btn-sm" onClick={() => reschedule(booking)}>{t('booking_reschedule')}</button>}
-                        {canOperate(booking) && <button className="btn btn-secondary btn-sm" onClick={() => updateBooking(booking, { status: 'cancelled_by_guest' })}>{t('booking_cancel_guest')}</button>}
-                        {canOperate(booking) && <button className="btn btn-secondary btn-sm" onClick={() => updateBooking(booking, { status: 'cancelled_weather' })}>{t('booking_cancel_weather')}</button>}
-                        {canToggleSigned(booking) && <button className="btn btn-secondary btn-sm" onClick={() => updateBooking(booking, { signedByGuest: !booking.signed_by_guest })}>{t('common_signed')}</button>}
-                      </div>
+                    <td className="booking-action-cell">
+                      {hasBookingActions(booking) ? (
+                        <details
+                          className="booking-action-menu"
+                          onBlur={(event) => {
+                            if (!event.currentTarget.contains(event.relatedTarget)) event.currentTarget.removeAttribute('open');
+                          }}
+                          onKeyDown={(event) => {
+                            if (event.key === 'Escape') {
+                              event.currentTarget.removeAttribute('open');
+                              event.currentTarget.querySelector('summary')?.focus();
+                            }
+                          }}
+                        >
+                          <summary
+                            aria-label={`${t('common_action')} ${booking.booking_code}`}
+                            title={t('common_action')}
+                          >
+                            <span className="booking-action-trigger-icon" aria-hidden="true">
+                              <span />
+                              <span />
+                              <span />
+                              <span />
+                            </span>
+                            <span className="booking-action-trigger-label">
+                              {language === 'en' ? 'Manage' : 'Kelola'}
+                            </span>
+                            <span className="booking-action-trigger-chevron" aria-hidden="true" />
+                          </summary>
+                          <div
+                            className="booking-action-dropdown"
+                            role="menu"
+                            onClick={(event) => {
+                              if (event.target.closest('button')) event.currentTarget.closest('details')?.removeAttribute('open');
+                            }}
+                          >
+                            {booking.status === 'pending' && <button type="button" role="menuitem" className="booking-action-item is-primary" onClick={() => setConfirmModal({ type: 'accept', booking })}>{t('btn_accept', 'Setujui')}</button>}
+                            {booking.status === 'pending' && <button type="button" role="menuitem" className="booking-action-item is-danger" onClick={() => setConfirmModal({ type: 'reject', booking })}>{t('btn_reject', 'Tolak')}</button>}
+                            {canOperate(booking) && <button type="button" role="menuitem" className="booking-action-item" onClick={() => updateBooking(booking, { status: 'completed' })}>{t('booking_complete')}</button>}
+                            {canOperate(booking) && <button type="button" role="menuitem" className="booking-action-item" onClick={() => reschedule(booking)}>{t('booking_reschedule')}</button>}
+                            {canOperate(booking) && <button type="button" role="menuitem" className="booking-action-item is-danger" onClick={() => updateBooking(booking, { status: 'cancelled_by_guest' })}>{t('booking_cancel_guest')}</button>}
+                            {canOperate(booking) && <button type="button" role="menuitem" className="booking-action-item is-danger" onClick={() => updateBooking(booking, { status: 'cancelled_weather' })}>{t('booking_cancel_weather')}</button>}
+                            {canToggleSigned(booking) && (
+                              <button type="button" role="menuitem" className="booking-action-item" onClick={() => updateBooking(booking, { signedByGuest: !booking.signed_by_guest })}>
+                                {booking.signed_by_guest
+                                  ? (language === 'en' ? 'Mark as unsigned' : 'Tandai belum ditandatangani')
+                                  : t('common_signed')}
+                              </button>
+                            )}
+                          </div>
+                        </details>
+                      ) : <span className="booking-action-empty">-</span>}
                     </td>
                   )}
                 </tr>
@@ -417,11 +467,11 @@ export default function StaffBookingsClient({ role }) {
               .replace('{total}', filteredBookings.length)}
           </span>
           <div className="pagination-controls">
-            <button className="page-btn" disabled={page === 1} onClick={() => setPage(1)}>{t('common_first')}</button>
-            <button className="page-btn" disabled={page === 1} onClick={() => setPage((p) => p - 1)}>{t('common_previous')}</button>
-            <button className="page-btn active">{page}</button>
-            <button className="page-btn" disabled={page === totalPages || totalPages === 0} onClick={() => setPage((p) => p + 1)}>{t('common_next')}</button>
-            <button className="page-btn" disabled={page === totalPages || totalPages === 0} onClick={() => setPage(totalPages)}>{t('common_last')}</button>
+            <button type="button" className="page-btn" title={t('common_first')} aria-label={t('common_first')} disabled={page === 1} onClick={() => setPage(1)}>«</button>
+            <button type="button" className="page-btn" title={t('common_previous')} aria-label={t('common_previous')} disabled={page === 1} onClick={() => setPage((p) => p - 1)}>‹</button>
+            <button type="button" className="page-btn active" aria-current="page" aria-label={`${language === 'en' ? 'Page' : 'Halaman'} ${page}`}>{page}</button>
+            <button type="button" className="page-btn" title={t('common_next')} aria-label={t('common_next')} disabled={page === totalPages || totalPages === 0} onClick={() => setPage((p) => p + 1)}>›</button>
+            <button type="button" className="page-btn" title={t('common_last')} aria-label={t('common_last')} disabled={page === totalPages || totalPages === 0} onClick={() => setPage(totalPages)}>»</button>
           </div>
         </div>
       </div>

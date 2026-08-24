@@ -1,3 +1,20 @@
+export function bookingCreationState(user) {
+  return user.role === 'external'
+    ? { status: 'pending', assignedInternalId: null }
+    : { status: 'active', assignedInternalId: user.id };
+}
+
+export function assignedInternalAfterUpdate({
+  previousAssignedInternalId,
+  previousStatus,
+  nextStatus,
+  internalUserId,
+}) {
+  return previousStatus === 'pending' && nextStatus === 'active'
+    ? internalUserId
+    : previousAssignedInternalId;
+}
+
 /**
  * Persist a booking reschedule while retaining an immutable history row.
  * Callers must authorize the actor before invoking this command.

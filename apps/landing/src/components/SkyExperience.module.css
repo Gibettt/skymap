@@ -9,9 +9,9 @@
   width: 100vw;
   height: 100vh;
   overflow: hidden;
-  background: #000000;
+  background: #08090b;
   color: #e2e8f0;
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-family: var(--font-inter), -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   user-select: none;
   -webkit-user-select: none;
 }
@@ -1283,5 +1283,453 @@
     right: 10px;
     width: auto;
     max-height: 50vh;
+  }
+}
+
+/* Circle-inspired product skin. All astronomy calculations and controls remain unchanged. */
+.page {
+  --sky-surface: rgba(16, 17, 20, 0.94);
+  --sky-surface-solid: #101114;
+  --sky-elevated: #18191d;
+  --sky-border: #292a2f;
+  --sky-border-strong: #3a3b43;
+  --sky-text: #eeeef0;
+  --sky-muted: #85868f;
+  --sky-dim: #62636c;
+  --sky-accent: #d9824f;
+  color: var(--sky-text);
+}
+
+.topBar {
+  top: 8px;
+  left: 8px;
+  right: 8px;
+  min-height: 48px;
+  padding: 7px 10px;
+  border: 1px solid var(--sky-border);
+  border-radius: 8px;
+  background: var(--sky-surface);
+  backdrop-filter: blur(14px);
+}
+
+.brandLogo {
+  color: var(--sky-text);
+  font-size: 12px;
+  font-weight: 620;
+  letter-spacing: -0.01em;
+}
+
+.brandLogo span {
+  color: var(--sky-accent);
+}
+
+.locationBadge,
+.actionBtn,
+.hudCard,
+.fovIndicator,
+.toggleBar,
+.timeMachineBar,
+.timeControlBtn,
+.nowBtn {
+  border: 1px solid var(--sky-border);
+  border-radius: 5px;
+  background: rgba(16, 17, 20, 0.88);
+  color: var(--sky-muted);
+  box-shadow: none;
+  backdrop-filter: blur(12px);
+}
+
+.locationBadge:hover,
+.actionBtn:hover,
+.timeControlBtn:hover,
+.nowBtn:hover {
+  border-color: var(--sky-border-strong);
+  background: var(--sky-elevated);
+  color: var(--sky-text);
+}
+
+.actionBtn.active,
+.timeControlBtn.active,
+.toggleBtn.active {
+  border-color: rgba(217, 130, 79, 0.45);
+  background: rgba(217, 130, 79, 0.14);
+  color: #e8a47d;
+}
+
+.gpsPulse {
+  box-shadow: none;
+  animation: none;
+}
+
+.locationPromptBanner,
+.calibrationToast,
+.locationModal,
+.searchModal,
+.inspectorDrawer,
+.eventsDrawer {
+  border: 1px solid var(--sky-border);
+  border-radius: 8px;
+  background: var(--sky-surface);
+  box-shadow: 0 28px 70px rgba(0, 0, 0, 0.48);
+  backdrop-filter: blur(18px);
+}
+
+.locationPromptBanner,
+.calibrationToast {
+  top: 66px;
+}
+
+.locationModal,
+.searchModal {
+  background: #131417;
+}
+
+.locationModalHeader,
+.searchHeader {
+  border-bottom-color: var(--sky-border);
+}
+
+.locationPresetCard,
+.locationGpsTrigger,
+.inspectorItem,
+.inspectorDesc,
+.eventCard,
+.searchItem,
+.wideViewBtn,
+.closeDrawerBtn {
+  border-color: var(--sky-border);
+  border-radius: 5px;
+  background: #15161a;
+  box-shadow: none;
+}
+
+.locationPresetCard:hover,
+.locationGpsTrigger:hover,
+.eventCard:hover,
+.searchItem:hover,
+.wideViewBtn:hover,
+.closeDrawerBtn:hover {
+  border-color: var(--sky-border-strong);
+  background: var(--sky-elevated);
+}
+
+.locationPresetCard.active {
+  border-color: rgba(217, 130, 79, 0.45);
+  background: rgba(217, 130, 79, 0.12);
+}
+
+.enableGpsBtn,
+.telescopeZoomBtn {
+  border: 1px solid var(--sky-accent);
+  border-radius: 5px;
+  background: var(--sky-accent);
+  color: #fff8f3;
+  box-shadow: none;
+}
+
+.enableGpsBtn:hover,
+.telescopeZoomBtn:hover {
+  border-color: #e39869;
+  background: #e39869;
+  color: #fff8f3;
+  transform: none;
+}
+
+.hudOverlay,
+.inspectorDrawer {
+  left: 16px;
+}
+
+.inspectorDrawer,
+.eventsDrawer,
+.telescopeModeBadge {
+  top: 66px;
+}
+
+.inspectorTitle,
+.locationModalTitle,
+.promptTitle,
+.searchItemTitle,
+.eventCardTitle {
+  color: var(--sky-text);
+}
+
+.inspectorSubtitle,
+.promptSubtitle,
+.locationPresetCoords,
+.eventCardDate,
+.eventCardDesc,
+.searchItemCategory,
+.searchItemMeta,
+.inspectorLabel,
+.inspectorFactLabel {
+  color: var(--sky-dim);
+}
+
+.inspectorValue,
+.inspectorFactValue,
+.hudAzimuth,
+.timeDisplay {
+  color: var(--sky-text);
+  font-variant-numeric: tabular-nums;
+}
+
+.distanceBadge,
+.telescopeModeBadge {
+  border: 1px solid rgba(217, 130, 79, 0.4);
+  border-radius: 5px;
+  background: rgba(217, 130, 79, 0.12);
+  box-shadow: none;
+}
+
+.distanceBadgeLabel,
+.telescopeModeBadge,
+.reticleLabel {
+  color: #e8a47d;
+}
+
+.targetReticle {
+  border-color: rgba(217, 130, 79, 0.72);
+  box-shadow: none;
+}
+
+.reticleCornerTL,
+.reticleCornerTR,
+.reticleCornerBL,
+.reticleCornerBR {
+  border-color: var(--sky-accent);
+}
+
+.reticleCornerTL {
+  border-top-color: var(--sky-accent);
+  border-left-color: var(--sky-accent);
+}
+
+.reticleCornerTR {
+  border-top-color: var(--sky-accent);
+  border-right-color: var(--sky-accent);
+}
+
+.reticleCornerBL {
+  border-bottom-color: var(--sky-accent);
+  border-left-color: var(--sky-accent);
+}
+
+.reticleCornerBR {
+  border-right-color: var(--sky-accent);
+  border-bottom-color: var(--sky-accent);
+}
+
+.objectLabel {
+  border-color: var(--sky-border);
+  border-radius: 4px;
+  background: rgba(16, 17, 20, 0.84);
+  box-shadow: none;
+}
+
+.objectLabel:hover,
+.objectLabel.active {
+  border-color: rgba(217, 130, 79, 0.55);
+  background: rgba(217, 130, 79, 0.2);
+  box-shadow: none;
+}
+
+.bottomDock {
+  padding-bottom: 8px;
+  background: linear-gradient(to top, rgba(8, 9, 11, 0.82), transparent);
+}
+
+.toggleBar,
+.timeMachineBar {
+  padding: 4px;
+}
+
+.toggleBtn {
+  border-radius: 4px;
+}
+
+.timeSlider {
+  background: var(--sky-border-strong);
+}
+
+.timeSlider::-webkit-slider-thumb {
+  width: 11px;
+  height: 11px;
+  background: var(--sky-accent);
+  box-shadow: none;
+}
+
+@media (max-width: 768px) {
+  .topBar {
+    top: 0;
+    left: 0;
+    right: 0;
+    border-width: 0 0 1px;
+    border-radius: 0;
+  }
+
+  .locationPromptBanner {
+    top: 96px;
+  }
+
+  .inspectorDrawer,
+  .eventsDrawer {
+    right: 8px;
+    bottom: 104px;
+    left: 8px;
+    border-radius: 8px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .targetReticle,
+  .gpsPulse,
+  .calibrationToast,
+  .locationPromptBanner,
+  .inspectorDrawer,
+  .eventsDrawer {
+    animation: none;
+  }
+}
+
+/* Circle parity pass: softer surfaces, consistent 10px controls, 16px panels. */
+.page {
+  --sky-surface: rgba(31, 33, 38, 0.9);
+  --sky-surface-solid: #1f2126;
+  --sky-elevated: #292b32;
+  --sky-border: #2c2e35;
+  --sky-border-strong: #3b3e47;
+  --sky-text: #eef0f3;
+  --sky-muted: #8a8f98;
+  --sky-dim: #6b6f78;
+  --sky-accent: #6469d7;
+}
+
+.topBar {
+  border-radius: 14px;
+  background: var(--sky-surface);
+  box-shadow: 0 1px 2px rgba(5, 6, 8, 0.24), inset 0 1px 0 rgba(255, 255, 255, 0.03);
+  backdrop-filter: blur(18px) saturate(120%);
+}
+
+.locationBadge,
+.actionBtn,
+.hudCard,
+.fovIndicator,
+.toggleBar,
+.timeMachineBar,
+.timeControlBtn,
+.nowBtn {
+  border-radius: 10px;
+  background: rgba(31, 33, 38, 0.86);
+  box-shadow: 0 1px 2px rgba(5, 6, 8, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.025);
+}
+
+.actionBtn.active,
+.timeControlBtn.active,
+.toggleBtn.active {
+  border-color: rgba(100, 105, 215, 0.52);
+  background: rgba(100, 105, 215, 0.18);
+  color: #aeb1ff;
+}
+
+.locationPromptBanner,
+.calibrationToast,
+.locationModal,
+.searchModal,
+.inspectorDrawer,
+.eventsDrawer {
+  border-radius: 16px;
+  background: var(--sky-surface);
+  box-shadow: 0 24px 72px rgba(5, 6, 8, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.035);
+  backdrop-filter: blur(20px) saturate(125%);
+}
+
+.locationModal,
+.searchModal {
+  background: #22242a;
+}
+
+.locationPresetCard,
+.locationGpsTrigger,
+.inspectorItem,
+.inspectorDesc,
+.eventCard,
+.searchItem,
+.wideViewBtn,
+.closeDrawerBtn {
+  border-radius: 10px;
+  background: #24262c;
+  box-shadow: 0 1px 2px rgba(5, 6, 8, 0.18);
+}
+
+.locationPresetCard.active {
+  border-color: rgba(100, 105, 215, 0.52);
+  background: rgba(100, 105, 215, 0.16);
+}
+
+.enableGpsBtn,
+.telescopeZoomBtn {
+  border-color: var(--sky-accent);
+  border-radius: 10px;
+  background: var(--sky-accent);
+  box-shadow: 0 1px 2px rgba(5, 6, 8, 0.22);
+}
+
+.enableGpsBtn:hover,
+.telescopeZoomBtn:hover {
+  border-color: #767be2;
+  background: #767be2;
+}
+
+.distanceBadge,
+.telescopeModeBadge {
+  border-color: rgba(100, 105, 215, 0.48);
+  border-radius: 9px;
+  background: rgba(100, 105, 215, 0.16);
+}
+
+.distanceBadgeLabel,
+.telescopeModeBadge,
+.reticleLabel {
+  color: #aeb1ff;
+}
+
+.targetReticle {
+  border-color: rgba(100, 105, 215, 0.74);
+}
+
+.objectLabel {
+  border-radius: 8px;
+  background: rgba(31, 33, 38, 0.84);
+  box-shadow: 0 1px 2px rgba(5, 6, 8, 0.2);
+}
+
+.objectLabel:hover,
+.objectLabel.active {
+  border-color: rgba(100, 105, 215, 0.58);
+  background: rgba(100, 105, 215, 0.2);
+}
+
+.toggleBtn {
+  border-radius: 8px;
+}
+
+.timeSlider::-webkit-slider-thumb {
+  background: var(--sky-accent);
+}
+
+.bottomDock {
+  background: linear-gradient(to top, rgba(25, 26, 31, 0.88), transparent);
+}
+
+@media (max-width: 768px) {
+  .topBar {
+    border-radius: 0 0 14px 14px;
+  }
+
+  .inspectorDrawer,
+  .eventsDrawer {
+    border-radius: 16px;
   }
 }

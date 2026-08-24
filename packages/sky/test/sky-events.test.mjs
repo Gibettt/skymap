@@ -3,6 +3,8 @@ import test from 'node:test';
 import {
   filterPublicEvents,
   normalizeSkyEventInput,
+  rollingDateWindow,
+  nearestResort,
   validateResortLocation,
 } from '../events.js';
 
@@ -37,6 +39,37 @@ test('returns only published events within the requested dates', () => {
   ], '2026-08-01', '2026-08-31');
 
   assert.deepEqual(events.map((event) => event.id), ['one']);
+});
+
+test('uses seven local calendar dates for a resort', () => {
+  assert.deepEqual(
+    rollingDateWindow('Indian/Maldives', new Date('2026-08-20T20:30:00.000Z')),
+    { from: '2026-08-21', to: '2026-08-27' },
+  );
+});
+
+test('selects the nearest resort from browser coordinates', () => {
+  const resorts = [
+    { slug: 'west', latitude: 5.2, longitude: 72.9 },
+    { slug: 'east', latitude: 5.3, longitude: 73.5 },
+  ];
+  assert.equal(nearestResort(5.28, 73.49, resorts).slug, 'east');
+});
+
+test('normalizes resort event operations without forcing recurrence', () => {
+  const event = normalizeSkyEventInput({
+    title: 'Perseids at the beach',
+    eventType: 'meteor',
+    startsAt: '2026-08-21T20:00:00.000Z',
+    status: 'sold_out',
+    capacity: 12,
+    priceOverrideUsd: 45,
+    imageUrl: 'https://example.com/perseids.webp',
+  });
+
+  assert.equal(event.status, 'sold_out');
+  assert.equal(event.capacity, 12);
+  assert.equal(event.priceOverrideUsd, 45);
 });
 
 test('accepts Indonesia pilot coordinates and rejects invalid coordinates', () => {

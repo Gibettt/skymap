@@ -1,9 +1,7 @@
-import { assertSameOrigin, jsonError, parseJsonBody, requireUser, writeAudit } from '@ephemeris/auth';
+import { ApiError, assertSameOrigin, jsonError, parseJsonBody, requireUser, writeAudit } from '@ephemeris/auth';
 import { query, transaction } from '@ephemeris/db';
 import { createSkyEventSchema } from '@ephemeris/db/validators/sky-event';
-import { calculatedSkyEvents, filterPublicEvents, normalizeSkyEventInput, getOfficialPresets } from '@ephemeris/sky';
-
-const FALLBACK_LOCATION = { latitude: -6.2088, longitude: 106.8456 };
+import { normalizeSkyEventInput, getOfficialPresets } from '@ephemeris/sky';
 
 function mapEvent(row) {
   return {
@@ -16,6 +14,14 @@ function mapEvent(row) {
     sourceName: row.source_name || '',
     sourceUrl: row.source_url || null,
     visibility: row.visibility,
+    resortId: row.resort_id,
+    packageId: row.package_id,
+    packageName: row.package_name || null,
+    observationSpot: row.observation_spot || '',
+    capacity: row.capacity,
+    priceOverrideUsd: row.price_override_usd == null ? null : Number(row.price_override_usd),
+    imageUrl: row.image_url || null,
+    status: row.status,
     isPublished: row.is_published,
     calculated: false,
   };
@@ -25,51 +31,37 @@ function dates(request) {
   const url = new URL(request.url);
   const today = new Date();
   const fallbackFrom = today.toISOString().slice(0, 10);
-  const fallbackTo = new Date(today.getTime() + 90 * 86400000).toISOString().slice(0, 10);
+  const fallbackTo = new Date(today.getTime() + 365 * 86400000).toISOString().slice(0, 10);
   const from = url.searchParams.get('from') || fallbackFrom;
   const to = url.searchParams.get('to') || fallbackTo;
   if (Number.isNaN(new Date(`${from}T00:00:00Z`).getTime()) || Number.isNaN(new Date(`${to}T00:00:00Z`).getTime()) || from > to) {
     throw new Error('Invalid date range');
   }
-  return { from, to, admin: url.searchParams.get('scope') === 'admin' };
-}
-
-async function location() {
-  try {
-    const { rows } = await query('SELECT latitude, longitude FROM sky_app_settings WHERE id = true');
-    return rows[0] ? { latitude: Number(rows[0].latitude), longitude: Number(rows[0].longitude) } : FALLBACK_LOCATION;
-  } catch {
-    return FALLBACK_LOCATION;
-  }
+  return { from, to };
 }
 
 export async function GET(request) {
   try {
-    const { from, to, admin } = dates(request);
-    if (admin) await requireUser(['admin']);
+    const user = await requireUser(['internal', 'external']);
+    if (!user.resort_id) throw new ApiError(403, 'Staff resort profile is not configured');
+    const { from, to } = dates(request);
     let rows = [];
     try {
       const result = await query(
-        `SELECT * FROM sky_events
-         WHERE ($1::boolean OR is_published = true)
-           AND starts_at >= $2::timestamptz
-           AND starts_at < ($3::date + INTERVAL '1 day')
-         ORDER BY starts_at ASC`,
-        [admin, from, to]
+        `SELECT se.*, p.name AS package_name FROM sky_events se
+         LEFT JOIN packages p ON p.id = se.package_id
+         WHERE se.resort_id = $1
+           AND se.starts_at >= $2::timestamptz
+           AND se.starts_at < ($3::date + INTERVAL '1 day')
+           AND ($4::boolean = false OR se.status = 'published')
+         ORDER BY se.starts_at ASC`,
+        [user.resort_id, from, to, user.role === 'external']
       );
       rows = result.rows;
     } catch {
       rows = [];
     }
-
-    const stored = rows.map(mapEvent);
-    if (admin) return Response.json({ events: stored });
-
-    const resort = await location();
-    const calculated = calculatedSkyEvents({ from, to, ...resort });
-    const events = filterPublicEvents([...stored, ...calculated], from, to)
-      .sort((a, b) => new Date(a.startsAt) - new Date(b.startsAt));
-    return Response.json({ events });
+    return Response.json({ events: rows.map(mapEvent) });
   } catch (error) {
     if (error?.status) return jsonError(error);
     return Response.json({ error: 'Invalid calendar request' }, { status: 400 });
@@ -79,7 +71,8 @@ export async function GET(request) {
 export async function POST(request) {
   try {
     await assertSameOrigin(request);
-    const user = await requireUser(['admin']);
+    const user = await requireUser(['internal']);
+    if (!user.resort_id) throw new ApiError(403, 'Staff resort profile is not configured');
     const body = await parseJsonBody(request);
 
     // 1-Click Official Sync from NASA / IAU / IMO / ESA Presets
@@ -93,14 +86,15 @@ export async function POST(request) {
           const normalized = normalizeSkyEventInput(preset);
           // Check if already exists by title
           const existing = await client.query(
-            'SELECT id FROM sky_events WHERE title = $1 AND starts_at = $2::timestamptz LIMIT 1',
-            [normalized.title, normalized.startsAt]
+            'SELECT id FROM sky_events WHERE resort_id = $1 AND title = $2 AND starts_at = $3::timestamptz LIMIT 1',
+            [user.resort_id, normalized.title, normalized.startsAt]
           );
           if (existing.rows.length === 0) {
             await client.query(
               `INSERT INTO sky_events
-                (title, event_type, starts_at, ends_at, description, source_name, source_url, visibility, is_published, created_by, updated_by)
-               VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $10)`,
+                (title, event_type, starts_at, ends_at, description, source_name, source_url, visibility,
+                 resort_id, status, is_published, created_by, updated_by)
+               VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'published', true, $10, $10)`,
               [
                 normalized.title,
                 normalized.eventType,
@@ -110,7 +104,7 @@ export async function POST(request) {
                 normalized.sourceName,
                 normalized.sourceUrl,
                 normalized.visibility,
-                normalized.isPublished,
+                user.resort_id,
                 user.id,
               ]
             );
@@ -140,13 +134,21 @@ export async function POST(request) {
       return Response.json({ error: 'Data sky event tidak valid', details: parsed.error.flatten() }, { status: 400 });
     }
     const event = normalizeSkyEventInput(parsed.data);
+    if (event.packageId) {
+      const pkg = await query('SELECT id FROM packages WHERE id = $1 AND resort_id = $2 AND is_active = true', [event.packageId, user.resort_id]);
+      if (!pkg.rows[0]) throw new ApiError(400, 'Package is not available for this resort');
+    }
     const created = await transaction(async (client) => {
       const { rows } = await client.query(
         `INSERT INTO sky_events
-          (title, event_type, starts_at, ends_at, description, source_name, source_url, visibility, is_published, created_by, updated_by)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $10)
+          (title, event_type, starts_at, ends_at, description, source_name, source_url, visibility,
+           resort_id, package_id, observation_spot, capacity, price_override_usd, image_url, status,
+           is_published, created_by, updated_by)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $17)
          RETURNING *`,
-        [event.title, event.eventType, event.startsAt, event.endsAt, event.description, event.sourceName, event.sourceUrl, event.visibility, event.isPublished, user.id]
+        [event.title, event.eventType, event.startsAt, event.endsAt, event.description, event.sourceName,
+          event.sourceUrl, event.visibility, user.resort_id, event.packageId, event.observationSpot,
+          event.capacity, event.priceOverrideUsd, event.imageUrl, event.status, event.isPublished, user.id]
       );
       await writeAudit(client, {
         actorId: user.id,
