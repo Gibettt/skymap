@@ -7,11 +7,11 @@ import ResortLocator from '@/components/ResortLocator';
 export const dynamic = 'force-dynamic';
 
 export const metadata = {
-  title: 'Maldives Stargazing Experiences | Ephemeris',
+  title: 'Maldives Stargazing Experiences | SpaceCat Astrotourism',
   description: 'Discover guided stargazing, solar observation, celestial dining, and astronomy programmes across partner resorts in the Maldives.',
 };
 
-const whatsappLink = 'https://wa.me/6285179546466?text=Hello%2C%20I%20would%20like%20to%20ask%20about%20an%20Ephemeris%20stargazing%20experience.';
+const whatsappLink = 'https://wa.me/6285179546466?text=Hello%2C%20I%20would%20like%20to%20ask%20about%20a%20SpaceCat%20Astrotourism%20stargazing%20experience.';
 
 const masterclass = [
   ['Skygazer - basic', '3 days', 'USD 285++ per person'],
@@ -69,9 +69,9 @@ export default async function LandingPage() {
         <nav className="home-nav" aria-label="Main navigation">
           <Link href="/" className="home-brand">
             <span className="home-brand-mark" aria-hidden="true">
-              <Image src="/stargazing-assets/ephemeris-logo.png" alt="" width={66} height={44} sizes="66px" />
+              <Image src="/spacecat-astrotourism-logo.jpg" alt="" width={66} height={44} sizes="66px" />
             </span>
-            <span><strong>Ephemeris</strong><small>Maldives Stargazing</small></span>
+            <span><strong>SpaceCat</strong><small>Astrotourism</small></span>
           </Link>
           <div className="home-nav-links">
             <Link href="/sky">Sky Guide 3D</Link>
@@ -200,9 +200,9 @@ export default async function LandingPage() {
         <div>
           <Link href="/" className="home-brand">
             <span className="home-brand-mark" aria-hidden="true">
-              <Image src="/stargazing-assets/ephemeris-logo.png" alt="" width={66} height={44} sizes="66px" />
+              <Image src="/spacecat-astrotourism-logo.jpg" alt="" width={66} height={44} sizes="66px" />
             </span>
-            <span><strong>Ephemeris</strong><small>Maldives Stargazing</small></span>
+            <span><strong>SpaceCat</strong><small>Astrotourism</small></span>
           </Link>
           <p>Guided astronomy experiences across partner resorts in the Maldives.</p>
         </div>

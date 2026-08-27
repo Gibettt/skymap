@@ -17,8 +17,9 @@ const spaceGrotesk = localFont({
 });
 
 export const metadata = {
-  title: 'Beach Stargazing | Le Meridien Maldives',
+  title: 'SpaceCat Astrotourism | Maldives Stargazing',
   description: 'Premium guided stargazing, solar observation, celestial dining, and astronomy programmes at Le Meridien Maldives.',
+  icons: { icon: '/spacecat-astrotourism-logo.jpg' },
 };
 
 import ClientWrapper from '@/components/ClientWrapper';

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAdminLanguage } from '@/context/AdminLanguageContext';
@@ -228,19 +229,12 @@ export default function AdminSidebar({ alertCount = 0, bookingCount = 0, isOpen 
 
         {/* Brand */}
         <div className="sidebar-brand">
-          <div className="sidebar-brand-icon" title="Ephemeris Observatorium Nasional">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-              <circle cx="12" cy="12" r="4" fill="white" />
-              <circle cx="12" cy="12" r="9" stroke="white" strokeWidth="1.5" fill="none" />
-              <line x1="12" y1="3" x2="12" y2="0.5" stroke="white" strokeWidth="1.5" />
-              <line x1="12" y1="21" x2="12" y2="23.5" stroke="white" strokeWidth="1.5" />
-              <line x1="3" y1="12" x2="0.5" y2="12" stroke="white" strokeWidth="1.5" />
-              <line x1="21" y1="12" x2="23.5" y2="12" stroke="white" strokeWidth="1.5" />
-            </svg>
+          <div className="sidebar-brand-icon" title="SpaceCat Astrotourism">
+            <Image src="/spacecat-astrotourism-logo.jpg" alt="" width={32} height={32} sizes="32px" />
           </div>
           <div className="sidebar-collapsible-text">
-            <div className="sidebar-brand-text">Ephemeris</div>
-            <div className="sidebar-brand-sub">{t('observatory_name', 'Observatorium Nasional')}</div>
+            <div className="sidebar-brand-text">SpaceCat</div>
+            <div className="sidebar-brand-sub">Astrotourism</div>
           </div>
         </div>
 

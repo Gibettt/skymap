@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
@@ -66,9 +67,11 @@ export default function LoginClient({ roles, demoUsers, portalLabel = 'Portal' }
         <div className="login-grid">
           <aside className="login-aside">
             <div className="login-brand">
-              <div className="login-brand-mark" aria-hidden="true">EP</div>
+              <div className="login-brand-mark" aria-hidden="true">
+                <Image src="/spacecat-astrotourism-logo.jpg" alt="" width={34} height={34} sizes="34px" />
+              </div>
               <div>
-                <div className="login-brand-name">Ephemeris</div>
+                <div className="login-brand-name">SpaceCat Astrotourism</div>
                 <div className="login-brand-meta">{portalLabel}</div>
               </div>
             </div>
@@ -154,7 +157,7 @@ export default function LoginClient({ roles, demoUsers, portalLabel = 'Portal' }
         </div>
       </section>
 
-      <div className="login-copyright">© 2026 Ephemeris</div>
+      <div className="login-copyright">© 2026 SpaceCat Astrotourism</div>
     </main>
   );
 }

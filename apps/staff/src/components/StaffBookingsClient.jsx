@@ -240,8 +240,8 @@ export default function StaffBookingsClient({ role }) {
 
 
   return (
-    <div className="fade-in-up">
-      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, alignItems: 'center', marginBottom: 24, flexWrap: 'wrap' }}>
+    <div className="fade-in-up staff-bookings-page">
+      <div className="staff-page-heading" style={{ display: 'flex', justifyContent: 'space-between', gap: 16, alignItems: 'center', marginBottom: 24, flexWrap: 'wrap' }}>
         <div>
           <h2 style={{ fontSize: 24, fontFamily: 'var(--font-heading)', color: 'var(--text-primary)' }}>{pageTitle}</h2>
           <p style={{ color: 'var(--text-secondary)', fontSize: 14 }}>{pageSubtitle}</p>
@@ -255,7 +255,7 @@ export default function StaffBookingsClient({ role }) {
         </Link>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 16, marginBottom: 24 }}>
+      <div className="staff-metrics-strip" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 16, marginBottom: 24 }}>
         <MiniCard label={language === 'en' ? 'Total Bookings' : 'Total Booking'} value={bookings.length} />
         <MiniCard label={t('filter_pending_review', 'Pending')} value={totals.pending} />
         <MiniCard label={t('status_accepted', 'Aktif')} value={totals.accepted} />
@@ -277,7 +277,7 @@ export default function StaffBookingsClient({ role }) {
       )}
 
       {/* Search Bar */}
-      <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginBottom: 18, flexWrap: 'wrap' }}>
+      <div className="staff-list-toolbar" style={{ display: 'flex', gap: 12, alignItems: 'center', marginBottom: 18, flexWrap: 'wrap' }}>
         <div className="search-bar" style={{ maxWidth: 380, flex: '1 1 280px' }}>
           <input
             type="text"

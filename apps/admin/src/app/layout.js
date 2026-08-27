@@ -15,8 +15,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata = {
-  title: 'Ephemeris Admin — Observatorium Nasional',
-  description: 'Dashboard admin Ephemeris: booking, keuangan, pengguna, dan audit.',
+  title: 'SpaceCat Astrotourism Admin — Observatorium Nasional',
+  description: 'Dashboard admin SpaceCat Astrotourism: booking, keuangan, pengguna, dan audit.',
+  icons: { icon: '/spacecat-astrotourism-logo.jpg' },
 };
 
 import ClientWrapper from '@/components/ClientWrapper';

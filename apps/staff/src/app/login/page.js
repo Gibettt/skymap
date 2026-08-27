@@ -11,7 +11,7 @@ const DEMO_USERS = {
 };
 
 export const metadata = {
-  title: 'Login Staff | Ephemeris',
+  title: 'Login Staff | SpaceCat Astrotourism',
 };
 
 export default function StaffLoginPage() {

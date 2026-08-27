@@ -44,7 +44,7 @@ export default function ExternalSettingsPage() {
   };
 
   return (
-    <div className="fade-in-up stagger" style={{ maxWidth: 880 }}>
+    <div className="fade-in-up stagger staff-settings-page">
       <header className="page-header">
         <h1 className="page-title">{t('settings_title', 'Settings')}</h1>
         <p>{t('settings_subtitle', 'Kelola profil, preferensi bahasa, dan notifikasi Anda.')}</p>
@@ -59,26 +59,17 @@ export default function ExternalSettingsPage() {
               {t('settings_language_desc', 'Pilih bahasa antarmuka aplikasi staf.')}
             </p>
           </div>
-          <span style={{ fontSize: 18 }}>🌐</span>
+          <span className="settings-language-icon" aria-hidden="true">LANG</span>
         </div>
-        <div className="card-body" style={{ padding: '20px' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
+        <div className="card-body">
+          <div className="settings-language-grid">
             {/* Bahasa Indonesia Option */}
             <div
               onClick={() => handleLanguageChange('id')}
-              style={{
-                padding: '16px 18px',
-                background: language === 'id' ? 'rgba(124, 58, 237, 0.08)' : 'var(--bg-elevated)',
-                border: language === 'id' ? '2px solid var(--primary, #7c3aed)' : '1px solid var(--border)',
-                cursor: 'pointer',
-                transition: 'all 0.15s ease',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-              }}
+              className={`settings-language-option${language === 'id' ? ' is-active' : ''}`}
             >
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                <span style={{ fontSize: 28 }}>🇮🇩</span>
+              <div className="settings-language-copy">
+                <span className="settings-language-code" aria-hidden="true">ID</span>
                 <div>
                   <div style={{ fontWeight: 800, fontSize: 14, color: 'var(--text-primary)' }}>
                     Bahasa Indonesia
@@ -93,26 +84,17 @@ export default function ExternalSettingsPage() {
                 name="app_language"
                 checked={language === 'id'}
                 onChange={() => handleLanguageChange('id')}
-                style={{ width: 18, height: 18, accentColor: 'var(--primary, #7c3aed)', cursor: 'pointer' }}
+                className="settings-language-radio"
               />
             </div>
 
             {/* English Option */}
             <div
               onClick={() => handleLanguageChange('en')}
-              style={{
-                padding: '16px 18px',
-                background: language === 'en' ? 'rgba(124, 58, 237, 0.08)' : 'var(--bg-elevated)',
-                border: language === 'en' ? '2px solid var(--primary, #7c3aed)' : '1px solid var(--border)',
-                cursor: 'pointer',
-                transition: 'all 0.15s ease',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-              }}
+              className={`settings-language-option${language === 'en' ? ' is-active' : ''}`}
             >
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                <span style={{ fontSize: 28 }}>🇬🇧</span>
+              <div className="settings-language-copy">
+                <span className="settings-language-code" aria-hidden="true">EN</span>
                 <div>
                   <div style={{ fontWeight: 800, fontSize: 14, color: 'var(--text-primary)' }}>
                     English (US/UK)
@@ -127,7 +109,7 @@ export default function ExternalSettingsPage() {
                 name="app_language"
                 checked={language === 'en'}
                 onChange={() => handleLanguageChange('en')}
-                style={{ width: 18, height: 18, accentColor: 'var(--primary, #7c3aed)', cursor: 'pointer' }}
+                className="settings-language-radio"
               />
             </div>
           </div>
@@ -143,7 +125,7 @@ export default function ExternalSettingsPage() {
         <div className="card-header">
           <h2 className="card-title">{t('settings_profile_title', 'Profil')}</h2>
         </div>
-        <div className="card-body" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+        <div className="card-body settings-profile-grid">
           <div className="input-group">
             <label className="input-label">{t('settings_name', 'Nama')}</label>
             <input className="input" value={profile?.name || ''} disabled />

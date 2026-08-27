@@ -37,7 +37,7 @@ export default function InternalLayout({ children }) {
   const closeSidebar = useCallback(() => setSidebarOpen(false), []);
 
   return (
-    <div className="app-layout external-compact-layout">
+    <div className="app-layout external-compact-layout staff-role-internal">
       <StaffSidebar role="Internal" bookingCount={bookingCount} isOpen={sidebarOpen} onClose={closeSidebar} />
       <div className="main-content">
         <StaffHeader role="Internal" bookingCount={bookingCount} onMenuToggle={toggleSidebar} />

@@ -1,4 +1,4 @@
-/* Ephemeris public UI
+/* SpaceCat Astrotourism public UI
    Soft, layered public presentation based on the Circle repository's dark UI. */
 
 :root {
@@ -1587,7 +1587,7 @@ textarea:focus-visible,
   }
 }
 
-/* NASA-inspired editorial direction. Ephemeris branding and content remain original. */
+/* NASA-inspired editorial direction. SpaceCat Astrotourism branding and content remain original. */
 .home-page {
   --home-bg: #05070a;
   --home-surface: #0d1117;

@@ -1,6 +1,7 @@
 import { Geist, Geist_Mono } from 'next/font/google';
 import './globals.css';
 import '@ephemeris/ui/product.css';
+import './staff-ui.css';
 
 const geistSans = Geist({
   subsets: ['latin'],
@@ -15,15 +16,16 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata = {
-  title: 'Ephemeris Staff — Observatorium Nasional',
-  description: 'Portal staff Ephemeris: booking, jadwal, observasi, dan Sky Guide untuk staff internal.',
+  title: 'SpaceCat Astrotourism Staff - Observatorium Nasional',
+  description: 'Portal staff SpaceCat Astrotourism: booking, jadwal, observasi, dan Sky Guide untuk staff internal.',
+  icons: { icon: '/spacecat-astrotourism-logo.jpg' },
 };
 
 import ClientWrapper from '@/components/ClientWrapper';
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="id" className={`${geistSans.variable} ${geistMono.variable}`} suppressHydrationWarning>
+    <html lang="id" className={`dark ${geistSans.variable} ${geistMono.variable}`} suppressHydrationWarning>
       <head>
         <meta name="viewport" content="width=device-width, initial-scale=1" />
       </head>

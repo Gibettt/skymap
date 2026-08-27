@@ -23,15 +23,15 @@ const EMPTY_EVENT = {
 const DEFAULT_LOCATION = { name: '', latitude: null, longitude: null, timezone: '', observationSpots: '' };
 
 const METEOR_CATALOG = [
-  { name: 'Quadrantids', peakDate: '03–04 Jan', zhr: '110 meteor/jam', radiant: 'Boötes', parent: 'Asteroid 2003 EH1', active: '28 Des – 12 Jan', desc: 'Hujan meteor awal tahun berintensitas sangat tinggi dengan durasi puncak singkat.', source: 'IMO / IAU' },
-  { name: 'Lyrids', peakDate: '22–23 Apr', zhr: '18 meteor/jam', radiant: 'Lyra (dekat Vega)', parent: 'Komet C/1861 G1 (Thatcher)', active: '16 – 25 Apr', desc: 'Hujan meteor tertua dalam catatan sejarah astronomi, terkenal dengan jejak debu bercahaya.', source: 'IAU Meteor Data Center' },
-  { name: 'Eta Aquariids', peakDate: '05–06 Mei', zhr: '50 meteor/jam', radiant: 'Aquarius', parent: 'Komet 1P/Halley', active: '19 Apr – 28 Mei', desc: 'Berasal dari debu Komet Halley, sangat ideal diamati dari wilayah tropis & khatulistiwa.', source: 'NASA Meteoroid Environment' },
-  { name: 'Southern Delta Aquariids', peakDate: '29–30 Jul', zhr: '25 meteor/jam', radiant: 'Aquarius', parent: 'Komet 96P/Machholz', active: '12 Jul – 23 Agu', desc: 'Membuka musim pengamatan langit malam pertengahan tahun sebelum puncak Perseids.', source: 'IMO' },
-  { name: 'Perseids', peakDate: '12–13 Agu', zhr: '100 meteor/jam', radiant: 'Perseus', parent: 'Komet 109P/Swift-Tuttle', active: '17 Jul – 24 Agu', desc: 'Ratu hujan meteor musim panas dunia, terkenal dengan bola api (fireball) terang spektakuler.', source: 'NASA GSFC / IMO' },
-  { name: 'Orionids', peakDate: '21–22 Okt', zhr: '20 meteor/jam', radiant: 'Orion (Betelgeuse)', parent: 'Komet 1P/Halley', active: '2 Okt – 7 Nov', desc: 'Lintasan kedua debu Komet Halley berkecepatan 66 km/detik dengan pijaran tajam.', source: 'NASA / IAU' },
-  { name: 'Leonids', peakDate: '17–18 Nov', zhr: '15 meteor/jam', radiant: 'Leo', parent: 'Komet 55P/Tempel-Tuttle', active: '6 – 30 Nov', desc: 'Terkenal dengan siklus badai meteor periodik dan kilatan warna kehijauan/kebiruan.', source: 'IAU / NASA' },
-  { name: 'Geminids', peakDate: '13–14 Des', zhr: '150 meteor/jam', radiant: 'Gemini (Castor)', parent: 'Asteroid 3200 Phaethon', active: '4 – 20 Des', desc: 'Raja hujan meteor tahunan dengan laju tertinggi, multi-warna, dan pergerakan lambat anggun.', source: 'NASA GSFC / IMO' },
-  { name: 'Ursids', peakDate: '22–23 Des', zhr: '10 meteor/jam', radiant: 'Ursa Minor (Polaris)', parent: 'Komet 8P/Tuttle', active: '17 – 26 Des', desc: 'Hujan meteor penutup akhir tahun di sekitar Bintang Kutub Utara.', source: 'IMO / IAU' },
+  { name: 'Quadrantids', peakDate: '03-04 Jan', zhr: '110 meteor/jam', radiant: 'Boötes', parent: 'Asteroid 2003 EH1', active: '28 Des - 12 Jan', desc: 'Hujan meteor awal tahun berintensitas sangat tinggi dengan durasi puncak singkat.', source: 'IMO / IAU' },
+  { name: 'Lyrids', peakDate: '22-23 Apr', zhr: '18 meteor/jam', radiant: 'Lyra (dekat Vega)', parent: 'Komet C/1861 G1 (Thatcher)', active: '16 - 25 Apr', desc: 'Hujan meteor tertua dalam catatan sejarah astronomi, terkenal dengan jejak debu bercahaya.', source: 'IAU Meteor Data Center' },
+  { name: 'Eta Aquariids', peakDate: '05-06 Mei', zhr: '50 meteor/jam', radiant: 'Aquarius', parent: 'Komet 1P/Halley', active: '19 Apr - 28 Mei', desc: 'Berasal dari debu Komet Halley, sangat ideal diamati dari wilayah tropis & khatulistiwa.', source: 'NASA Meteoroid Environment' },
+  { name: 'Southern Delta Aquariids', peakDate: '29-30 Jul', zhr: '25 meteor/jam', radiant: 'Aquarius', parent: 'Komet 96P/Machholz', active: '12 Jul - 23 Agu', desc: 'Membuka musim pengamatan langit malam pertengahan tahun sebelum puncak Perseids.', source: 'IMO' },
+  { name: 'Perseids', peakDate: '12-13 Agu', zhr: '100 meteor/jam', radiant: 'Perseus', parent: 'Komet 109P/Swift-Tuttle', active: '17 Jul - 24 Agu', desc: 'Ratu hujan meteor musim panas dunia, terkenal dengan bola api (fireball) terang spektakuler.', source: 'NASA GSFC / IMO' },
+  { name: 'Orionids', peakDate: '21-22 Okt', zhr: '20 meteor/jam', radiant: 'Orion (Betelgeuse)', parent: 'Komet 1P/Halley', active: '2 Okt - 7 Nov', desc: 'Lintasan kedua debu Komet Halley berkecepatan 66 km/detik dengan pijaran tajam.', source: 'NASA / IAU' },
+  { name: 'Leonids', peakDate: '17-18 Nov', zhr: '15 meteor/jam', radiant: 'Leo', parent: 'Komet 55P/Tempel-Tuttle', active: '6 - 30 Nov', desc: 'Terkenal dengan siklus badai meteor periodik dan kilatan warna kehijauan/kebiruan.', source: 'IAU / NASA' },
+  { name: 'Geminids', peakDate: '13-14 Des', zhr: '150 meteor/jam', radiant: 'Gemini (Castor)', parent: 'Asteroid 3200 Phaethon', active: '4 - 20 Des', desc: 'Raja hujan meteor tahunan dengan laju tertinggi, multi-warna, dan pergerakan lambat anggun.', source: 'NASA GSFC / IMO' },
+  { name: 'Ursids', peakDate: '22-23 Des', zhr: '10 meteor/jam', radiant: 'Ursa Minor (Polaris)', parent: 'Komet 8P/Tuttle', active: '17 - 26 Des', desc: 'Hujan meteor penutup akhir tahun di sekitar Bintang Kutub Utara.', source: 'IMO / IAU' },
 ];
 
 const SPACE_DAYS_CATALOG = [
@@ -40,7 +40,7 @@ const SPACE_DAYS_CATALOG = [
   { date: '15 Mei', title: 'International Astronomy Day (Spring)', org: 'Astronomical League / IAU', desc: 'Hari Astronomi Internasional musim semi untuk edukasi publik dan pengamatan teleskop.' },
   { date: '30 Juni', title: 'International Asteroid Day (UN Sanctioned)', org: 'PBB / UN & ESA', desc: 'Hari Asteroid Internasional untuk kesadaran global terhadap pertahanan dan sains asteroid.' },
   { date: '20 Juli', title: 'International Moon Day (Apollo 11 Landing)', org: 'PBB / UN & NASA', desc: 'Peringatan bersejarah pendaratan manusia pertama di Bulan (Apollo 11, 1969).' },
-  { date: '04–10 Okt', title: 'UN World Space Week (Pekan Antariksa Sedunia)', org: 'United Nations General Assembly', desc: 'Pekan perayaan teknologi dan eksplorasi antariksa sedunia terbesar di planet Bumi.' },
+  { date: '04-10 Okt', title: 'UN World Space Week (Pekan Antariksa Sedunia)', org: 'United Nations General Assembly', desc: 'Pekan perayaan teknologi dan eksplorasi antariksa sedunia terbesar di planet Bumi.' },
   { date: '12 Oktober', title: 'International Astronomy Day (Autumn)', org: 'Astronomical League / IAU', desc: 'Hari Astronomi Internasional musim gugur untuk menyambut konstelasi langit akhir tahun.' },
   { date: '25 Desember', title: 'James Webb Space Telescope (JWST) Launch Day', org: 'NASA / ESA / CSA', desc: 'Peringatan peluncuran observatori inframerah antariksa tercanggih dalam sejarah manusia.' },
 ];
@@ -308,7 +308,7 @@ export default function SkyEventsInternalPage() {
   }, [events]);
 
   return (
-    <div className="fade-in-up">
+    <div className="fade-in-up sky-events-page">
       {/* Toast Notification */}
       {toast && (
         <div className="toast-container">

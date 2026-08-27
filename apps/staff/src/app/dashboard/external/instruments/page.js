@@ -16,7 +16,7 @@ export default function ExternalInstrumentsPage() {
         {TELESCOPES.map((name) => (
           <div className="card" key={name}>
             <div className="card-body">
-              <div style={{ fontSize: '22px', marginBottom: '10px' }}>🔭</div>
+              <div className="instrument-mark" aria-hidden="true">OBS</div>
               <div style={{ fontWeight: 700, fontSize: '14px', color: 'var(--text-primary)' }}>{name}</div>
             </div>
           </div>

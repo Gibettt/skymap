@@ -37,7 +37,7 @@ export default function ExternalStaffLayout({ children }) {
   const closeSidebar = useCallback(() => setSidebarOpen(false), []);
 
   return (
-    <div className="app-layout external-compact-layout">
+    <div className="app-layout external-compact-layout staff-role-external">
       <StaffSidebar role="External" bookingCount={bookingCount} isOpen={sidebarOpen} onClose={closeSidebar} />
       <div className="main-content">
         <StaffHeader role="External" bookingCount={bookingCount} onMenuToggle={toggleSidebar} />

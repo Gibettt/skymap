@@ -16,7 +16,9 @@ test('home leads guests from inspiration to resort selection and booking', () =>
 });
 
 test('home uses a NASA-inspired editorial composition without copying NASA branding', () => {
-  assert.match(page, /\/stargazing-assets\/ephemeris-logo\.png/);
+  assert.match(page, /\/spacecat-astrotourism-logo\.jpg/);
+  assert.match(page, /SpaceCat/);
+  assert.match(page, /Astrotourism/);
   assert.doesNotMatch(page, /quality=\{88\}/);
   assert.match(page, /className="home-site-header"/);
   assert.match(page, /className="home-hero-action"/);

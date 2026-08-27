@@ -2,7 +2,7 @@ import { redirect } from 'next/navigation';
   import SkyExperience from '@/components/SkyExperience';
 
   export const metadata = {
-    title: 'Ephemeris Sky Guide',
+    title: 'SpaceCat Astrotourism Sky Guide',
     description: 'Peta langit dan kalender astronomi untuk tamu resort.',
   };
 

@@ -70,9 +70,9 @@ async function loadResort(slug) {
 export async function generateMetadata({ params }) {
   const { slug } = await params;
   const data = await loadResort(slug);
-  if (!data) return { title: 'Resort not found | Ephemeris' };
+  if (!data) return { title: 'Resort not found | SpaceCat Astrotourism' };
   return {
-    title: `Stargazing at ${data.resort.name} | Ephemeris`,
+    title: `Stargazing at ${data.resort.name} | SpaceCat Astrotourism`,
     description: `Exclusive astronomy experiences and pricing for ${data.resort.name}.`,
   };
 }
@@ -89,7 +89,7 @@ export default async function ResortLandingPage({ params }) {
   return (
     <main className="stargazing-page">
       <nav className="stargazing-nav">
-        <Link href="/" className="stargazing-brand"><span>Ephemeris</span><small>{resort.name}</small></Link>
+        <Link href="/" className="stargazing-brand"><span>SpaceCat Astrotourism</span><small>{resort.name}</small></Link>
         <div className="stargazing-nav-links">
           <Link href="/sky">Sky Guide 3D</Link>
           <a href="#experiences">Experiences</a>
@@ -151,7 +151,7 @@ export default async function ResortLandingPage({ params }) {
           : <div className="stargazing-note"><p>No special event is published for this seven-day window.</p></div>}
       </section>
 
-      <footer className="stargazing-footer"><span>Ephemeris</span><span>{resort.name}</span></footer>
+      <footer className="stargazing-footer"><span>SpaceCat Astrotourism</span><span>{resort.name}</span></footer>
     </main>
   );
 }

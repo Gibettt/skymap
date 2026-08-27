@@ -195,7 +195,7 @@ export const OBSERVATION_EXPERIENCES = [
     tip: {
       icon: '🌕',
       title: 'Placeholder Programme',
-      body: 'No resort flyer exists for this session yet — content is drafted from live observatory-network data and should be reviewed before publishing.',
+      body: 'No resort flyer exists for this session yet. Content is drafted from live observatory-network data and should be reviewed before publishing.',
     },
     schedule: {
       days: ['Upon request'],
@@ -230,7 +230,7 @@ export const OBSERVATION_EXPERIENCES = [
     tip: {
       icon: '🌌',
       title: 'Placeholder Programme',
-      body: 'No resort flyer exists for this session yet — content is drafted from live observatory-network data and should be reviewed before publishing.',
+      body: 'No resort flyer exists for this session yet. Content is drafted from live observatory-network data and should be reviewed before publishing.',
     },
     schedule: {
       days: ['Upon request'],
@@ -265,7 +265,7 @@ export const OBSERVATION_EXPERIENCES = [
     tip: {
       icon: '🔭',
       title: 'Placeholder Programme',
-      body: 'No resort flyer exists for this session yet — content is drafted from live observatory-network data and should be reviewed before publishing.',
+      body: 'No resort flyer exists for this session yet. Content is drafted from live observatory-network data and should be reviewed before publishing.',
     },
     schedule: {
       days: ['Upon request'],
@@ -282,7 +282,7 @@ export const OBSERVATION_EXPERIENCES = [
     ],
     price: 'Upon request',
     ageLimit: null,
-    description: 'An advanced session focused on deep-sky objects — nebulae, star clusters, and distant galaxies — relayed from one of the highest-altitude sites in our observatory network for exceptional clarity.',
+    description: 'An advanced session focused on deep-sky objects such as nebulae, star clusters, and distant galaxies, relayed from one of the highest-altitude sites in our observatory network for exceptional clarity.',
     highlights: ['Live Telescope Feed', 'Upon Request', 'Placeholder Content'],
     whatYouSee: [
       { icon: '🌠', label: 'Nebulae' },
