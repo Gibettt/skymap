@@ -1,5 +1,5 @@
 import { assertSameOrigin, jsonError, parseJsonBody, requireUser, writeAudit } from '@ephemeris/auth';
-import { query, transaction, refreshAfterBookingChange } from '@ephemeris/db';
+import { query, refreshAfterBookingChange, transaction } from '@ephemeris/db';
 import {
   bookingSelectQuery,
   generateBookingCode,
@@ -8,7 +8,7 @@ import {
   paginationMeta,
 } from '@ephemeris/db/helpers';
 import { createBookingSchema } from '@ephemeris/db/validators/booking';
-import { emit, EventTypes } from '@ephemeris/events';
+import { EventTypes, emit } from '@ephemeris/events';
 import { calculateBookingTotals } from '@ephemeris/finance';
 
 export async function GET(request) {
@@ -17,12 +17,15 @@ export async function GET(request) {
     const pagination = paginationFromRequest(request);
     const { rows } = await query(
       `${bookingSelectQuery} ORDER BY b.created_at DESC, b.event_date DESC LIMIT $1 OFFSET $2`,
-      [pagination.limit, pagination.offset]
+      [pagination.limit, pagination.offset],
     );
     const { rows: countRows } = await query('SELECT COUNT(*) FROM bookings');
     return Response.json({
       bookings: rows,
-      pagination: paginationMeta({ ...pagination, total: Number(countRows[0].count) }),
+      pagination: paginationMeta({
+        ...pagination,
+        total: Number(countRows[0].count),
+      }),
     });
   } catch (error) {
     return jsonError(error);
@@ -45,7 +48,10 @@ export async function POST(request) {
       const pkg = await client.query('SELECT * FROM packages WHERE id = $1 AND is_active = true', [packageId]);
       if (!pkg.rows[0]) throw new Error('Package not found');
 
-      const staff = await client.query('SELECT id, role, resort_id, name FROM users WHERE id = $1 AND status = $2', [staffId, 'active']);
+      const staff = await client.query('SELECT id, role, resort_id, name FROM users WHERE id = $1 AND status = $2', [
+        staffId,
+        'active',
+      ]);
       const staffRow = staff.rows[0];
       if (!staffRow) throw new Error('Staff not found');
       const resortId = data.resortId || staffRow.resort_id || pkg.rows[0].resort_id;
@@ -54,7 +60,9 @@ export async function POST(request) {
         throw new Error('Package is not available at the selected resort');
       }
 
-      const childPriceUsd = pkg.rows[0].child_price_usd ?? (pkg.rows[0].package_type === 'kids' ? pkg.rows[0].adult_price_usd : pkg.rows[0].adult_price_usd * 0.5);
+      const childPriceUsd =
+        pkg.rows[0].child_price_usd ??
+        (pkg.rows[0].package_type === 'kids' ? pkg.rows[0].adult_price_usd : pkg.rows[0].adult_price_usd * 0.5);
       const totals = calculateBookingTotals({
         adultCount: data.adultCount,
         childCount: data.childCount,
@@ -70,7 +78,7 @@ export async function POST(request) {
           booking_code, booking_date, event_date, time_start, time_end,
           guest_name, guest_phone, guest_email, preferred_language,
           room_number, nationality, adult_count, child_count, child_ages,
-          special_occasion, guardian_name, guardian_phone, seating_setup, photo_request,
+          special_occasion, guardian_name, guardian_phone,
           privacy_preference, dietary_restrictions, reschedule_consent, slot_status,
           booking_source, package_id, booked_adult_price_usd, booked_child_price_usd, add_ons, package_notes,
           staff_id, resort_id, status, signed_by_guest, notes,
@@ -83,15 +91,15 @@ export async function POST(request) {
           $1, current_date, $2, $3, $4,
           $5, $6, $7, $8,
           $9, $10, $11, $12, $13,
-          $14, $15, $16, $17, $18,
-          $19, $20, $21, $22,
-          $23, $24, $25, $26, $27::jsonb, $28,
-          $29, $30, $31, false, $32,
-          $33, $34, $35,
-          $36, $37, $38, $39, $40,
-          $41, $42, $43, $44,
-          $45, $46, $47,
-          $48, $49, $50, $51, $51
+          $14, $15, $16,
+          $17, $18, $19, $20,
+          $21, $22, $23, $24, $25::jsonb, $26,
+          $27, $28, $29, false, $30,
+          $31, $32, $33,
+          $34, $35, $36, $37, $38,
+          $39, $40, $41, $42,
+          $43, $44, $45,
+          $46, $47, $48, $49, $49
         ) RETURNING *`,
         [
           generateBookingCode(),
@@ -110,8 +118,6 @@ export async function POST(request) {
           data.specialOccasion,
           data.guardianName,
           data.guardianPhone,
-          data.seatingSetup,
-          data.photoRequest,
           data.privacyPreference,
           data.dietaryRestrictions,
           data.rescheduleConsent,
@@ -145,14 +151,15 @@ export async function POST(request) {
           data.tipRecipient,
           data.tipNotes,
           user.id,
-        ]
+        ],
       );
 
       const booking = rows[0];
-      await client.query(
-        'INSERT INTO feedback_tokens (booking_id, token, status) VALUES ($1, $2, $3)',
-        [booking.id, generateFeedbackToken(), 'not_sent']
-      );
+      await client.query('INSERT INTO feedback_tokens (booking_id, token, status) VALUES ($1, $2, $3)', [
+        booking.id,
+        generateFeedbackToken(),
+        'not_sent',
+      ]);
       await writeAudit(client, {
         actorId: user.id,
         action: 'booking.create',
@@ -163,17 +170,21 @@ export async function POST(request) {
       });
 
       // Emit domain event & refresh CQRS views
-      await emit(EventTypes.BOOKING_CREATED, {
-        bookingId: booking.id,
-        bookingCode: booking.booking_code,
-        guestName: booking.guest_name,
-        packageName: pkg.rows[0]?.name,
-        eventDate: booking.event_date,
-        creatorId: user.id,
-        creatorRole: user.role,
-        creatorName: user.name,
-        resortId: booking.resort_id,
-      }, { client, actorId: user.id });
+      await emit(
+        EventTypes.BOOKING_CREATED,
+        {
+          bookingId: booking.id,
+          bookingCode: booking.booking_code,
+          guestName: booking.guest_name,
+          packageName: pkg.rows[0]?.name,
+          eventDate: booking.event_date,
+          creatorId: user.id,
+          creatorRole: user.role,
+          creatorName: user.name,
+          resortId: booking.resort_id,
+        },
+        { client, actorId: user.id },
+      );
 
       await refreshAfterBookingChange(client);
 

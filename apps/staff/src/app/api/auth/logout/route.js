@@ -1,9 +1,15 @@
-import { createLogoutHandler, currentUser } from '@ephemeris/auth';
+import { assertSameOrigin, createLogoutHandler, currentUser, jsonError } from '@ephemeris/auth';
 import { query } from '@ephemeris/db';
 
 const logout = createLogoutHandler();
 
 export async function POST(request) {
+  try {
+    await assertSameOrigin(request, { requireOrigin: true });
+  } catch (error) {
+    return jsonError(error);
+  }
+
   try {
     const user = await currentUser();
     if (user) {

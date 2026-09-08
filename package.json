@@ -7,20 +7,29 @@
     "dev": "turbo run dev",
     "dev:landing": "pnpm --filter @ephemeris/landing dev",
     "dev:admin": "pnpm --filter @ephemeris/admin dev",
+    "dev:admin-web": "pnpm --filter @ephemeris/admin-web dev",
     "dev:staff": "pnpm --filter @ephemeris/staff dev",
+    "dev:staff-web": "pnpm --filter @ephemeris/staff-web dev",
     "build": "turbo run build",
     "build:landing": "pnpm --filter @ephemeris/landing build",
     "build:admin": "pnpm --filter @ephemeris/admin build",
+    "build:admin-web": "pnpm --filter @ephemeris/admin-web build",
     "build:staff": "pnpm --filter @ephemeris/staff build",
+    "build:staff-web": "pnpm --filter @ephemeris/staff-web build",
+    "db:migrate:mysql": "node scripts/migrate-postgres-to-mysql.mjs",
     "preview": "pnpm build && pnpm start",
     "start": "turbo run start",
     "start:landing": "pnpm --filter @ephemeris/landing start",
     "start:admin": "pnpm --filter @ephemeris/admin start",
+    "start:admin-web": "pnpm --filter @ephemeris/admin-web start",
     "start:staff": "pnpm --filter @ephemeris/staff start",
+    "start:staff-web": "pnpm --filter @ephemeris/staff-web start",
     "test": "turbo run test",
     "lint": "turbo run lint"
   },
   "devDependencies": {
+    "mysql2": "3.24.2",
+    "pg": "8.23.0",
     "turbo": "^2.5.0"
   }
 }

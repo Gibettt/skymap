@@ -71,8 +71,6 @@ function initialForm() {
     children: [],
     // Consent & General
     specialOccasion: '',
-    seatingSetup: 'Couple / Family',
-    photoRequest: 'Ask guest first',
     privacyPreference: 'Standard',
     dietaryRestrictions: '',
     rescheduleConsent: 'Yes',
@@ -528,8 +526,6 @@ export default function FamilyBookingForm({ basePath, fixedSlug = null, staticEx
           specialOccasion: form.specialOccasion,
           guardianName: form.leadGuestName,
           guardianPhone: form.leadGuestPhone,
-          seatingSetup: form.seatingSetup,
-          photoRequest: form.photoRequest,
           privacyPreference: form.privacyPreference,
           dietaryRestrictions: form.dietaryRestrictions,
           rescheduleConsent: form.rescheduleConsent,
@@ -678,8 +674,6 @@ export default function FamilyBookingForm({ basePath, fixedSlug = null, staticEx
       extraAdults: parsedExtraAdults.slice(0, Math.max(0, adultCount - 2)),
       children: parsedChildren,
       specialOccasion: booking.special_occasion || '',
-      seatingSetup: booking.seating_setup || 'Couple / Family',
-      photoRequest: booking.photo_request || 'Ask guest first',
       privacyPreference: booking.privacy_preference || 'Standard',
       dietaryRestrictions: booking.dietary_restrictions || '',
       rescheduleConsent: booking.reschedule_consent || 'Yes',
@@ -1233,24 +1227,12 @@ export default function FamilyBookingForm({ basePath, fixedSlug = null, staticEx
           <section className="booking-form-section">
             <h3>{t('form_sec_consent_notes')}</h3>
             <div className="booking-form-grid">
-              <Field label={t('form_label_photo_consent')}>
-                <select className="input" value={form.photoRequest} onChange={(e) => setField('photoRequest', e.target.value)}>
-                  <option value="Ask guest first">{t('form_photo_ask')}</option>
-                  <option value="Allowed">{t('form_photo_allowed')}</option>
-                  <option value="Not allowed">{t('form_photo_not_allowed')}</option>
-                </select>
-              </Field>
-
               <Field label={t('form_label_weather_reschedule')}>
                 <select className="input" value={form.rescheduleConsent} onChange={(e) => setField('rescheduleConsent', e.target.value)}>
                   <option value="Yes">{t('common_yes')}</option>
                   <option value="No">{t('common_no')}</option>
                   <option value="Ask guest first">{t('form_photo_ask')}</option>
                 </select>
-              </Field>
-
-              <Field label={t('form_label_seating_setup')}>
-                <input className="input" value={form.seatingSetup} onChange={(e) => setField('seatingSetup', e.target.value)} placeholder={t('form_placeholder_seating')} />
               </Field>
 
               <Field label={t('form_label_slot_status')}>

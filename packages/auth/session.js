@@ -1,4 +1,4 @@
-import crypto from 'crypto';
+import crypto from 'node:crypto';
 
 const SESSION_COOKIE = process.env.SESSION_COOKIE_NAME || 'ephemeris_session';
 const SESSION_MAX_AGE = 60 * 60 * 8;
@@ -33,6 +33,18 @@ export function hashPassword(password) {
   return `pbkdf2_sha256$${rounds}$${salt}$${hash}`;
 }
 
+export async function hashPasswordAsync(password) {
+  const salt = crypto.randomBytes(16).toString('hex');
+  const rounds = 310000;
+  const hash = await new Promise((resolve, reject) => {
+    crypto.pbkdf2(password, salt, rounds, 32, 'sha256', (error, derivedKey) => {
+      if (error) reject(error);
+      else resolve(derivedKey.toString('hex'));
+    });
+  });
+  return `pbkdf2_sha256$${rounds}$${salt}$${hash}`;
+}
+
 export function createSessionValue(user) {
   const payload = base64url(JSON.stringify({
     id: user.id,
@@ -45,7 +57,7 @@ export function createSessionValue(user) {
 }
 
 export function readSessionValue(value) {
-  if (!value || !value.includes('.')) return null;
+  if (!value?.includes('.')) return null;
   const [payload, signature] = value.split('.');
   if (signature !== sign(payload)) return null;
 

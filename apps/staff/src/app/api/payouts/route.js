@@ -1,4 +1,4 @@
-import { assertSameOrigin, jsonError, parseJsonBody, requireUser, writeAudit } from '@ephemeris/auth';
+import { assertSameOrigin, jsonError, parseJsonBody, requirePermission, writeAudit } from '@ephemeris/auth';
 import { query, transaction } from '@ephemeris/db';
 import { createPayoutRequestSchema } from '@ephemeris/db/validators/payout';
 import { emit, EventTypes } from '@ephemeris/events';
@@ -44,7 +44,7 @@ async function loadSummary(user, client = { query }) {
 
 export async function GET() {
   try {
-    const user = await requireUser(['internal', 'external']);
+    const user = await requirePermission('staff.finance', ['internal', 'external']);
     if (!user.resort_id) {
       return Response.json({ error: 'Staff resort profile is not configured' }, { status: 403 });
     }
@@ -58,7 +58,7 @@ export async function GET() {
 export async function POST(request) {
   try {
     await assertSameOrigin(request);
-    const user = await requireUser(['internal', 'external']);
+    const user = await requirePermission('staff.finance', ['internal', 'external'], { write: true });
     if (!user.resort_id) {
       return Response.json({ error: 'Staff resort profile is not configured' }, { status: 403 });
     }

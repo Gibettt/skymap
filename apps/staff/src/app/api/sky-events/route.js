@@ -1,4 +1,4 @@
-import { ApiError, assertSameOrigin, jsonError, parseJsonBody, requireUser, writeAudit } from '@ephemeris/auth';
+import { ApiError, assertSameOrigin, jsonError, parseJsonBody, requirePermission, writeAudit } from '@ephemeris/auth';
 import { query, transaction } from '@ephemeris/db';
 import { createSkyEventSchema } from '@ephemeris/db/validators/sky-event';
 import { normalizeSkyEventInput, getOfficialPresets } from '@ephemeris/sky';
@@ -35,43 +35,35 @@ function dates(request) {
   const from = url.searchParams.get('from') || fallbackFrom;
   const to = url.searchParams.get('to') || fallbackTo;
   if (Number.isNaN(new Date(`${from}T00:00:00Z`).getTime()) || Number.isNaN(new Date(`${to}T00:00:00Z`).getTime()) || from > to) {
-    throw new Error('Invalid date range');
+    throw new ApiError(400, 'Invalid date range');
   }
   return { from, to };
 }
 
 export async function GET(request) {
   try {
-    const user = await requireUser(['internal', 'external']);
+    const user = await requirePermission('staff.sky_guide', ['internal']);
     if (!user.resort_id) throw new ApiError(403, 'Staff resort profile is not configured');
     const { from, to } = dates(request);
-    let rows = [];
-    try {
-      const result = await query(
-        `SELECT se.*, p.name AS package_name FROM sky_events se
-         LEFT JOIN packages p ON p.id = se.package_id
-         WHERE se.resort_id = $1
-           AND se.starts_at >= $2::timestamptz
-           AND se.starts_at < ($3::date + INTERVAL '1 day')
-           AND ($4::boolean = false OR se.status = 'published')
-         ORDER BY se.starts_at ASC`,
-        [user.resort_id, from, to, user.role === 'external']
-      );
-      rows = result.rows;
-    } catch {
-      rows = [];
-    }
+    const { rows } = await query(
+      `SELECT se.*, p.name AS package_name FROM sky_events se
+       LEFT JOIN packages p ON p.id = se.package_id
+       WHERE se.resort_id = $1
+         AND se.starts_at >= $2::timestamptz
+         AND se.starts_at < ($3::date + INTERVAL '1 day')
+       ORDER BY se.starts_at ASC`,
+      [user.resort_id, from, to]
+    );
     return Response.json({ events: rows.map(mapEvent) });
   } catch (error) {
-    if (error?.status) return jsonError(error);
-    return Response.json({ error: 'Invalid calendar request' }, { status: 400 });
+    return jsonError(error);
   }
 }
 
 export async function POST(request) {
   try {
     await assertSameOrigin(request);
-    const user = await requireUser(['internal']);
+    const user = await requirePermission('staff.sky_guide', ['internal'], { write: true });
     if (!user.resort_id) throw new ApiError(403, 'Staff resort profile is not configured');
     const body = await parseJsonBody(request);
 

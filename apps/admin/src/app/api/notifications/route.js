@@ -20,9 +20,9 @@ async function syncAdminNotifications(client) {
       'booking',
       'bookings',
       b.id,
-      'Booking baru dari staff ' || CASE WHEN staff.role = 'internal' THEN 'Internal' ELSE 'External' END,
-      b.booking_code || ' - ' || b.guest_name || COALESCE(', ' || p.name, ''),
-      COALESCE(staff.name, 'Staff') || ' - ' || to_char(b.event_date, 'DD Mon'),
+      CONCAT('Booking baru dari staff ', CASE WHEN staff.role = 'internal' THEN 'Internal' ELSE 'External' END),
+      CONCAT(b.booking_code, ' - ', b.guest_name, COALESCE(CONCAT(', ', p.name), '')),
+      CONCAT(COALESCE(staff.name, 'Staff'), ' - ', b.event_date),
       '/dashboard/admin/bookings',
       b.created_at
     FROM bookings b
@@ -54,8 +54,8 @@ async function syncAdminNotifications(client) {
       'payout',
       'payout_requests',
       pr.id,
-      'Payout staff ' || CASE WHEN requester.role = 'internal' THEN 'Internal' ELSE 'External' END,
-      COALESCE(requester.name, 'Staff') || ' meminta pencairan $' || to_char(pr.amount_usd, 'FM999999990.00'),
+      CONCAT('Payout staff ', CASE WHEN requester.role = 'internal' THEN 'Internal' ELSE 'External' END),
+      CONCAT(COALESCE(requester.name, 'Staff'), ' meminta pencairan $', pr.amount_usd),
       COALESCE(r.name, 'Internal observatorium'),
       '/dashboard/admin/keuangan?tab=pencairan',
       pr.created_at

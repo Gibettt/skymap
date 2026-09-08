@@ -1,4 +1,4 @@
-import { query as defaultQuery } from './index.js';
+import { isMySql, query as defaultQuery } from './index.js';
 
 /**
  * CQRS Read Model Queries
@@ -165,6 +165,7 @@ export async function getBookingPipeline(clientOrPool) {
  * Triggers asynchronous / concurrent refresh of all materialized views
  */
 export async function refreshMaterializedViews(clientOrPool) {
+  if (isMySql()) return true;
   const db = clientOrPool || { query: defaultQuery };
   try {
     await db.query(`
@@ -185,6 +186,7 @@ export async function refreshMaterializedViews(clientOrPool) {
  * Triggers refresh of a single materialized view
  */
 export async function refreshMaterializedView(viewName, clientOrPool) {
+  if (isMySql()) return true;
   const db = clientOrPool || { query: defaultQuery };
   const isTransactional = Boolean(clientOrPool);
   const savepoint = `sp_refresh_${viewName}`;

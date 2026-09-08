@@ -19,3 +19,14 @@ export const createStaffSchema = z.object({
   resortId: uuidSchema,
   password: z.string().min(8).max(128),
 });
+
+export const externalRegistrationSchema = z.object({
+  name: z.string().trim().min(1).max(200),
+  email: z.string().trim().toLowerCase().email().max(254),
+  phone: z.preprocess(
+    (value) => (typeof value === 'string' && value.trim() === '' ? null : value),
+    z.string().trim().max(40).nullable().optional()
+  ),
+  resortId: uuidSchema,
+  password: z.string().min(8).max(128),
+}).strict();

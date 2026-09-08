@@ -10,6 +10,7 @@ const DEFAULT_REWARD_SETTINGS = Object.freeze({
   starThreshold: 10,
   starBonusUsd: 10,
 });
+const MAX_MONTHLY_FULL_STARS = 5;
 
 const PAYOUT_BLOCKING_STATUSES = new Set([
   'requested',
@@ -90,6 +91,66 @@ function utcMonthBounds(now) {
   return { start, end };
 }
 
+function utcCycleKey(value, fallback) {
+  if (!value) return fallback;
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) return fallback;
+  return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, '0')}`;
+}
+
+function payoutRewardSnapshot(payout, config) {
+  const starUnits = Math.max(0, Number(field(payout, 'star_points', 'starPoints') || 0));
+  const storedFullStars = field(payout, 'full_stars', 'fullStars');
+  const fullStars = Math.min(
+    MAX_MONTHLY_FULL_STARS,
+    Math.max(0, Number(storedFullStars ?? Math.floor(starUnits / config.starThreshold))),
+  );
+  const fullStarReward = Math.max(
+    0,
+    Number(field(payout, 'star_bonus_usd', 'starBonusUsd') ?? fullStars * config.starBonusUsd),
+  );
+  const partialReward = fullStars >= MAX_MONTHLY_FULL_STARS
+    ? 0
+    : Math.min(config.starThreshold, Math.max(0, starUnits - (fullStars * config.starThreshold)));
+  return roundUsd(fullStarReward + partialReward);
+}
+
+function payoutDeductions(payoutRequests, config, role, currentCycle) {
+  const rewardByCycle = new Map();
+  let commissionUsd = 0;
+  let totalUsd = 0;
+
+  const orderedRequests = payoutRequests
+    .map((payout, index) => ({ payout, index }))
+    .filter(({ payout }) => PAYOUT_BLOCKING_STATUSES.has(payout.status))
+    .sort((left, right) => {
+      const leftTime = new Date(field(left.payout, 'created_at', 'createdAt') || 0).getTime();
+      const rightTime = new Date(field(right.payout, 'created_at', 'createdAt') || 0).getTime();
+      const safeLeft = Number.isNaN(leftTime) ? 0 : leftTime;
+      const safeRight = Number.isNaN(rightTime) ? 0 : rightTime;
+      return safeLeft - safeRight || left.index - right.index;
+    });
+
+  for (const { payout } of orderedRequests) {
+    const amountUsd = Math.max(0, Number(field(payout, 'amount_usd', 'amountUsd') || 0));
+    const cycle = utcCycleKey(field(payout, 'created_at', 'createdAt'), currentCycle);
+    const rewardEntitlementUsd = role === 'external' ? payoutRewardSnapshot(payout, config) : 0;
+    const previouslyDeductedRewardUsd = rewardByCycle.get(cycle) || 0;
+    const availableRewardAtRequestUsd = Math.max(0, rewardEntitlementUsd - previouslyDeductedRewardUsd);
+    const rewardUsd = Math.min(amountUsd, availableRewardAtRequestUsd);
+
+    rewardByCycle.set(cycle, roundUsd(previouslyDeductedRewardUsd + rewardUsd));
+    commissionUsd += amountUsd - rewardUsd;
+    totalUsd += amountUsd;
+  }
+
+  return {
+    commissionUsd: roundUsd(commissionUsd),
+    currentRewardUsd: roundUsd(rewardByCycle.get(currentCycle) || 0),
+    totalUsd: roundUsd(totalUsd),
+  };
+}
+
 function bookingDate(booking) {
   const value = field(booking, 'event_date', 'eventDate') || field(booking, 'booking_date', 'bookingDate');
   if (!value) return null;
@@ -131,17 +192,22 @@ export function calculatePayoutSummary(bookings, payoutRequests = [], options = 
   const starUnits = role === 'external'
     ? roundUsd(calculateStarPoints(bookings, config, options.now || new Date()))
     : 0;
-  const fullStars = role === 'external' ? Math.floor(starUnits / config.starThreshold) : 0;
+  const fullStars = role === 'external'
+    ? Math.min(MAX_MONTHLY_FULL_STARS, Math.floor(starUnits / config.starThreshold))
+    : 0;
   const starBonusUsd = roundUsd(fullStars * config.starBonusUsd);
-  const partialProgressUsd = role === 'external'
+  const partialProgressUsd = role === 'external' && fullStars < MAX_MONTHLY_FULL_STARS
     ? roundUsd(starUnits - (fullStars * config.starThreshold))
     : 0;
   const starRewardUsd = roundUsd(starBonusUsd + partialProgressUsd);
   const earnedUsd = roundUsd(commissionUsd + starRewardUsd);
-  const blockedUsd = roundUsd(payoutRequests.reduce((total, payout) => {
-    if (!PAYOUT_BLOCKING_STATUSES.has(payout.status)) return total;
-    return total + Number(field(payout, 'amount_usd', 'amountUsd') || 0);
-  }, 0));
+  const cycleStart = utcMonthBounds(options.now || new Date()).start.toISOString().slice(0, 10);
+  const deductions = payoutDeductions(payoutRequests, config, role, cycleStart.slice(0, 7));
+  const rewardRequestedOrPaidUsd = Math.min(starRewardUsd, deductions.currentRewardUsd);
+  const rewardOverflowUsd = Math.max(0, roundUsd(deductions.currentRewardUsd - rewardRequestedOrPaidUsd));
+  const commissionRequestedOrPaidUsd = roundUsd(deductions.commissionUsd + rewardOverflowUsd);
+  const availableCommissionUsd = Math.max(0, roundUsd(commissionUsd - commissionRequestedOrPaidUsd));
+  const availableRewardUsd = Math.max(0, roundUsd(starRewardUsd - rewardRequestedOrPaidUsd));
 
   return {
     commissionUsd,
@@ -152,11 +218,15 @@ export function calculatePayoutSummary(bookings, payoutRequests = [], options = 
     partialProgressUsd,
     starRewardUsd,
     earnedUsd,
-    requestedOrPaidUsd: blockedUsd,
-    availableUsd: Math.max(0, roundUsd(earnedUsd - blockedUsd)),
-    cycleStart: utcMonthBounds(options.now || new Date()).start.toISOString().slice(0, 10),
+    requestedOrPaidUsd: deductions.totalUsd,
+    commissionRequestedOrPaidUsd,
+    rewardRequestedOrPaidUsd,
+    availableCommissionUsd,
+    availableRewardUsd,
+    availableUsd: roundUsd(availableCommissionUsd + availableRewardUsd),
+    cycleStart,
     starThreshold: config.starThreshold,
   };
 }
 
-export { DEFAULT_REWARD_SETTINGS };
+export { DEFAULT_REWARD_SETTINGS, MAX_MONTHLY_FULL_STARS };

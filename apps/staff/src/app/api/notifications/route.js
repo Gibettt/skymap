@@ -1,10 +1,10 @@
-import { assertSameOrigin, ApiError, jsonError, parseJsonBody, requireUser } from '@ephemeris/auth';
+import { assertSameOrigin, ApiError, jsonError, parseJsonBody, requirePermission } from '@ephemeris/auth';
 import { transaction } from '@ephemeris/db';
 import { uuidSchema } from '@ephemeris/db/validators/common';
 
 export async function GET() {
   try {
-    const user = await requireUser();
+    const user = await requirePermission('staff.notifications', ['internal', 'external']);
     const notifications = await transaction(async (client) => {
       const { rows } = await client.query(
         `SELECT
@@ -38,7 +38,7 @@ export async function GET() {
 export async function PATCH(request) {
   try {
     await assertSameOrigin(request);
-    const user = await requireUser();
+    const user = await requirePermission('staff.notifications', ['internal', 'external'], { write: true });
     const body = await parseJsonBody(request);
 
     if (body.markAll || body.all) {

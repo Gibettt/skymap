@@ -1,9 +1,9 @@
-import { jsonError, requireUser } from '@ephemeris/auth';
+import { jsonError, requirePermission } from '@ephemeris/auth';
 import { query } from '@ephemeris/db';
 
 export async function GET() {
   try {
-    const user = await requireUser();
+    const user = await requirePermission('staff.bookings', ['internal', 'external']);
     const { rows } = await query(`
       SELECT id, name, code, location, timezone, observation_spots, contact_name, contact_phone, latitude, longitude, status
       FROM resorts

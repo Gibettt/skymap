@@ -1,6 +1,7 @@
 import { cookies } from 'next/headers';
-import { query, transaction } from '@ephemeris/db';
-import { ApiError, parseJsonBody } from './errors.js';
+import { isMySql, query, transaction } from '@ephemeris/db';
+import { ApiError, jsonError, parseJsonBody } from './errors.js';
+import { assertSameOrigin } from './origin.js';
 import {
   createSessionValue,
   sessionCookieOptions,
@@ -13,6 +14,17 @@ let rateLimitTableReady = false;
 
 async function ensureRateLimitTable() {
   if (rateLimitTableReady) return;
+  if (isMySql()) {
+    await query(`
+      CREATE TABLE IF NOT EXISTS rate_limit_login (
+        email VARCHAR(320) NOT NULL,
+        attempted_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+        INDEX idx_rate_limit_login_email_time (email, attempted_at)
+      )
+    `);
+    rateLimitTableReady = true;
+    return;
+  }
   await query(`
     CREATE TABLE IF NOT EXISTS rate_limit_login (
       email text NOT NULL,
@@ -50,6 +62,7 @@ async function checkRateLimit(email) {
 export function createLoginHandler({ allowedRoles = [] } = {}) {
   return async function POST(request) {
     try {
+      await assertSameOrigin(request, { requireOrigin: true });
       const body = await parseJsonBody(request);
       const email = String(body.email || '').trim().toLowerCase();
       const password = String(body.password || '');
@@ -60,10 +73,12 @@ export function createLoginHandler({ allowedRoles = [] } = {}) {
 
       const { rows } = await query(
         `SELECT
-          u.id, u.name, u.email, u.role, u.status, u.password_hash, u.resort_id,
+          u.id, u.name, u.email, u.role, u.status, u.password_hash, u.resort_id, u.access_role_id,
+          ar.name AS access_role_name, ar.status AS access_role_status, ar.access_level AS access_role_level,
           r.name AS resort_name, r.code AS resort_code, r.location AS resort_location,
           r.status AS resort_status
          FROM users u
+         LEFT JOIN access_roles ar ON ar.id = u.access_role_id
          LEFT JOIN resorts r ON r.id = u.resort_id
          WHERE u.email = $1
          LIMIT 1`,
@@ -74,7 +89,13 @@ export function createLoginHandler({ allowedRoles = [] } = {}) {
       const inactiveStaffResort = user
         && ['internal', 'external'].includes(user.role)
         && user.resort_status !== 'active';
-      if (!user || user.status !== 'active' || inactiveStaffResort || !verifyPassword(password, user.password_hash)) {
+      const inactiveAccessRole = user && user.access_role_status !== 'active';
+      if (
+        user?.status !== 'active'
+        || inactiveStaffResort
+        || inactiveAccessRole
+        || !verifyPassword(password, user.password_hash)
+      ) {
         return Response.json({ error: 'Invalid login' }, { status: 401 });
       }
 
@@ -118,9 +139,14 @@ export function createLoginHandler({ allowedRoles = [] } = {}) {
 
 /** Handler POST /api/auth/logout untuk membersihkan cookie sesi. */
 export function createLogoutHandler() {
-  return async function POST() {
-    const cookieStore = await cookies();
-    cookieStore.set(SESSION_COOKIE, '', { path: '/', maxAge: 0 });
-    return Response.json({ ok: true });
+  return async function POST(request) {
+    try {
+      await assertSameOrigin(request, { requireOrigin: true });
+      const cookieStore = await cookies();
+      cookieStore.set(SESSION_COOKIE, '', { path: '/', maxAge: 0 });
+      return Response.json({ ok: true });
+    } catch (error) {
+      return jsonError(error);
+    }
   };
 }

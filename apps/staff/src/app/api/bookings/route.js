@@ -1,5 +1,6 @@
-import { assertSameOrigin, jsonError, parseJsonBody, requireUser, writeAudit } from '@ephemeris/auth';
-import { query, transaction, refreshAfterBookingChange } from '@ephemeris/db';
+import { assertSameOrigin, jsonError, parseJsonBody, requirePermission, writeAudit } from '@ephemeris/auth';
+import { query, refreshAfterBookingChange, transaction } from '@ephemeris/db';
+import { bookingCreationInputForStaff, bookingCreationState, bookingResponseForStaff } from '@ephemeris/db/bookings';
 import {
   bookingSelectQuery,
   generateBookingCode,
@@ -7,15 +8,14 @@ import {
   paginationFromRequest,
   paginationMeta,
 } from '@ephemeris/db/helpers';
-import { createBookingSchema } from '@ephemeris/db/validators/booking';
-import { bookingCreationState } from '@ephemeris/db/bookings';
 import { bookingScopeForUser } from '@ephemeris/db/scopes';
-import { emit, EventTypes } from '@ephemeris/events';
+import { createBookingSchema } from '@ephemeris/db/validators/booking';
+import { EventTypes, emit } from '@ephemeris/events';
 import { calculateBookingTotals } from '@ephemeris/finance';
 
 export async function GET(request) {
   try {
-    const user = await requireUser(['internal', 'external']);
+    const user = await requirePermission('staff.bookings', ['internal', 'external']);
     const pagination = paginationFromRequest(request);
     const scope = bookingScopeForUser(user);
     const whereClause = `WHERE ${scope.whereClause}`;
@@ -23,12 +23,15 @@ export async function GET(request) {
 
     const { rows } = await query(
       `${bookingSelectQuery} ${whereClause} ORDER BY b.created_at DESC, b.event_date DESC LIMIT $${params.length + 1} OFFSET $${params.length + 2}`,
-      [...params, pagination.limit, pagination.offset]
+      [...params, pagination.limit, pagination.offset],
     );
     const { rows: countRows } = await query(`SELECT COUNT(*) FROM bookings b ${whereClause}`, params);
     return Response.json({
-      bookings: rows,
-      pagination: paginationMeta({ ...pagination, total: Number(countRows[0].count) }),
+      bookings: rows.map((booking) => bookingResponseForStaff(user, booking)),
+      pagination: paginationMeta({
+        ...pagination,
+        total: Number(countRows[0].count),
+      }),
     });
   } catch (error) {
     return jsonError(error);
@@ -38,12 +41,12 @@ export async function GET(request) {
 export async function POST(request) {
   try {
     await assertSameOrigin(request);
-    const user = await requireUser(['internal', 'external']);
+    const user = await requirePermission('staff.bookings', ['internal', 'external'], { write: true });
     const parsed = createBookingSchema.safeParse(await parseJsonBody(request));
     if (!parsed.success) {
       return Response.json({ error: 'Data booking tidak valid', details: parsed.error.flatten() }, { status: 400 });
     }
-    const data = parsed.data;
+    const data = bookingCreationInputForStaff(user, parsed.data);
     const packageId = data.packageId;
     const staffId = user.role === 'admin' && data.staffId ? data.staffId : user.id;
     const resortId = user.resort_id;
@@ -61,7 +64,7 @@ export async function POST(request) {
         const eventResult = await client.query(
           `SELECT id, package_id, price_override_usd
            FROM sky_events WHERE id = $1 AND resort_id = $2 AND status = 'published'`,
-          [data.skyEventId, resortId]
+          [data.skyEventId, resortId],
         );
         skyEvent = eventResult.rows[0];
         if (!skyEvent || (skyEvent.package_id && skyEvent.package_id !== packageId)) {
@@ -69,7 +72,10 @@ export async function POST(request) {
         }
       }
 
-      const staff = await client.query('SELECT id, role, resort_id, name FROM users WHERE id = $1 AND status = $2', [staffId, 'active']);
+      const staff = await client.query('SELECT id, role, resort_id, name FROM users WHERE id = $1 AND status = $2', [
+        staffId,
+        'active',
+      ]);
       if (!staff.rows[0]) throw new Error('Staff not found');
 
       let resortName = null;
@@ -79,9 +85,11 @@ export async function POST(request) {
       }
 
       const adultPriceUsd = skyEvent?.price_override_usd ?? pkg.rows[0].adult_price_usd;
-      const childPriceUsd = skyEvent?.price_override_usd != null
-        ? Number(skyEvent.price_override_usd) * 0.5
-        : pkg.rows[0].child_price_usd ?? (pkg.rows[0].package_type === 'kids' ? pkg.rows[0].adult_price_usd : pkg.rows[0].adult_price_usd * 0.5);
+      const childPriceUsd =
+        skyEvent?.price_override_usd != null
+          ? Number(skyEvent.price_override_usd) * 0.5
+          : (pkg.rows[0].child_price_usd ??
+            (pkg.rows[0].package_type === 'kids' ? pkg.rows[0].adult_price_usd : pkg.rows[0].adult_price_usd * 0.5));
       const totals = calculateBookingTotals({
         adultCount: data.adultCount,
         childCount: data.childCount,
@@ -98,7 +106,7 @@ export async function POST(request) {
           booking_code, booking_date, event_date, time_start, time_end,
           guest_name, guest_phone, guest_email, preferred_language,
           room_number, nationality, adult_count, child_count, child_ages,
-          special_occasion, guardian_name, guardian_phone, seating_setup, photo_request,
+          special_occasion, guardian_name, guardian_phone,
           privacy_preference, dietary_restrictions, reschedule_consent, slot_status,
           booking_source, package_id, booked_adult_price_usd, booked_child_price_usd, add_ons, package_notes,
           staff_id, resort_id, status, signed_by_guest, notes,
@@ -111,15 +119,15 @@ export async function POST(request) {
           $1, current_date, $2, $3, $4,
           $5, $6, $7, $8,
           $9, $10, $11, $12, $13,
-          $14, $15, $16, $17, $18,
-          $19, $20, $21, $22,
-          $23, $24, $25, $26, $27::jsonb, $28,
-          $29, $30, $31, false, $32,
-          $33, $34, $35,
-          $36, $37, $38, $39, $40,
-          $41, $42, $43, $44,
-          $45, $46, $47,
-          $48, $49, $50, $51, $51
+          $14, $15, $16,
+          $17, $18, $19, $20,
+          $21, $22, $23, $24, $25::jsonb, $26,
+          $27, $28, $29, false, $30,
+          $31, $32, $33,
+          $34, $35, $36, $37, $38,
+          $39, $40, $41, $42,
+          $43, $44, $45,
+          $46, $47, $48, $49, $49
         ) RETURNING *`,
         [
           generateBookingCode(),
@@ -138,8 +146,6 @@ export async function POST(request) {
           data.specialOccasion,
           data.guardianName,
           data.guardianPhone,
-          data.seatingSetup,
-          data.photoRequest,
           data.privacyPreference,
           data.dietaryRestrictions,
           data.rescheduleConsent,
@@ -173,25 +179,26 @@ export async function POST(request) {
           data.tipRecipient,
           data.tipNotes,
           user.id,
-        ]
+        ],
       );
 
       const assigned = await client.query(
         `UPDATE bookings
          SET assigned_internal_id = $2, sky_event_id = $3, observation_spot = $4
          WHERE id = $1 RETURNING *`,
-        [rows[0].id, assignedInternalId, data.skyEventId || null, data.observationSpot || null]
+        [rows[0].id, assignedInternalId, data.skyEventId || null, data.observationSpot || null],
       );
       const booking = assigned.rows[0];
-      await client.query(
-        'INSERT INTO feedback_tokens (booking_id, token, status) VALUES ($1, $2, $3)',
-        [booking.id, generateFeedbackToken(), 'not_sent']
-      );
+      await client.query('INSERT INTO feedback_tokens (booking_id, token, status) VALUES ($1, $2, $3)', [
+        booking.id,
+        generateFeedbackToken(),
+        'not_sent',
+      ]);
 
       // Notifikasi ke Admin selalu dikirim untuk semua booking baru (Internal maupun External)
       const staffRoleLabel = staff.rows[0]?.role === 'internal' ? 'Internal' : 'External';
       const notifTitle = `Booking baru dari staff ${staffRoleLabel}`;
-      const notifMsg = `${booking.booking_code} - ${booking.guest_name}${pkg.rows[0]?.name ? ', ' + pkg.rows[0].name : ''}`;
+      const notifMsg = `${booking.booking_code} - ${booking.guest_name}${pkg.rows[0]?.name ? `, ${pkg.rows[0].name}` : ''}`;
       const notifMeta = `${staff.rows[0]?.name || `Staff ${staffRoleLabel}`} - ${new Date(data.eventDate).toLocaleDateString('id-ID', { day: '2-digit', month: 'short' })}`;
 
       // 1. Notifikasi ke Admin
@@ -216,7 +223,7 @@ export async function POST(request) {
           message = EXCLUDED.message,
           meta = EXCLUDED.meta,
           link = EXCLUDED.link`,
-        [booking.id, notifTitle, notifMsg, notifMeta]
+        [booking.id, notifTitle, notifMsg, notifMeta],
       );
 
       // Internal operators at this resort receive an operational notification.
@@ -244,7 +251,7 @@ export async function POST(request) {
             message = EXCLUDED.message,
             meta = EXCLUDED.meta,
             link = EXCLUDED.link`,
-          [booking.id, notifTitle, notifMsg, notifMeta, resortId]
+          [booking.id, notifTitle, notifMsg, notifMeta, resortId],
         );
       }
 
@@ -258,25 +265,29 @@ export async function POST(request) {
       });
 
       // Emit domain event and refresh CQRS views (run outside transaction to prevent silent aborts on failure)
-      emit(EventTypes.BOOKING_CREATED, {
-        bookingId: booking.id,
-        bookingCode: booking.booking_code,
-        guestName: booking.guest_name,
-        packageName: pkg.rows[0]?.name,
-        eventDate: booking.event_date,
-        creatorId: user.id,
-        creatorRole: user.role,
-        creatorName: staff.rows[0]?.name || user.name,
-        resortName,
-        resortId,
-      }, { actorId: user.id, skipLogging: true }).catch(console.error);
+      emit(
+        EventTypes.BOOKING_CREATED,
+        {
+          bookingId: booking.id,
+          bookingCode: booking.booking_code,
+          guestName: booking.guest_name,
+          packageName: pkg.rows[0]?.name,
+          eventDate: booking.event_date,
+          creatorId: user.id,
+          creatorRole: user.role,
+          creatorName: staff.rows[0]?.name || user.name,
+          resortName,
+          resortId,
+        },
+        { actorId: user.id, skipLogging: true },
+      ).catch(console.error);
 
       refreshAfterBookingChange().catch(console.error);
 
       return booking;
     });
 
-    return Response.json({ booking: created }, { status: 201 });
+    return Response.json({ booking: bookingResponseForStaff(user, created) }, { status: 201 });
   } catch (error) {
     return jsonError(error);
   }

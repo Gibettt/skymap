@@ -1,0 +1,127 @@
+"use client";
+
+import type { MouseEvent } from "react";
+
+import type { ReactTable } from "@tanstack/react-table";
+
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Separator } from "@/components/ui/separator";
+import type { DataTableFeatures } from "@/lib/data-table-features";
+
+import type { UserRow } from "../../_lib/admin-data";
+
+function preventPaginationNavigation(event: MouseEvent<HTMLAnchorElement>) {
+  event.preventDefault();
+}
+
+function getPageNumbers(currentPage: number, pageCount: number) {
+  if (pageCount <= 3) return Array.from({ length: pageCount }, (_, index) => index + 1);
+  if (currentPage <= 2) return [1, 2, 3];
+  if (currentPage >= pageCount - 1) return [pageCount - 2, pageCount - 1, pageCount];
+  return [currentPage - 1, currentPage, currentPage + 1];
+}
+
+export function UsersPagination({ table }: { table: ReactTable<DataTableFeatures, UserRow> }) {
+  const pageCount = Math.max(table.getPageCount(), 1);
+  const currentPage = Math.min(table.state.pagination.pageIndex + 1, pageCount);
+  const pageNumbers = getPageNumbers(currentPage, pageCount);
+  const rowsPerPage = `${table.state.pagination.pageSize}`;
+
+  return (
+    <>
+      <Separator />
+
+      <div className="flex flex-col gap-3 px-4 md:flex-row md:items-center md:justify-between">
+        <div className="flex flex-wrap items-center gap-4 text-muted-foreground text-sm">
+          <div className="flex items-center gap-2">
+            <span>Rows per page</span>
+            <Select value={rowsPerPage} onValueChange={(value) => table.setPageSize(Number(value))}>
+              <SelectTrigger size="sm" className="w-20" id="users-rows-per-page">
+                <SelectValue placeholder={rowsPerPage} />
+              </SelectTrigger>
+              <SelectContent side="top">
+                <SelectGroup>
+                  {[10, 20, 30, 40, 50].map((pageSize) => (
+                    <SelectItem key={pageSize} value={`${pageSize}`}>
+                      {pageSize}
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
+              </SelectContent>
+            </Select>
+          </div>
+          <span>
+            Page {currentPage} of {pageCount}
+          </span>
+        </div>
+
+        <Pagination className="mx-0 w-auto justify-start md:justify-end">
+          <PaginationContent>
+            <PaginationItem>
+              <PaginationPrevious
+                href="#"
+                text=""
+                className={!table.getCanPreviousPage() ? "pointer-events-none opacity-50" : undefined}
+                onClick={(event) => {
+                  preventPaginationNavigation(event);
+                  table.previousPage();
+                }}
+              />
+            </PaginationItem>
+            {pageNumbers[0] > 1 ? (
+              <PaginationItem>
+                <PaginationEllipsis />
+              </PaginationItem>
+            ) : null}
+            {pageNumbers.map((pageNumber) => (
+              <PaginationItem key={`page-${pageNumber}`}>
+                <PaginationLink
+                  href="#"
+                  isActive={table.state.pagination.pageIndex === pageNumber - 1}
+                  onClick={(event) => {
+                    preventPaginationNavigation(event);
+                    table.setPageIndex(pageNumber - 1);
+                  }}
+                >
+                  {pageNumber}
+                </PaginationLink>
+              </PaginationItem>
+            ))}
+            {pageNumbers[pageNumbers.length - 1] < pageCount ? (
+              <PaginationItem>
+                <PaginationEllipsis />
+              </PaginationItem>
+            ) : null}
+            <PaginationItem>
+              <PaginationNext
+                href="#"
+                text=""
+                className={!table.getCanNextPage() ? "pointer-events-none opacity-50" : undefined}
+                onClick={(event) => {
+                  preventPaginationNavigation(event);
+                  table.nextPage();
+                }}
+              />
+            </PaginationItem>
+          </PaginationContent>
+        </Pagination>
+      </div>
+    </>
+  );
+}

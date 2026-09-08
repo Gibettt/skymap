@@ -1,12 +1,20 @@
-import { assertSameOrigin, ApiError, jsonError, parseJsonBody, requireUser, writeAudit } from '@ephemeris/auth';
-import { transaction, refreshAfterBookingChange } from '@ephemeris/db';
+import { ApiError, assertSameOrigin, jsonError, parseJsonBody, requireUser, writeAudit } from '@ephemeris/auth';
+import { refreshAfterBookingChange, transaction } from '@ephemeris/db';
+import { hasStoredBookingExperiences } from '@ephemeris/db/bookings';
 import { bookingSelectQuery, cleanText } from '@ephemeris/db/helpers';
 import { updateBookingSchema } from '@ephemeris/db/validators/booking';
 import { uuidSchema } from '@ephemeris/db/validators/common';
-import { emit, EventTypes } from '@ephemeris/events';
+import { EventTypes, emit } from '@ephemeris/events';
 import { calculateBookingTotals } from '@ephemeris/finance';
 
-const BOOKING_STATUSES = new Set(['pending', 'active', 'completed', 'cancelled_by_guest', 'cancelled_weather', 'rescheduled']);
+const BOOKING_STATUSES = new Set([
+  'pending',
+  'active',
+  'completed',
+  'cancelled_by_guest',
+  'cancelled_weather',
+  'rescheduled',
+]);
 
 export async function PATCH(request, { params }) {
   try {
@@ -32,6 +40,9 @@ export async function PATCH(request, { params }) {
       const beforeResult = await client.query('SELECT * FROM bookings WHERE id = $1', [id]);
       const before = beforeResult.rows[0];
       if (!before) return null;
+      if (body.packageId && body.packageId !== before.package_id && (await hasStoredBookingExperiences(client, id))) {
+        throw new ApiError(409, 'The primary package is managed from the booking experience schedule');
+      }
       const packageId = body.packageId || before.package_id;
       const packageChanged = packageId !== before.package_id;
       let adultPriceUsd = Number(before.booked_adult_price_usd);
@@ -46,7 +57,9 @@ export async function PATCH(request, { params }) {
           throw new Error('Package not found for this resort');
         }
         adultPriceUsd = Number(pkg.rows[0].adult_price_usd);
-        childPriceUsd = Number(pkg.rows[0].child_price_usd ?? (pkg.rows[0].package_type === 'kids' ? adultPriceUsd : adultPriceUsd * 0.5));
+        childPriceUsd = Number(
+          pkg.rows[0].child_price_usd ?? (pkg.rows[0].package_type === 'kids' ? adultPriceUsd : adultPriceUsd * 0.5),
+        );
         newBookedAdultPriceUsd = adultPriceUsd;
         newBookedChildPriceUsd = childPriceUsd;
         isChargeable = pkg.rows[0].is_chargeable;
@@ -106,41 +119,39 @@ export async function PATCH(request, { params }) {
           special_occasion = $14,
           guardian_name = $15,
           guardian_phone = $16,
-          seating_setup = $17,
-          photo_request = $18,
-          privacy_preference = $19,
-          dietary_restrictions = $20,
-          reschedule_consent = $21,
-          slot_status = $22,
-          booking_source = $23,
-          package_id = $24,
-          booked_adult_price_usd = $25,
-          booked_child_price_usd = $26,
-          add_ons = $27::jsonb,
-          package_notes = $28,
-          status = $29,
-          signed_by_guest = $30,
-          notes = $31,
-          payment_method = $32,
-          invoice_number = $33,
-          billing_notes = $34,
-          weather_condition = $35,
-          equipment_needed = $36,
-          assigned_astronomer = $37,
-          assigned_butler = $38,
-          setup_status = $39,
-          base_total_usd = $40,
-          service_charge_10_usd = $41,
-          gst_17_usd = $42,
-          invoice_total_usd = $43,
-          operation_share_50_usd = $44,
-          company_share_50_usd = $45,
-          staff_commission_5_usd = $46,
-          field_tip_incentive_usd = $47,
-          tip_recipient = $48,
-          tip_notes = $49,
-          payout_status = $50,
-          updated_by = $51
+          privacy_preference = $17,
+          dietary_restrictions = $18,
+          reschedule_consent = $19,
+          slot_status = $20,
+          booking_source = $21,
+          package_id = $22,
+          booked_adult_price_usd = $23,
+          booked_child_price_usd = $24,
+          add_ons = $25::jsonb,
+          package_notes = $26,
+          status = $27,
+          signed_by_guest = $28,
+          notes = $29,
+          payment_method = $30,
+          invoice_number = $31,
+          billing_notes = $32,
+          weather_condition = $33,
+          equipment_needed = $34,
+          assigned_astronomer = $35,
+          assigned_butler = $36,
+          setup_status = $37,
+          base_total_usd = $38,
+          service_charge_10_usd = $39,
+          gst_17_usd = $40,
+          invoice_total_usd = $41,
+          operation_share_50_usd = $42,
+          company_share_50_usd = $43,
+          staff_commission_5_usd = $44,
+          field_tip_incentive_usd = $45,
+          tip_recipient = $46,
+          tip_notes = $47,
+          payout_status = $48,
+          updated_by = $49
          WHERE id = $1
          RETURNING *`,
         [
@@ -160,8 +171,6 @@ export async function PATCH(request, { params }) {
           body.specialOccasion === undefined ? before.special_occasion : cleanText(body.specialOccasion),
           body.guardianName === undefined ? before.guardian_name : cleanText(body.guardianName),
           body.guardianPhone === undefined ? before.guardian_phone : cleanText(body.guardianPhone),
-          body.seatingSetup === undefined ? before.seating_setup : cleanText(body.seatingSetup),
-          body.photoRequest === undefined ? before.photo_request : cleanText(body.photoRequest),
           body.privacyPreference === undefined ? before.privacy_preference : cleanText(body.privacyPreference),
           body.dietaryRestrictions === undefined ? before.dietary_restrictions : cleanText(body.dietaryRestrictions),
           body.rescheduleConsent === undefined ? before.reschedule_consent : cleanText(body.rescheduleConsent),
@@ -195,7 +204,7 @@ export async function PATCH(request, { params }) {
           body.tipNotes === undefined ? before.tip_notes : cleanText(body.tipNotes),
           user.role === 'admin' ? (body.payoutStatus ?? before.payout_status) : before.payout_status,
           user.id,
-        ]
+        ],
       );
 
       await writeAudit(client, {
@@ -217,15 +226,19 @@ export async function PATCH(request, { params }) {
         else if (nextStatus === 'rescheduled') eventType = EventTypes.BOOKING_RESCHEDULED;
       }
 
-      await emit(eventType, {
-        bookingId: id,
-        bookingCode: rows[0].booking_code,
-        guestName: rows[0].guest_name,
-        staffId: rows[0].staff_id,
-        previousStatus: before.status,
-        status: nextStatus,
-        signedByGuest,
-      }, { client, actorId: user.id });
+      await emit(
+        eventType,
+        {
+          bookingId: id,
+          bookingCode: rows[0].booking_code,
+          guestName: rows[0].guest_name,
+          staffId: rows[0].staff_id,
+          previousStatus: before.status,
+          status: nextStatus,
+          signedByGuest,
+        },
+        { client, actorId: user.id },
+      );
 
       // Trigger CQRS read view refresh
       await refreshAfterBookingChange(client);
