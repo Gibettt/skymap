@@ -2,7 +2,7 @@ import { insertNotification } from './notification.js';
 
 export async function handlePayoutRequested(payload, { client, query }) {
   const db = client || { query };
-  const { payoutId, requesterId, requesterName, requesterRole, amountUsd, resortName } = payload;
+  const { payoutId, requesterName, requesterRole, amountUsd, resortName } = payload;
 
   try {
     const { rows: admins } = await db.query(
@@ -23,7 +23,7 @@ export async function handlePayoutRequested(payload, { client, query }) {
         title,
         message,
         meta,
-        link: '/dashboard/admin/keuangan?tab=pencairan',
+        link: '/dashboard/admin/finance#payouts',
       });
     }
   } catch (err) {

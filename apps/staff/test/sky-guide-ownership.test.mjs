@@ -30,8 +30,8 @@ test('Sky Guide write APIs require staff internal and no longer exist in admin',
   ]);
 
   for (const source of [events, event, settings]) {
-    assert.match(source, /requireUser\(\['internal'\]\)/);
-    assert.doesNotMatch(source, /requireUser\(\['admin'\]\)/);
+    assert.match(source, /requirePermission\('staff\.sky_guide', \['internal'\], \{ write: true \}\)/);
+    assert.doesNotMatch(source, /requirePermission\([^\n]*\['admin'\]/);
   }
   assert.match(settings, /catch \(error\)[\s\S]*jsonError\(error\)/);
   await Promise.all([

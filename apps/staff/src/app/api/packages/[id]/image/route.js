@@ -1,10 +1,10 @@
-import { jsonError, requireUser } from '@ephemeris/auth';
+import { jsonError, requirePermission } from '@ephemeris/auth';
 import { query } from '@ephemeris/db';
 import { uuidSchema } from '@ephemeris/db/validators/common';
 
 export async function GET(_request, { params }) {
   try {
-    await requireUser(['internal', 'external']);
+    await requirePermission('staff.bookings', ['internal', 'external']);
     const { id: rawId } = await params;
     const parseId = uuidSchema.safeParse(rawId);
     if (!parseId.success) return Response.json({ error: 'ID tidak valid' }, { status: 400 });

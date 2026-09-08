@@ -78,8 +78,6 @@ export const createBookingSchema = z.object({
   specialOccasion: cleanTextSchema(200),
   guardianName: cleanTextSchema(200),
   guardianPhone: cleanTextSchema(30),
-  seatingSetup: cleanTextSchema(120),
-  photoRequest: cleanTextSchema(200),
   privacyPreference: cleanTextSchema(120),
   dietaryRestrictions: cleanTextSchema(200),
   rescheduleConsent: cleanTextSchema(120),

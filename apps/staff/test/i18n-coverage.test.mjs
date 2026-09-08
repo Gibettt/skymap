@@ -37,8 +37,8 @@ test('staff dictionaries contain matching Indonesian and English coverage keys',
     assert.equal(source.match(new RegExp(`${key}:`, 'g'))?.length, 2, `Expected id/en values for ${key}`);
   }
 
-  const idBlock = source.match(/id:\s*\{([\s\S]*?)\n\s*\},\n\s*en:\s*\{/)[1];
-  const enBlock = source.match(/en:\s*\{([\s\S]*?)\n\s*\},\n\};/)[1];
+  const idBlock = source.match(/id:\s*\{([\s\S]*?)\r?\n\s*\},\r?\n\s*en:\s*\{/)[1];
+  const enBlock = source.match(/en:\s*\{([\s\S]*?)\r?\n\s*\},\r?\n\};/)[1];
   const keys = (block) => [...block.matchAll(/^\s{4}([A-Za-z0-9_]+):/gm)].map((match) => match[1]);
   assert.deepEqual([...new Set(keys(idBlock))].sort(), [...new Set(keys(enBlock))].sort());
 });

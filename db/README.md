@@ -38,6 +38,19 @@ activity timestamps for the realtime Admin presence view.
 Then run `db/migrations/021_resort_staff_coverage.sql` once to add the resort
 coverage read model and protect activation, deactivation, and last-staff changes.
 
+Then run `db/migrations/022_admin_sky_event_management.sql` once to allow active
+admins to manage resort sky events from the Admin Calendar while preserving the
+same-resort restriction for Internal staff.
+
+Then run `db/migrations/023_access_roles_and_permissions.sql` once to add
+database-backed access-role profiles, permission sets, member assignments, and
+the compatibility bridge to the existing `admin`/`internal`/`external` portal roles.
+
+Then run migrations `024` through `029` in numeric order. Migration `028_invoices.sql`
+adds immutable customer invoices and paid staff-payout receipts. Migration
+`029_customer_payment_confirmation.sql` adds the auditable customer-payment state;
+customer invoices can only be generated after that payment is confirmed.
+
 5. Create `.env.local` in **each app folder** (`apps/landing`, `apps/admin`, `apps/staff`):
 
 ```env
@@ -70,13 +83,14 @@ External: external@ephemeris.id / external123
 Admin:
 - full dashboard access
 - package/price management
+- cross-resort sky event management from the Admin Calendar
 - audit log
 - all booking and finance reports
 
 Internal:
 - sees and manages all bookings assigned to their own resort
 - can complete, cancel, sign, and reschedule resort bookings
-- exclusively manages Sky Guide events and observatory coordinates
+- manages Sky Guide events and observatory coordinates for their own resort
 - earns commission only; star rewards are bypassed
 
 External:

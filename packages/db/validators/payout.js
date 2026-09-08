@@ -17,3 +17,19 @@ export const reviewPayoutSchema = z.object({
   status: z.enum(['processed', 'completed', 'rejected']),
   adminNotes: cleanTextSchema(500),
 });
+
+export function payoutTransitionError(currentStatus, nextStatus) {
+  if (currentStatus === 'completed' || currentStatus === 'rejected') {
+    return 'Payout request is already closed';
+  }
+  if (nextStatus === 'processed' && currentStatus !== 'requested') {
+    return 'Only requested payouts can be processed';
+  }
+  if (nextStatus === 'completed' && currentStatus !== 'processed') {
+    return 'Only processed payouts can be completed';
+  }
+  if (nextStatus === 'rejected' && !['requested', 'processed'].includes(currentStatus)) {
+    return 'Only open payouts can be rejected';
+  }
+  return null;
+}
