@@ -8,8 +8,19 @@ export default function AdminLoginLayout({ children }: Readonly<{ children: Reac
   return (
     <main>
       <div className="grid h-dvh justify-center p-2 lg:grid-cols-2">
-        <div className="relative order-2 hidden h-full rounded-3xl bg-primary lg:flex">
-          <div className="absolute top-10 flex flex-col gap-1 px-10 text-primary-foreground">
+        <div className="relative order-2 hidden h-full overflow-hidden rounded-3xl lg:flex">
+          {/* Background image */}
+          <Image
+            src="/login-bg.png"
+            alt="Space background"
+            fill
+            className="object-cover"
+            priority
+          />
+          {/* Dark overlay so text stays readable */}
+          <div className="absolute inset-0 bg-black/50" />
+
+          <div className="absolute top-10 flex flex-col gap-1 px-10 text-white">
             <Image
               src="/spacecat-astrotourism-logo.jpg"
               alt="SpaceCat ASTROTOURISM"
@@ -22,14 +33,14 @@ export default function AdminLoginLayout({ children }: Readonly<{ children: Reac
           </div>
 
           <div className="absolute bottom-10 flex w-full justify-between px-10">
-            <div className="flex flex-1 flex-col gap-1 text-primary-foreground">
+            <div className="flex flex-1 flex-col gap-1 text-white">
               <h2 className="font-medium">Operational control</h2>
               <p className="text-sm">
                 Manage bookings, resorts, packages, finances, and daily operations in one place.
               </p>
             </div>
-            <Separator orientation="vertical" className="mx-3 h-auto!" />
-            <div className="flex flex-1 flex-col gap-1 text-primary-foreground">
+            <Separator orientation="vertical" className="mx-3 h-auto! bg-white/30" />
+            <div className="flex flex-1 flex-col gap-1 text-white">
               <h2 className="font-medium">Secure access</h2>
               <p className="text-sm">This portal is restricted to authorized SpaceCat ASTROTOURISM administrators.</p>
             </div>

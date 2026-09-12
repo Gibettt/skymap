@@ -8,8 +8,19 @@ export default function StaffLoginLayout({ children }: Readonly<{ children: Reac
   return (
     <main>
       <div className="grid min-h-dvh justify-center p-2 lg:grid-cols-2">
-        <div className="relative order-2 hidden rounded-3xl bg-primary lg:sticky lg:top-2 lg:flex lg:h-[calc(100dvh-1rem)]">
-          <div className="absolute top-10 flex flex-col gap-1 px-10 text-primary-foreground">
+        <div className="relative order-2 hidden overflow-hidden rounded-3xl lg:sticky lg:top-2 lg:flex lg:h-[calc(100dvh-1rem)]">
+          {/* Background image */}
+          <Image
+            src="/login-bg.png"
+            alt="Space background"
+            fill
+            className="object-cover"
+            priority
+          />
+          {/* Dark overlay so text stays readable */}
+          <div className="absolute inset-0 bg-black/50" />
+
+          <div className="absolute top-10 flex flex-col gap-1 px-10 text-white">
             <Image
               src="/spacecat-astrotourism-logo.jpg"
               alt="SpaceCat ASTROTOURISM"
@@ -22,14 +33,14 @@ export default function StaffLoginLayout({ children }: Readonly<{ children: Reac
           </div>
 
           <div className="absolute bottom-10 flex w-full justify-between px-10">
-            <div className="flex flex-1 flex-col gap-1 text-primary-foreground">
+            <div className="flex flex-1 flex-col gap-1 text-white">
               <h2 className="font-medium">Resort operations</h2>
               <p className="text-sm">
                 Keep bookings, schedules, guest experiences, and payouts organized in one place.
               </p>
             </div>
-            <Separator orientation="vertical" className="mx-3 h-auto!" />
-            <div className="flex flex-1 flex-col gap-1 text-primary-foreground">
+            <Separator orientation="vertical" className="mx-3 h-auto! bg-white/30" />
+            <div className="flex flex-1 flex-col gap-1 text-white">
               <h2 className="font-medium">Role-aware access</h2>
               <p className="text-sm">Internal and external staff see only the tools assigned to their role.</p>
             </div>
