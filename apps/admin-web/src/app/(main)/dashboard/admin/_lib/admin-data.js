@@ -16,7 +16,7 @@ export async function getOverview() {
       COUNT(*)::int AS total,
       COUNT(*) FILTER (WHERE status IN ('pending', 'active', 'rescheduled'))::int AS open,
       COUNT(*) FILTER (WHERE status = 'completed')::int AS completed,
-      COALESCE(SUM(invoice_total_usd) FILTER (WHERE status = 'completed'), 0)::numeric AS revenue
+      COALESCE(SUM(invoice_total_usd) FILTER (WHERE status IN ('active', 'completed', 'rescheduled')), 0)::numeric AS revenue
       FROM bookings`),
     query(`SELECT COUNT(*)::int AS total,
       COUNT(*) FILTER (WHERE status = 'active')::int AS active FROM resorts`),
@@ -162,7 +162,7 @@ export async function getFinance() {
       COALESCE(SUM(base_total_usd) FILTER (WHERE status = 'completed'), 0)::numeric AS base_total,
       COALESCE(SUM(service_charge_10_usd) FILTER (WHERE status = 'completed'), 0)::numeric AS service_charge,
       COALESCE(SUM(gst_17_usd) FILTER (WHERE status = 'completed'), 0)::numeric AS gst,
-      COALESCE(SUM(invoice_total_usd) FILTER (WHERE status = 'completed'), 0)::numeric AS invoice_total,
+      COALESCE(SUM(invoice_total_usd) FILTER (WHERE status IN ('active', 'completed', 'rescheduled')), 0)::numeric AS invoice_total,
       COALESCE(SUM(operation_share_50_usd) FILTER (WHERE status = 'completed'), 0)::numeric AS resort_share,
       COALESCE(SUM(company_share_50_usd) FILTER (WHERE status = 'completed'), 0)::numeric AS company_share,
       COALESCE(SUM(staff_commission_5_usd) FILTER (WHERE status = 'completed'), 0)::numeric AS staff_commission,
@@ -187,7 +187,7 @@ export async function getFinance() {
           AND event_date < date_trunc('month', current_date) + interval '1 month'
       )::int AS current_completed_bookings,
       COALESCE(SUM(invoice_total_usd) FILTER (
-        WHERE status = 'completed'
+        WHERE status IN ('active', 'completed', 'rescheduled')
           AND event_date >= date_trunc('month', current_date)
           AND event_date < date_trunc('month', current_date) + interval '1 month'
       ), 0)::numeric AS current_revenue,

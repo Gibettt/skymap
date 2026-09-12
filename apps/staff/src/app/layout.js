@@ -16,9 +16,13 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata = {
-  title: 'SpaceCat Astrotourism Staff - Observatorium Nasional',
-  description: 'Portal staff SpaceCat Astrotourism: booking, jadwal, observasi, dan Sky Guide untuk staff internal.',
-  icons: { icon: '/spacecat-astrotourism-logo.jpg' },
+  title: 'SpaceCat ASTROTOURISM Staff - Observatorium Nasional',
+  description: 'Portal staff SpaceCat ASTROTOURISM: booking, jadwal, observasi, dan Sky Guide untuk staff internal.',
+  icons: {
+    icon: '/spacecat-astrotourism-logo.jpg',
+    shortcut: '/spacecat-astrotourism-logo.jpg',
+    apple: '/spacecat-astrotourism-logo.jpg',
+  },
 };
 
 import ClientWrapper from '@/components/ClientWrapper';

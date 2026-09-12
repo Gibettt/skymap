@@ -10,7 +10,7 @@
     "dev:admin-web": "pnpm --filter @ephemeris/admin-web dev",
     "dev:staff": "pnpm --filter @ephemeris/staff dev",
     "dev:staff-web": "pnpm --filter @ephemeris/staff-web dev",
-    "build": "turbo run build",
+    "build": "turbo run build --concurrency=1",
     "build:landing": "pnpm --filter @ephemeris/landing build",
     "build:admin": "pnpm --filter @ephemeris/admin build",
     "build:admin-web": "pnpm --filter @ephemeris/admin-web build",

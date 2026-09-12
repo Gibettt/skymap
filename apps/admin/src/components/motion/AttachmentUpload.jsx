@@ -453,7 +453,7 @@ function AttachmentRow({
  *
  * Drag-and-drop / click-to-browse file uploader with animated upload progress,
  * image thumbnails, shared-layout image preview, and staggered list animations.
- * Adapted from beui.dev for SpaceCat Astrotourism Admin (image-upload focused).
+ * Adapted from beui.dev for SpaceCat ASTROTOURISM Admin (image-upload focused).
  *
  * @param {object}    props
  * @param {Array}     [props.value]             - Controlled items array.

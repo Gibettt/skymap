@@ -1,0 +1,8 @@
+obs_description          = minimal stars survey for Stellarium Mobile
+hips_release_date        = 2020-02-05T00:00Z
+hips_order_min           = 0
+min_vmag                 = -1.453125
+max_vmag                 = 7
+type                     = stars
+hips_tile_format         = eph
+skysource_sha256         = 7c4ddaaec0d4a50fb016e1139b7e67fb5e501551851b8085b9e227d43e706887

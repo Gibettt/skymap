@@ -1,0 +1,13 @@
+hips_order            = 2
+hips_order_min        = 0
+hips_tile_width       = 512
+hips_tile_format      = webp
+dataproduct_type      = image
+obs_title             = neptune
+hips_release_date     = 2024-01-11T20:54Z
+source_md5            = 
+type                  = planet
+obs_description       = The texture for Neptune was initially prepared by Oleg Pluton a.k.a Helleformer under Creative Commons Attribution 4.0 International license (original data for this texture was obtained from NASA website under public domain license). After this Ruslan Kabatsayev at Stellarium Labs recolored the texture to match better real-world colors, trying to reproduce the colors of the corrected version of the photo as discussed in https://doi.org/10.1093/mnras/stad3761 paper.
+hips_frame            = neptune
+obs_copyright         = Oleg Pluton a.k.a Helleformer
+hips_status           = public mirror clonableOnce

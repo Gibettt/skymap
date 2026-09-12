@@ -1,8 +1,8 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 
-import { Command } from "lucide-react";
 import { useShallow } from "zustand/react/shallow";
 
 import {
@@ -59,7 +59,7 @@ export function AppSidebar({ user = rootUser, permissions, ...props }: AppSideba
   const collapsible = isSynced ? sidebarCollapsible : props.collapsible;
   const visibleItems = permissions
     ? sidebarItems.map((group) =>
-        group.label === "Ephemeris Admin"
+        group.label === "SpaceCat ASTROTOURISM Admin"
           ? {
               ...group,
               items: group.items.filter((item) =>
@@ -72,13 +72,27 @@ export function AppSidebar({ user = rootUser, permissions, ...props }: AppSideba
 
   return (
     <Sidebar {...props} variant={variant} collapsible={collapsible}>
-      <SidebarHeader>
+      <SidebarHeader className="group-data-[collapsible=icon]:p-1.5">
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton asChild>
-              <Link prefetch={false} href="/dashboard/default">
-                <Command />
-                <span className="font-semibold text-base">{APP_CONFIG.name}</span>
+            <SidebarMenuButton
+              size="lg"
+              asChild
+              tooltip={APP_CONFIG.name}
+              className="group-data-[collapsible=icon]:size-9! group-data-[collapsible=icon]:p-0! group-data-[collapsible=icon]:justify-center"
+            >
+              <Link prefetch={false} href="/dashboard/default" className="flex items-center gap-2.5">
+                <Image
+                  src="/spacecat-astrotourism-logo.jpg"
+                  alt="SpaceCat ASTROTOURISM"
+                  width={36}
+                  height={36}
+                  priority
+                  className="size-9 shrink-0 aspect-square rounded-lg object-cover"
+                />
+                <span className="font-semibold text-base truncate group-data-[collapsible=icon]:hidden">
+                  {APP_CONFIG.name}
+                </span>
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>

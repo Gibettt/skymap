@@ -2121,14 +2121,13 @@ textarea:focus-visible,
 }
 
 .home-image-story {
-  display: grid;
+  display: block;
   width: 100%;
-  min-height: 720px;
-  grid-template-columns: minmax(0, 1.25fr) minmax(380px, 0.75fr);
+  min-height: auto;
   overflow: hidden;
   border: 0;
   border-radius: 0;
-  background: var(--home-surface);
+  background: var(--white, #fff);
 }
 
 .home-story-image {

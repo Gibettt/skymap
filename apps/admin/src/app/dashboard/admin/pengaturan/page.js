@@ -74,7 +74,7 @@ export default function PengaturanPage() {
 
   /* ── Umum settings ── */
   const [generalSettings, setGeneralSettings] = useState({
-    systemName:  'SpaceCat Astrotourism Management System',
+    systemName:  'SpaceCat ASTROTOURISM Management System',
     timezone:    'Asia/Jakarta',
     language,
     adminEmail:  'admin@ephemeris.id',

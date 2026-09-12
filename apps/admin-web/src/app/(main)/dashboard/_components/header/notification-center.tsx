@@ -6,6 +6,7 @@ import { formatDistanceToNow } from "date-fns";
 import { Bell, CalendarCheck, CheckCheck, CircleDollarSign } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -46,25 +47,44 @@ export function NotificationCenter() {
   const [unreadCount, setUnreadCount] = React.useState(0);
   const [loading, setLoading] = React.useState(true);
   const [markingAll, setMarkingAll] = React.useState(false);
+  const seenIdsRef = React.useRef<Set<string> | null>(null);
 
-  const loadNotifications = React.useCallback(async () => {
+  const loadNotifications = React.useCallback(async (isInitial = false) => {
     try {
       const response = await fetch("/api/notifications?limit=8", { cache: "no-store" });
       if (!response.ok) return;
       const body = await response.json();
-      setNotifications(Array.isArray(body.notifications) ? body.notifications : []);
+      const list: AdminNotification[] = Array.isArray(body.notifications) ? body.notifications : [];
+      setNotifications(list);
       setUnreadCount(Number(body.unreadCount) || 0);
+
+      if (!isInitial && seenIdsRef.current) {
+        const newlyArrived = list.filter((n) => !n.read_at && !seenIdsRef.current?.has(n.id));
+        for (const notif of newlyArrived) {
+          const link = notif.link;
+          toast.info(notif.title, {
+            description: notif.message,
+            action: link
+              ? {
+                  label: "Buka",
+                  onClick: () => router.push(link),
+                }
+              : undefined,
+          });
+        }
+      }
+      seenIdsRef.current = new Set(list.map((n) => n.id));
     } catch {
       // Keep the last successfully loaded state during a transient network failure.
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [router]);
 
   React.useEffect(() => {
-    void loadNotifications();
-    const interval = window.setInterval(() => void loadNotifications(), 60_000);
-    const handleChanged = () => void loadNotifications();
+    void loadNotifications(true);
+    const interval = window.setInterval(() => void loadNotifications(false), 10_000);
+    const handleChanged = () => void loadNotifications(false);
     window.addEventListener(NOTIFICATIONS_CHANGED_EVENT, handleChanged);
     return () => {
       window.clearInterval(interval);
@@ -132,8 +152,7 @@ export function NotificationCenter() {
           <Bell data-icon="inline-start" />
           {unreadCount > 0 ? (
             <Badge
-              className="pointer-events-none absolute -top-1 -right-1 h-4 min-w-4 px-1"
-              variant="secondary"
+              className="pointer-events-none absolute -top-1.5 -right-1.5 h-4 min-w-4 px-1 bg-red-600 text-white font-bold text-[10px] rounded-full flex items-center justify-center shadow-xs border border-background"
               aria-hidden="true"
             >
               {unreadCount > 9 ? "9+" : unreadCount}

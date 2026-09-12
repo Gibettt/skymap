@@ -3,12 +3,12 @@ import packageJson from "../../package.json";
 const currentYear = new Date().getFullYear();
 
 export const APP_CONFIG = {
-  name: "Ephemeris Staff",
+  name: "SpaceCat ASTROTOURISM Staff",
   version: packageJson.version,
-  copyright: `© ${currentYear}, Ephemeris Staff.`,
+  copyright: `© ${currentYear}, SpaceCat ASTROTOURISM Staff.`,
   meta: {
-    title: "Ephemeris Staff Portal",
+    title: "SpaceCat ASTROTOURISM Staff Portal",
     description:
-      "Role-aware operations portal for internal and external Ephemeris staff.",
+      "Role-aware operations portal for internal and external SpaceCat ASTROTOURISM staff.",
   },
 };

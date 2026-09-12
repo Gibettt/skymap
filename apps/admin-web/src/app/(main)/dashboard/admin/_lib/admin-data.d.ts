@@ -31,6 +31,7 @@ export interface BookingRow {
   package_name: string;
   staff_id: string;
   staff_name: string;
+  staff_role?: string | null;
   resort_id: string | null;
   resort_name: string | null;
   status: string;

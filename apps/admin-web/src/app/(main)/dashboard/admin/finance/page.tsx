@@ -218,7 +218,7 @@ export default async function FinancePage() {
   return (
     <div className="flex flex-col gap-4">
       <div className="space-y-1">
-        <h1 className="text-3xl tracking-tight">Ephemeris Finances</h1>
+        <h1 className="text-3xl tracking-tight">SpaceCat ASTROTOURISM Finances</h1>
         <p className="text-muted-foreground text-sm">{formattedDate}</p>
       </div>
 

@@ -7,7 +7,7 @@ import { Globe } from "lucide-react";
 import { ExternalRegisterForm } from "./_components/external-register-form";
 
 export const metadata = {
-  title: "External Staff Registration | Ephemeris",
+  title: "External Staff Registration | SpaceCat ASTROTOURISM",
 };
 
 export default async function ExternalRegisterPage() {
@@ -38,7 +38,7 @@ export default async function ExternalRegisterPage() {
       </div>
 
       <div className="pointer-events-none absolute bottom-5 flex w-full justify-between px-6 sm:px-10">
-        <p className="text-sm">&copy; {new Date().getFullYear()}, Ephemeris.</p>
+        <p className="text-sm">&copy; {new Date().getFullYear()}, SpaceCat ASTROTOURISM.</p>
         <div className="flex items-center gap-1 text-sm">
           <Globe className="size-4 text-muted-foreground" />
           ENG

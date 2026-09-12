@@ -174,7 +174,7 @@ export function SettingsPanel({
             <CardTitle className="flex items-center gap-2">
               <UserRound className="size-4" /> Account
             </CardTitle>
-            <CardDescription>Your identity is managed by the Ephemeris administrator.</CardDescription>
+            <CardDescription>Your identity is managed by the SpaceCat ASTROTOURISM administrator.</CardDescription>
           </CardHeader>
           <CardContent>
             <FieldGroup>

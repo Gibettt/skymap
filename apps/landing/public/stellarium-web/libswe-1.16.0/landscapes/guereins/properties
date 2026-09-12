@@ -1,0 +1,10 @@
+hips_order            = 2
+hips_order_min        = 0
+hips_tile_width       = 512
+hips_tile_format      = webp
+dataproduct_type      = image
+hips_frame            = observed
+obs_title             = GuÃ©reins
+hips_release_date     = 2021-11-04T10:48Z
+source_md5            = 74e8264e0e1aff66ed965d3ef58d45f8
+type                  = landscape

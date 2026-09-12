@@ -229,12 +229,12 @@ export default function AdminSidebar({ alertCount = 0, bookingCount = 0, isOpen 
 
         {/* Brand */}
         <div className="sidebar-brand">
-          <div className="sidebar-brand-icon" title="SpaceCat Astrotourism">
+          <div className="sidebar-brand-icon" title="SpaceCat ASTROTOURISM">
             <Image src="/spacecat-astrotourism-logo.jpg" alt="" width={32} height={32} sizes="32px" />
           </div>
           <div className="sidebar-collapsible-text">
             <div className="sidebar-brand-text">SpaceCat</div>
-            <div className="sidebar-brand-sub">Astrotourism</div>
+            <div className="sidebar-brand-sub">ASTROTOURISM</div>
           </div>
         </div>
 

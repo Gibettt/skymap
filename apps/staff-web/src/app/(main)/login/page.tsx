@@ -6,7 +6,7 @@ import { Globe } from "lucide-react";
 import { StaffLoginForm } from "./_components/staff-login-form";
 
 export const metadata = {
-  title: "Staff Login | Ephemeris",
+  title: "Staff Login | SpaceCat ASTROTOURISM",
 };
 
 export default async function StaffLoginPage() {
@@ -30,7 +30,7 @@ export default async function StaffLoginPage() {
       </div>
 
       <div className="pointer-events-none absolute bottom-5 flex w-full justify-between px-6 sm:px-10">
-        <p className="text-sm">&copy; {new Date().getFullYear()}, Ephemeris.</p>
+        <p className="text-sm">&copy; {new Date().getFullYear()}, SpaceCat ASTROTOURISM.</p>
         <div className="flex items-center gap-1 text-sm">
           <Globe className="size-4 text-muted-foreground" />
           ENG

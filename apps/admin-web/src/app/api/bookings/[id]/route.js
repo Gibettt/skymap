@@ -113,6 +113,19 @@ export async function PATCH(request, { params }) {
       const addOns = body.addOns === undefined ? null : body.addOns;
       const guestEmail = body.guestEmail === undefined ? before.guest_email : cleanText(body.guestEmail);
 
+      let assignedInternalId = before.assigned_internal_id;
+      if (staffRole === "internal") {
+        assignedInternalId = staffRow.id;
+      } else if (before.status === "pending" && nextStatus === "active" && !assignedInternalId) {
+        const internalStaff = await client.query(
+          "SELECT id FROM users WHERE role = 'internal' AND status = 'active' AND resort_id = $1 LIMIT 1",
+          [resortId],
+        );
+        if (internalStaff.rows[0]) {
+          assignedInternalId = internalStaff.rows[0].id;
+        }
+      }
+
       if (!BOOKING_STATUSES.has(nextStatus)) {
         throw new ApiError(400, "Invalid booking status");
       }
@@ -174,7 +187,8 @@ export async function PATCH(request, { params }) {
           payout_status = $48,
           updated_by = $49,
           staff_id = $50,
-          resort_id = $51
+          resort_id = $51,
+          assigned_internal_id = $52
          WHERE id = $1
          RETURNING *`,
         [
@@ -202,7 +216,7 @@ export async function PATCH(request, { params }) {
           packageId,
           newBookedAdultPriceUsd,
           newBookedChildPriceUsd,
-          addOns === null ? JSON.stringify(before.add_ons || []) : JSON.stringify(addOns),
+          JSON.stringify(addOns === null ? (before.add_ons || []) : addOns),
           body.packageNotes === undefined ? before.package_notes : cleanText(body.packageNotes),
           nextStatus,
           signedByGuest,
@@ -229,6 +243,7 @@ export async function PATCH(request, { params }) {
           user.id,
           staffId,
           resortId,
+          assignedInternalId,
         ],
       );
 
@@ -247,7 +262,7 @@ export async function PATCH(request, { params }) {
       if (before.status !== nextStatus) {
         if (nextStatus === "active") eventType = EventTypes.BOOKING_ACTIVATED;
         else if (nextStatus === "completed") eventType = EventTypes.BOOKING_COMPLETED;
-        else if (nextStatus.startsWith("cancelled_")) eventType = EventTypes.BOOKING_CANCELLED;
+        else if (nextStatus.startsWith("cancelled_") || nextStatus === "rejected") eventType = EventTypes.BOOKING_CANCELLED;
         else if (nextStatus === "rescheduled") eventType = EventTypes.BOOKING_RESCHEDULED;
       }
 

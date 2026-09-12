@@ -9,7 +9,7 @@ const DEMO_USERS = {
 };
 
 export const metadata = {
-  title: 'Login Admin | SpaceCat Astrotourism',
+  title: 'Login Admin | SpaceCat ASTROTOURISM',
 };
 
 export default function AdminLoginPage() {

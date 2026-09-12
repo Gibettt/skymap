@@ -21,12 +21,15 @@ export async function getDefaultOverviewData() {
           AND created_at < current_date - interval '29 days'
       )::int AS bookings_previous,
       COUNT(*) FILTER (WHERE status = 'completed')::int AS completed_bookings,
-      COALESCE(SUM(invoice_total_usd) FILTER (WHERE status = 'completed'), 0)::numeric AS total_revenue,
       COALESCE(SUM(invoice_total_usd) FILTER (
-        WHERE status = 'completed' AND event_date >= current_date - interval '29 days'
+        WHERE status IN ('active', 'completed', 'rescheduled')
+      ), 0)::numeric AS total_revenue,
+      COALESCE(SUM(invoice_total_usd) FILTER (
+        WHERE status IN ('active', 'completed', 'rescheduled')
+          AND event_date >= current_date - interval '29 days'
       ), 0)::numeric AS revenue_current,
       COALESCE(SUM(invoice_total_usd) FILTER (
-        WHERE status = 'completed'
+        WHERE status IN ('active', 'completed', 'rescheduled')
           AND event_date >= current_date - interval '59 days'
           AND event_date < current_date - interval '29 days'
       ), 0)::numeric AS revenue_previous

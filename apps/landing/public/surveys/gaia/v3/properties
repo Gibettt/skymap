@@ -1,0 +1,9 @@
+obs_title             = gaia
+hips_order_min        = 5
+min_vmag              = 12.0
+hips_release_date     = 2026-03-18T00:00Z
+hips_tile_format      = eph
+type                  = stars
+obs_copyright         = Stellarium Labs
+obs_description       = Survey generated from Gaia dr3 archive (https://gea.esac.esa.int/archive/), in the 'eph' format used by Stellarium Web.  The sources are sorted by vmag, with a fixed number of stars per file.
+obs_ack               = This work has made use of data from the European Space Agency (ESA) mission Gaia (https://www.cosmos.esa.int/gaia), processed by the Gaia Data Processing and Analysis Consortium (DPAC, https://www.cosmos.esa.int/web/gaia/dpac/consortium). Funding for the DPAC has been provided by national institutions, in particular the institutions participating in the Gaia Multilateral Agreement.

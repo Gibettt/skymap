@@ -32,6 +32,7 @@ export function StaffOverview({ role, permissions, data }: Props) {
         data={data.recentBookings}
         total={data.metrics.totalBookings}
         exportFilename={`ephemeris-${role}-bookings.csv`}
+        newBookingHref={permissions.includes("staff.bookings") ? `/dashboard/${role}/bookings?new=1` : undefined}
       />
     </div>
   );

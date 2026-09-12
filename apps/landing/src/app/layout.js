@@ -1,4 +1,5 @@
 import localFont from 'next/font/local';
+import './club-faune-custom.css';
 import './globals.css';
 import './product.css';
 
@@ -16,17 +17,42 @@ const spaceGrotesk = localFont({
   weight: '300 700',
 });
 
+const ogg = localFont({
+  src: './fonts/Ogg-Regular.woff2',
+  variable: '--font-ogg',
+  display: 'swap',
+});
+
+const biotif = localFont({
+  src: [
+    { path: './fonts/Biotif-Light.woff2', weight: '300', style: 'normal' },
+    { path: './fonts/Biotif-Regular.woff2', weight: '400', style: 'normal' },
+    { path: './fonts/Biotif-Medium.woff2', weight: '500', style: 'normal' },
+    { path: './fonts/Biotif-Bold.woff2', weight: '700', style: 'normal' },
+    { path: './fonts/Biotif-Black.woff2', weight: '900', style: 'normal' },
+  ],
+  variable: '--font-biotif',
+  display: 'swap',
+});
+
 export const metadata = {
-  title: 'SpaceCat Astrotourism | Maldives Stargazing',
-  description: 'Premium guided stargazing, solar observation, celestial dining, and astronomy programmes at Le Meridien Maldives.',
-  icons: { icon: '/spacecat-astrotourism-logo.jpg' },
+  title: 'SpaceCat ASTROTOURISM | Luxury Astrotourism & Celestial Stargazing Experiences in the Maldives',
+  description: 'Journey into the cosmos beside the ocean of stars. Exclusive guided stargazing experiences led by resident astronomers at luxury Maldives partner resorts.',
+  icons: {
+    icon: '/spacecat-astrotourism-logo.jpg',
+    shortcut: '/spacecat-astrotourism-logo.jpg',
+    apple: '/spacecat-astrotourism-logo.jpg',
+  },
 };
 
+import Script from 'next/script';
 import ClientWrapper from '@/components/ClientWrapper';
 
-// Some browser security extensions inject this attribute into every div
-// before React hydrates. Remove only that known extension-owned attribute so
-// genuine application hydration mismatches remain visible during development.
+export const viewport = {
+  width: 'device-width',
+  initialScale: 1,
+};
+
 const browserExtensionHydrationGuard = `
   (function () {
     var attribute = 'bis_skin_checked';
@@ -66,10 +92,17 @@ const browserExtensionHydrationGuard = `
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="id" className={`${inter.variable} ${spaceGrotesk.variable}`} suppressHydrationWarning>
+    <html
+      lang="en"
+      className={`${inter.variable} ${spaceGrotesk.variable} ${ogg.variable} ${biotif.variable}`}
+      suppressHydrationWarning
+    >
       <head>
-        <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <script dangerouslySetInnerHTML={{ __html: browserExtensionHydrationGuard }} />
+        <Script
+          id="browser-extension-hydration-guard"
+          strategy="beforeInteractive"
+          dangerouslySetInnerHTML={{ __html: browserExtensionHydrationGuard }}
+        />
       </head>
       <body suppressHydrationWarning>
         <ClientWrapper>{children}</ClientWrapper>

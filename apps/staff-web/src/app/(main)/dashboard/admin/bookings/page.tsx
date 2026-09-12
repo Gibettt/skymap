@@ -2,13 +2,21 @@ import { getBookingOptions, getBookings } from "../_lib/admin-data";
 
 import { Bookings } from "./_components/bookings";
 
+function toIsoDate(value: unknown): string {
+  if (!value) return "";
+  if (value instanceof Date) {
+    return value.toISOString().slice(0, 10);
+  }
+  return String(value).slice(0, 10);
+}
+
 export default async function BookingsPage() {
   const [rows, rawOptions] = await Promise.all([getBookings(), getBookingOptions()]);
   const bookings = rows.map((booking) => ({
     id: String(booking.id),
     booking_code: String(booking.booking_code),
-    booking_date: String(booking.booking_date),
-    event_date: String(booking.event_date),
+    booking_date: toIsoDate(booking.booking_date),
+    event_date: toIsoDate(booking.event_date),
     time_start: booking.time_start ? String(booking.time_start) : null,
     time_end: booking.time_end ? String(booking.time_end) : null,
     guest_name: String(booking.guest_name),
@@ -21,6 +29,7 @@ export default async function BookingsPage() {
     package_name: String(booking.package_name),
     staff_id: String(booking.staff_id),
     staff_name: String(booking.staff_name),
+    staff_role: booking.staff_role ? String(booking.staff_role) : null,
     resort_id: booking.resort_id ? String(booking.resort_id) : null,
     resort_name: booking.resort_name ? String(booking.resort_name) : null,
     status: String(booking.status),

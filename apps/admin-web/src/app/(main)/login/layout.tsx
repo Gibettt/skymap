@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 
-import { Orbit } from "lucide-react";
+import Image from "next/image";
 
 import { Separator } from "@/components/ui/separator";
 
@@ -10,8 +10,14 @@ export default function AdminLoginLayout({ children }: Readonly<{ children: Reac
       <div className="grid h-dvh justify-center p-2 lg:grid-cols-2">
         <div className="relative order-2 hidden h-full rounded-3xl bg-primary lg:flex">
           <div className="absolute top-10 flex flex-col gap-1 px-10 text-primary-foreground">
-            <Orbit className="size-10" />
-            <h1 className="font-medium text-2xl">Ephemeris Admin</h1>
+            <Image
+              src="/spacecat-astrotourism-logo.jpg"
+              alt="SpaceCat ASTROTOURISM"
+              width={48}
+              height={48}
+              className="size-12 rounded-lg object-cover"
+            />
+            <h1 className="font-medium text-2xl">SpaceCat ASTROTOURISM Admin</h1>
             <p className="text-sm">Observe. Operate. Deliver.</p>
           </div>
 
@@ -25,7 +31,7 @@ export default function AdminLoginLayout({ children }: Readonly<{ children: Reac
             <Separator orientation="vertical" className="mx-3 h-auto!" />
             <div className="flex flex-1 flex-col gap-1 text-primary-foreground">
               <h2 className="font-medium">Secure access</h2>
-              <p className="text-sm">This portal is restricted to authorized Ephemeris administrators.</p>
+              <p className="text-sm">This portal is restricted to authorized SpaceCat ASTROTOURISM administrators.</p>
             </div>
           </div>
         </div>

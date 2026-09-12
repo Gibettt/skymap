@@ -1,0 +1,1728 @@
+{
+  "id": "western",
+  "region": "Europe",
+  "classification": ["single"],
+  "fallback_to_international_names": true,
+  "langs_use_native_names": ["en", "pt", "es"],
+  "thumbnail": "illustrations/capricornus.webp",
+  "thumbnail_bscale": 2,
+  "highlight": "CON western Ori",
+  "constellations": [
+    {
+      "id": "CON western Aql",
+      "lines": [[98036, 97649, 97278], [97649, 95501, 97804], [99473, 97804], [95501, 93747, 93244], [95501, 93805]],
+      "image": {
+        "file": "illustrations/aquila.webp",
+        "size": [512, 512],
+        "anchors": [
+          {"pos": [163, 232], "hip": 97649},
+          {"pos": [385, 131], "hip": 93244},
+          {"pos": [397, 397], "hip": 93805}
+        ]
+      },
+      "common_name": {"english": "Eagle", "native": "Aquila"},
+      "iau": "Aql"
+    },
+    {
+      "id": "CON western And",
+      "lines": [[677, 3092, 5447], [9640, 5447, 4436, 3881]],
+      "image": {
+        "file": "illustrations/andromeda.webp",
+        "size": [512, 512],
+        "anchors": [
+          {"pos": [198, 215], "hip": 3881},
+          {"pos": [337, 136], "hip": 3092},
+          {"pos": [224, 428], "hip": 9640}
+        ]
+      },
+      "common_name": {"english": "Chained Maiden", "native": "Andromeda"},
+      "iau": "And"
+    },
+    {
+      "id": "CON western Scl",
+      "lines": [[116231, 4577, 115102, 116231]],
+      "image": {
+        "file": "illustrations/sculptor.webp",
+        "size": [256, 256],
+        "anchors": [
+          {"pos": [231, 39], "hip": 115102},
+          {"pos": [240, 106], "hip": 116231},
+          {"pos": [32, 174], "hip": 4577}
+        ]
+      },
+      "common_name": {"english": "Sculptor", "native": "Sculptor"},
+      "iau": "Scl"
+    },
+    {
+      "id": "CON western Ara",
+      "lines": [[88714, 85792, 83081, 82363, 85727, 85267, 85258, 88714]],
+      "image": {
+        "file": "illustrations/ara.webp",
+        "size": [256, 256],
+        "anchors": [
+          {"pos": [98, 70], "hip": 83081},
+          {"pos": [191, 93], "hip": 85727},
+          {"pos": [107, 249], "hip": 88714}
+        ]
+      },
+      "common_name": {"english": "Altar", "native": "Ara"},
+      "iau": "Ara"
+    },
+    {
+      "id": "CON western Lib",
+      "lines": [[77853, 76333, 74785, 72622, 73714, 76333]],
+      "image": {
+        "file": "illustrations/libra.webp",
+        "size": [256, 256],
+        "anchors": [
+          {"pos": [41, 27], "hip": 74785},
+          {"pos": [58, 170], "hip": 77853},
+          {"pos": [224, 107], "hip": 73714}
+        ]
+      },
+      "common_name": {"english": "Scales", "native": "Libra"},
+      "iau": "Lib"
+    },
+    {
+      "id": "CON western Cet",
+      "lines": [[10324, 11484], [8102, 3419, 1562], [3419, 5364, 6537, 8645, 11345, 12390, 12770, 11783, 8102], [10826, 12390], [10826, 12387, 12706, 14135, 13954, 12828, 11484, 12093, 12706]],
+      "image": {
+        "file": "illustrations/cetus.webp",
+        "size": [512, 512],
+        "anchors": [
+          {"pos": [87, 63], "hip": 14143},
+          {"pos": [28, 274], "hip": 12770},
+          {"pos": [412, 440], "hip": 1562}
+        ]
+      },
+      "common_name": {"english": "Sea Monster", "native": "Cetus"},
+      "iau": "Cet"
+    },
+    {
+      "id": "CON western Ari",
+      "lines": [[13209, 9884, 8903, 8832]],
+      "image": {
+        "file": "illustrations/aries.webp",
+        "size": [256, 256],
+        "anchors": [
+          {"pos": [12, 130], "hip": 13209},
+          {"pos": [58, 206], "hip": 13914},
+          {"pos": [210, 47], "hip": 8832}
+        ]
+      },
+      "common_name": {"english": "Ram", "native": "Aries"},
+      "iau": "Ari"
+    },
+    {
+      "id": "CON western Sct",
+      "lines": [[92175, 92202, 92814, 90595, 91117, 92175]],
+      "image": {
+        "file": "illustrations/scutum.webp",
+        "size": [256, 256],
+        "anchors": [
+          {"pos": [52, 17], "hip": 92175},
+          {"pos": [224, 124], "hip": 90595},
+          {"pos": [139, 206], "hip": 92814}
+        ]
+      },
+      "common_name": {"english": "Shield", "native": "Scutum"},
+      "iau": "Sct"
+    },
+    {
+      "id": "CON western Pyx",
+      "lines": [[42515, 42828, 43409]],
+      "image": {
+        "file": "illustrations/pyxis.webp",
+        "size": [256, 256],
+        "anchors": [
+          {"pos": [152, 220], "hip": 41723},
+          {"pos": [94, 159], "hip": 42828},
+          {"pos": [44, 202], "hip": 42515}
+        ]
+      },
+      "common_name": {"english": "Compass", "native": "Pyxis"},
+      "iau": "Pyx"
+    },
+    {
+      "id": "CON western Boo",
+      "lines": [[71795, 69673, 72105, 74666, 73555, 71075, 71053, 69673, 67927, 67459]],
+      "image": {
+        "file": "illustrations/bootes.webp",
+        "size": [512, 512],
+        "anchors": [
+          {"pos": [225, 222], "hip": 72105},
+          {"pos": [365, 184], "hip": 71075},
+          {"pos": [207, 401], "hip": 67927}
+        ]
+      },
+      "common_name": {"english": "Herdsman", "native": "Bootes"},
+      "iau": "Boo"
+    },
+    {
+      "id": "CON western Cae",
+      "lines": [[21060, 21770, 21861]],
+      "image": {
+        "file": "illustrations/caelum.webp",
+        "size": [256, 256],
+        "anchors": [
+          {"pos": [16, 231], "hip": 21060},
+          {"pos": [76, 145], "hip": 21770},
+          {"pos": [199, 75], "hip": 21861}
+        ]
+      },
+      "common_name": {"english": "Engraving Tool", "native": "Caelum"},
+      "iau": "Cae"
+    },
+    {
+      "id": "CON western Cha",
+      "lines": [[40702, 51839, 60000]],
+      "image": {
+        "file": "illustrations/chamaeleon.webp",
+        "size": [256, 256],
+        "anchors": [
+          {"pos": [29, 214], "hip": 60000},
+          {"pos": [73, 123], "hip": 51839},
+          {"pos": [184, 33], "hip": 40702}
+        ]
+      },
+      "common_name": {"english": "Chameleon", "native": "Chamaeleon"},
+      "iau": "Cha"
+    },
+    {
+      "id": "CON western Cnc",
+      "lines": [[43103, 42806, 40843], [42806, 42911, 40526], [42911, 44066]],
+      "image": {
+        "file": "illustrations/cancer.webp",
+        "size": [256, 256],
+        "anchors": [
+          {"pos": [29, 166], "hip": 44066},
+          {"pos": [101, 255], "hip": 40526},
+          {"pos": [206, 91], "hip": 40843}
+        ]
+      },
+      "common_name": {"english": "Crab", "native": "Cancer"},
+      "iau": "Cnc"
+    },
+    {
+      "id": "CON western Cap",
+      "lines": [[100064, 100345, 104139, 105515, 106985, 107556], [105515, 105881, 104139], [100345, 102485], [104139, 102978]],
+      "image": {
+        "file": "illustrations/capricornus.webp",
+        "size": [512, 512],
+        "anchors": [
+          {"pos": [15, 436], "hip": 107556},
+          {"pos": [403, 7], "hip": 100064},
+          {"pos": [460, 438], "hip": 102978}
+        ]
+      },
+      "common_name": {"english": "Sea Goat", "native": "Capricornus"},
+      "iau": "Cap"
+    },
+    {
+      "id": "CON western Car",
+      "lines": [[45238, 50099, 52419, 52468, 54463, 53253, 51232, 50371, 45556], [42568, 41037, 30438], [45080, 45556], [45080, 42568], [30438, 31685], [41037, 39429]],
+      "image": {
+        "file": "illustrations/argonavis.webp",
+        "size": [512, 512],
+        "anchors": [
+          {"pos": [202, 455], "hip": 45238},
+          {"pos": [62, 216], "hip": 50191},
+          {"pos": [298, 22], "hip": 39757}
+        ]
+      },
+      "common_name": {"english": "Keel", "native": "Carina"},
+      "iau": "Car"
+    },
+    {
+      "id": "CON western Cas",
+      "lines": [[8886, 6686, 4427, 3179, 746]],
+      "image": {
+        "file": "illustrations/cassiopeia.webp",
+        "size": [512, 512],
+        "anchors": [
+          {"pos": [390, 336], "hip": 8886},
+          {"pos": [163, 156], "hip": 3179},
+          {"pos": [73, 243], "hip": 746}
+        ]
+      },
+      "common_name": {"english": "Seated Queen", "native": "Cassiopeia"},
+      "iau": "Cas"
+    },
+    {
+      "id": "CON western Cen",
+      "lines": [[71683, 68702, 66657, 68002, 68282, 67472, 67464, 65936, 65109], [67464, 68933], [67472, 71352, 73334], [68002, 61932, 60823, 59196, 56480, 56561]],
+      "image": {
+        "file": "illustrations/centaurus.webp",
+        "size": [512, 512],
+        "anchors": [
+          {"pos": [118, 157], "hip": 68933},
+          {"pos": [194, 444], "hip": 71683},
+          {"pos": [463, 412], "hip": 56561}
+        ]
+      },
+      "common_name": {"english": "Centaur", "native": "Centaurus"},
+      "iau": "Cen"
+    },
+    {
+      "id": "CON western Cep",
+      "lines": [[109492, 112724, 106032, 105199, 109492], [112724, 116727, 106032]],
+      "image": {
+        "file": "illustrations/cepheus.webp",
+        "size": [512, 512],
+        "anchors": [
+          {"pos": [60, 335], "hip": 116727},
+          {"pos": [125, 170], "hip": 106032},
+          {"pos": [335, 147], "hip": 109492}
+        ]
+      },
+      "common_name": {"english": "King", "native": "Cepheus"},
+      "iau": "Cep"
+    },
+    {
+      "id": "CON western Com",
+      "lines": [[64241, 64394, 60742]],
+      "image": {
+        "file": "illustrations/coma-berenices.webp",
+        "size": [256, 256],
+        "anchors": [
+          {"pos": [27, 199], "hip": 64241},
+          {"pos": [38, 58], "hip": 64394},
+          {"pos": [172, 64], "hip": 60742}
+        ]
+      },
+      "common_name": {"english": "Bernice's Hair", "native": "Coma Berenices"},
+      "iau": "Com"
+    },
+    {
+      "id": "CON western CVn",
+      "lines": [[61317, 63125]],
+      "image": {
+        "file": "illustrations/canes-venatici.webp",
+        "size": [256, 256],
+        "anchors": [
+          {"pos": [117, 113], "hip": 63901},
+          {"pos": [206, 40], "hip": 61317},
+          {"pos": [207, 152], "hip": 61309}
+        ]
+      },
+      "common_name": {"english": "Hunting Dogs", "native": "Canes Venatici"},
+      "iau": "CVn"
+    },
+    {
+      "id": "CON western Aur",
+      "lines": [[28380, 28360, 24608, 23453, 23015], [25428, 23015], [25428, 28380]],
+      "image": {
+        "file": "illustrations/auriga.webp",
+        "size": [512, 512],
+        "anchors": [
+          {"pos": [196, 189], "hip": 28380},
+          {"pos": [419, 208], "hip": 24608},
+          {"pos": [290, 423], "hip": 23015}
+        ]
+      },
+      "common_name": {"english": "Charioteer", "native": "Auriga"},
+      "iau": "Aur"
+    },
+    {
+      "id": "CON western Col",
+      "lines": [[30277, 29807, 28199, 27628, 28328], [27628, 26634, 25859]],
+      "image": {
+        "file": "illustrations/columba.webp",
+        "size": [256, 256],
+        "anchors": [
+          {"pos": [139, 29], "hip": 30277},
+          {"pos": [40, 190], "hip": 28328},
+          {"pos": [204, 211], "hip": 25859}
+        ]
+      },
+      "common_name": {"english": "Dove", "native": "Columba"},
+      "iau": "Col"
+    },
+    {
+      "id": "CON western Cir",
+      "lines": [[71908, 75323], [71908, 74824]],
+      "image": {
+        "file": "illustrations/circinus.webp",
+        "size": [256, 256],
+        "anchors": [
+          {"pos": [5, 36], "hip": 75323},
+          {"pos": [39, 11], "hip": 74824},
+          {"pos": [235, 239], "hip": 71908}
+        ]
+      },
+      "common_name": {"english": "Compass", "native": "Circinus"},
+      "iau": "Cir"
+    },
+    {
+      "id": "CON western Crt",
+      "lines": [[53740, 54682, 55705, 55282, 53740], [55282, 55687, 56633, 58188, 57283, 55705]],
+      "image": {
+        "file": "illustrations/crater.webp",
+        "size": [256, 256],
+        "anchors": [
+          {"pos": [45, 41], "hip": 58188},
+          {"pos": [160, 149], "hip": 55282},
+          {"pos": [55, 242], "hip": 54682}
+        ]
+      },
+      "common_name": {"english": "Cup", "native": "Crater"},
+      "iau": "Crt"
+    },
+    {
+      "id": "CON western CrA",
+      "lines": [[91875, 92989, 93174, 93825, 94114, 94160, 94005, 93542, 92953], [91875, 90887]],
+      "image": {
+        "file": "illustrations/corona-australis.webp",
+        "size": [256, 256],
+        "anchors": [
+          {"pos": [14, 142], "hip": 93825},
+          {"pos": [218, 34], "hip": 90887},
+          {"pos": [195, 208], "hip": 92953}
+        ]
+      },
+      "common_name": {"english": "Southern Crown", "native": "Corona Australis"},
+      "iau": "CrA"
+    },
+    {
+      "id": "CON western CrB",
+      "lines": [[76127, 75695, 76267, 76952, 77512, 78159, 78493]],
+      "image": {
+        "file": "illustrations/corona-borealis.webp",
+        "size": [256, 256],
+        "anchors": [
+          {"pos": [16, 186], "hip": 78493},
+          {"pos": [201, 203], "hip": 76952},
+          {"pos": [157, 20], "hip": 76127}
+        ]
+      },
+      "common_name": {"english": "Northern Crown", "native": "Corona Borealis"},
+      "iau": "CrB"
+    },
+    {
+      "id": "CON western Crv",
+      "lines": [[61174, 60965, 59803, 59316, 59199], [59316, 61359, 60965]],
+      "image": {
+        "file": "illustrations/corvus.webp",
+        "size": [256, 256],
+        "anchors": [
+          {"pos": [65, 59], "hip": 60965},
+          {"pos": [77, 235], "hip": 61359},
+          {"pos": [213, 187], "hip": 59316}
+        ]
+      },
+      "common_name": {"english": "Crow", "native": "Corvus"},
+      "iau": "Crv"
+    },
+    {
+      "id": "CON western Cru",
+      "lines": [[61084, 60718], [62434, 59747]],
+      "image": {
+        "file": "illustrations/crux.webp",
+        "size": [128, 128],
+        "anchors": [
+          {"pos": [112, 21], "hip": 61084},
+          {"pos": [42, 20], "hip": 62434},
+          {"pos": [21, 106], "hip": 60718}
+        ]
+      },
+      "common_name": {"english": "Southern Cross", "native": "Crux"},
+      "iau": "Cru"
+    },
+    {
+      "id": "CON western Cyg",
+      "lines": [[94779, 95853, 97165, 100453, 102098], [100453, 102488, 104732, 107310], [100453, 98110, 95947]],
+      "image": {
+        "file": "illustrations/cygnus.webp",
+        "size": [512, 512],
+        "anchors": [
+          {"pos": [7, 382], "hip": 107310},
+          {"pos": [474, 46], "hip": 94779},
+          {"pos": [467, 453], "hip": 95947}
+        ]
+      },
+      "common_name": {"english": "Swan", "native": "Cygnus"},
+      "iau": "Cyg"
+    },
+    {
+      "id": "CON western Del",
+      "lines": [[101421, 101769, 101958, 102532, 102281, 101769]],
+      "image": {
+        "file": "illustrations/delphinus.webp",
+        "size": [256, 256],
+        "anchors": [
+          {"pos": [59, 31], "hip": 102532},
+          {"pos": [75, 148], "hip": 102805},
+          {"pos": [211, 143], "hip": 101421}
+        ]
+      },
+      "common_name": {"english": "Dolphin", "native": "Delphinus"},
+      "iau": "Del"
+    },
+    {
+      "id": "CON western Dor",
+      "lines": [[27100, 27890, 26069, 27100], [26069, 21281, 19893]],
+      "image": {
+        "file": "illustrations/dorado.webp",
+        "size": [256, 256],
+        "anchors": [
+          {"pos": [56, 197], "hip": 27890},
+          {"pos": [75, 228], "hip": 27100},
+          {"pos": [219, 46], "hip": 19893}
+        ]
+      },
+      "common_name": {"english": "Swordfish", "native": "Dorado"},
+      "iau": "Dor"
+    },
+    {
+      "id": "CON western Dra",
+      "lines": [[87585, 87833, 85670, 85829, 87585, 94376, 97433, 94648, 89937, 83895, 80331, 78527, 75458, 68756, 61281, 56211]],
+      "image": {
+        "file": "illustrations/draco.webp",
+        "size": [512, 512],
+        "anchors": [
+          {"pos": [13, 411], "hip": 56211},
+          {"pos": [361, 154], "hip": 85670},
+          {"pos": [449, 429], "hip": 97433}
+        ]
+      },
+      "common_name": {"english": "Dragon", "native": "Draco"},
+      "iau": "Dra"
+    },
+    {
+      "id": "CON western Nor",
+      "lines": [[79509, 80000, 80582, 78639, 80000], [78639, 79509]],
+      "image": {
+        "file": "illustrations/norma.webp",
+        "size": [128, 128],
+        "anchors": [
+          {"pos": [17, 45], "hip": 78639},
+          {"pos": [101, 38], "hip": 79509},
+          {"pos": [16, 112], "hip": 80582}
+        ]
+      },
+      "common_name": {"english": "Carpenter's Square", "native": "Norma"},
+      "iau": "Nor"
+    },
+    {
+      "id": "CON western Eri",
+      "lines": [[7588, 9007, 10602, 11407, 12413, 12486, 13847, 15510, 17797, 17874, 20042, 20535, 21393, 17651, 16611, 15474, 14146, 12843, 13701, 15197, 16537, 17378, 21444, 22109, 22701, 23875, 23972, 21594]],
+      "image": {
+        "file": "illustrations/eridanus.webp",
+        "size": [512, 512],
+        "anchors": [
+          {"pos": [41, 95], "hip": 22109},
+          {"pos": [296, 44], "hip": 13701},
+          {"pos": [493, 490], "hip": 7588}
+        ]
+      },
+      "common_name": {"english": "River", "native": "Eridanus"},
+      "iau": "Eri"
+    },
+    {
+      "id": "CON western Sge",
+      "lines": [[96837, 97365, 96757], [97365, 98337, 98920]],
+      "image": {
+        "file": "illustrations/sagitta.webp",
+        "size": [256, 256],
+        "anchors": [
+          {"pos": [6, 12], "hip": 98920},
+          {"pos": [249, 213], "hip": 96757},
+          {"pos": [218, 243], "hip": 96837}
+        ]
+      },
+      "common_name": {"english": "Arrow", "native": "Sagitta"},
+      "iau": "Sge"
+    },
+    {
+      "id": "CON western For",
+      "lines": [[13147, 14879]],
+      "image": {
+        "file": "illustrations/fornax.webp",
+        "size": [256, 256],
+        "anchors": [
+          {"pos": [42, 125], "hip": 14879},
+          {"pos": [128, 37], "hip": 13202},
+          {"pos": [190, 129], "hip": 13147}
+        ]
+      },
+      "common_name": {"english": "Furnace", "native": "Fornax"},
+      "iau": "For"
+    },
+    {
+      "id": "CON western Gem",
+      "lines": [[31681, 34088, 35550, 35350, 32362], [35550, 36962, 37740], [36962, 37826], [36962, 36046, 34693, 36850], [34693, 33018], [34693, 32246, 30883], [32246, 30343, 29655, 28734]],
+      "image": {
+        "file": "illustrations/gemini.webp",
+        "size": [256, 256],
+        "anchors": [
+          {"pos": [14, 81], "hip": 37740},
+          {"pos": [117, 252], "hip": 32362},
+          {"pos": [249, 165], "hip": 28734}
+        ]
+      },
+      "common_name": {"english": "Twins", "native": "Gemini"},
+      "iau": "Gem"
+    },
+    {
+      "id": "CON western Cam",
+      "lines": [[16228, 18505, 22783], [16228, 17959, 22783], [17959, 25110]],
+      "image": {
+        "file": "illustrations/camelopardalis.webp",
+        "size": [256, 256],
+        "anchors": [
+          {"pos": [77, 46], "hip": 25110},
+          {"pos": [128, 135], "hip": 22783},
+          {"pos": [219, 136], "hip": 16228}
+        ]
+      },
+      "common_name": {"english": "Giraffe", "native": "Camelopardalis"},
+      "iau": "Cam"
+    },
+    {
+      "id": "CON western CMa",
+      "lines": [[33160, 34045, 33347, 32349, 33977, 34444, 35037, 35904], [33579, 33856, 34444], ["thin", 33856, 33152, 31592], [31592, 31416], [32349, 30324], [31592, 32349],  [30122, 33579], [33347, 33160]],
+      "image": {
+        "file": "illustrations/canis-major.webp",
+        "size": [512, 512],
+        "anchors": [
+          {"pos": [21, 347], "hip": 35904},
+          {"pos": [321, 24], "hip": 33160},
+          {"pos": [318, 492], "hip": 30122}
+        ]
+      },
+      "common_name": {"english": "Great Dog", "native": "Canis Major"},
+      "iau": "CMa"
+    },
+    {
+      "id": "CON western UMa",
+      "lines": [[67301, 65378, 62956, 59774, 54061, 53910, 58001, 59774], ["thin", 58001, 57399, 54539, 50372], ["thin", 54539, 50801], ["thin", 53910, 48402, 46853, 44471], ["thin", 46853, 44127], ["thin", 48402, 48319, 41704, 46733, 54061]],
+      "image": {
+        "file": "illustrations/ursa-major.webp",
+        "size": [512, 512],
+        "anchors": [
+          {"pos": [26, 75], "hip": 67301},
+          {"pos": [452, 272], "hip": 41704},
+          {"pos": [258, 394], "hip": 50372}
+        ]
+      },
+      "common_name": {"english": "Great Bear", "native": "Ursa Major"},
+      "iau": "UMa"
+    },
+    {
+      "id": "CON western Gru",
+      "lines": [[114131, 110997, 109268, 112122, 114421, 114131], [112122, 113638], [112122, 112623], [109268, 109111, 108085]],
+      "image": {
+        "file": "illustrations/grus.webp",
+        "size": [256, 256],
+        "anchors": [
+          {"pos": [49, 109], "hip": 114131},
+          {"pos": [85, 206], "hip": 112623},
+          {"pos": [220, 45], "hip": 108085}
+        ]
+      },
+      "common_name": {"english": "Crane", "native": "Grus"},
+      "iau": "Gru"
+    },
+    {
+      "id": "CON western Her",
+      "lines": [[86414, 87808, 85112, 84606, 84380, 81833, 81126, 79992, 77760], [81833, 81693, 80816, 80170], [81693, 83207, 84379, 85693, 86974], [86974, 87933, 88794], [83207, 84380], [80816, 84345]],
+      "image": {
+        "file": "illustrations/hercules.webp",
+        "size": [512, 512],
+        "anchors": [
+          {"pos": [44, 115], "hip": 80170},
+          {"pos": [254, 477], "hip": 79992},
+          {"pos": [441, 102], "hip": 88794}
+        ]
+      },
+      "common_name": {"english": "Hercules", "native": "Hercules"},
+      "iau": "Her"
+    },
+    {
+      "id": "CON western Hor",
+      "lines": [[19747, 12484, 14240]],
+      "image": {
+        "file": "illustrations/horlogium.webp",
+        "size": [256, 256],
+        "anchors": [
+          {"pos": [16, 235], "hip": 19747},
+          {"pos": [184, 67], "hip": 12484},
+          {"pos": [235, 119], "hip": 14240}
+        ]
+      },
+      "common_name": {"english": "Clock", "native": "Horologium"},
+      "iau": "Hor"
+    },
+    {
+      "id": "CON western Hya",
+      "lines": [[42799, 42402, 42313, 43109, 43234, 42799], [43234, 43813, 45336, 46776, 46509, 46390, 48356, 49841, 51069, 52943, 56343, 57936, 64166, 64962]],
+      "image": {
+        "file": "illustrations/hydra.webp",
+        "size": [512, 512],
+        "anchors": [
+          {"pos": [26, 491], "hip": 64962},
+          {"pos": [111, 149], "hip": 55434},
+          {"pos": [401, 33], "hip": 43813}
+        ]
+      },
+      "common_name": {"english": "Female Water Snake", "native": "Hydra"},
+      "iau": "Hya"
+    },
+    {
+      "id": "CON western Hyi",
+      "lines": [[2021, 17678, 12394, 11001, 9236]],
+      "image": {
+        "file": "illustrations/hydrus.webp",
+        "size": [256, 256],
+        "anchors": [
+          {"pos": [14, 204], "hip": 9236},
+          {"pos": [201, 43], "hip": 2021},
+          {"pos": [241, 215], "hip": 17678}
+        ]
+      },
+      "common_name": {"english": "Male Water Snake", "native": "Hydrus"},
+      "iau": "Hyi"
+    },
+    {
+      "id": "CON western Ind",
+      "lines": [[105319, 101772, 103227, 105319]],
+      "image": {
+        "file": "illustrations/indus.webp",
+        "size": [256, 256],
+        "anchors": [
+          {"pos": [64, 143], "hip": 101772},
+          {"pos": [154, 20], "hip": 103227},
+          {"pos": [175, 98], "hip": 105319}
+        ]
+      },
+      "common_name": {"english": "Indian", "native": "Indus"},
+      "iau": "Ind"
+    },
+    {
+      "id": "CON western Lac",
+      "lines": [[109937, 111104, 111022, 110609, 110538, 111169, 111022]],
+      "image": {
+        "file": "illustrations/lacerta.webp",
+        "size": [256, 256],
+        "anchors": [
+          {"pos": [249, 42], "hip": 110538},
+          {"pos": [108, 123], "hip": 111104},
+          {"pos": [67, 215], "hip": 109937}
+        ]
+      },
+      "common_name": {"english": "Lizard", "native": "Lacerta"},
+      "iau": "Lac"
+    },
+    {
+      "id": "CON western Mon",
+      "lines": [[29651, 30867, 34769, 30419, 29151], [34769, 39863, 37447]],
+      "image": {
+        "file": "illustrations/monoceros.webp",
+        "size": [512, 512],
+        "anchors": [
+          {"pos": [20, 306], "hip": 39863},
+          {"pos": [394, 80], "hip": 31978},
+          {"pos": [509, 359], "hip": 29651}
+        ]
+      },
+      "common_name": {"english": "Unicorn", "native": "Monoceros"},
+      "iau": "Mon"
+    },
+    {
+      "id": "CON western Lep",
+      "lines": [[28910, 28103, 27288, 25985, 24305], [25985, 27654, 27072, 25606, 23685], [25985, 25606], [24305, 24845], [24305, 24327], [23685, 24305], [24327, 24244], [24845, 24873]],
+      "image": {
+        "file": "illustrations/lepus.webp",
+        "size": [256, 256],
+        "anchors": [
+          {"pos": [21, 48], "hip": 28910},
+          {"pos": [246, 62], "hip": 24244},
+          {"pos": [213, 235], "hip": 23685}
+        ]
+      },
+      "common_name": {"english": "Hare", "native": "Lepus"},
+      "iau": "Lep"
+    },
+    {
+      "id": "CON western Leo",
+      "lines": [[57632, 54879, 49669, 49583, 50583, 54872, 57632], [50583, 50335, 48455, 47908], [54872, 54879]],
+      "image": {
+        "file": "illustrations/leo.webp",
+        "size": [512, 512],
+        "anchors": [
+          {"pos": [69, 411], "hip": 57632},
+          {"pos": [383, 186], "hip": 49669},
+          {"pos": [321, 32], "hip": 47908}
+        ]
+      },
+      "common_name": {"english": "Lion", "native": "Leo"},
+      "iau": "Leo"
+    },
+    {
+      "id": "CON western Lup",
+      "lines": [[77634, 78970, 78384, 77634], [78384, 76297, 75141, 75177], [75141, 73273], [76297, 76552, 74395, 71860], [74395, 71536], [71860, 70576], [71860, 73273]],
+      "image": {
+        "file": "illustrations/lupus.webp",
+        "size": [512, 512],
+        "anchors": [
+          {"pos": [90, 257], "hip": 74395},
+          {"pos": [207, 435], "hip": 70576},
+          {"pos": [425, 239], "hip": 75177}
+        ]
+      },
+      "common_name": {"english": "Wolf", "native": "Lupus"},
+      "iau": "Lup"
+    },
+    {
+      "id": "CON western Lyn",
+      "lines": [[45860, 45688, 44700, 44248, 41075, 36145, 33449, 30060]],
+      "image": {
+        "file": "illustrations/lynx.webp",
+        "size": [512, 512],
+        "anchors": [
+          {"pos": [100, 216], "hip": 44248},
+          {"pos": [337, 212], "hip": 36145},
+          {"pos": [472, 119], "hip": 30060}
+        ]
+      },
+      "common_name": {"english": "Lynx", "native": "Lynx"},
+      "iau": "Lyn"
+    },
+    {
+      "id": "CON western Lyr",
+      "lines": [[91262, 91971, 92420, 93194, 92791, 91971]],
+      "image": {
+        "file": "illustrations/lyra.webp",
+        "size": [256, 256],
+        "anchors": [
+          {"pos": [100, 96], "hip": 92791},
+          {"pos": [157, 38], "hip": 91262},
+          {"pos": [139, 162], "hip": 92420}
+        ]
+      },
+      "common_name": {"english": "Lyre", "native": "Lyra"},
+      "iau": "Lyr"
+    },
+    {
+      "id": "CON western Ant",
+      "lines": [[51172, 48926]],
+      "image": {
+        "file": "illustrations/antlia.webp",
+        "size": [128, 128],
+        "anchors": [
+          {"pos": [4, 84], "hip": 51172},
+          {"pos": [72, 69], "hip": 47758},
+          {"pos": [42, 120], "hip": 48926}
+        ]
+      },
+      "common_name": {"english": "Air Pump", "native": "Antlia"},
+      "iau": "Ant"
+    },
+    {
+      "id": "CON western Mic",
+      "lines": [[105140, 103738, 102831]],
+      "image": {
+        "file": "illustrations/microscopium.webp",
+        "size": [256, 256],
+        "anchors": [
+          {"pos": [122, 226], "hip": 105140},
+          {"pos": [168, 148], "hip": 103738},
+          {"pos": [234, 115], "hip": 102831}
+        ]
+      },
+      "common_name": {"english": "Microscope", "native": "Microscopium"},
+      "iau": "Mic"
+    },
+    {
+      "id": "CON western Mus",
+      "lines": [[62322, 57363, 61199, 61585, 62322]],
+      "image": {
+        "file": "illustrations/musca.webp",
+        "size": [256, 256],
+        "anchors": [
+          {"pos": [57, 52], "hip": 61199},
+          {"pos": [177, 68], "hip": 62322},
+          {"pos": [129, 236], "hip": 57363}
+        ]
+      },
+      "common_name": {"english": "Fly", "native": "Musca"},
+      "iau": "Mus"
+    },
+    {
+      "id": "CON western Oct",
+      "lines": [[107089, 112405, 70638, 107089]],
+      "image": {
+        "file": "illustrations/octans.webp",
+        "size": [256, 256],
+        "anchors": [
+          {"pos": [15, 16], "hip": 70638},
+          {"pos": [236, 239], "hip": 107089},
+          {"pos": [247, 140], "hip": 112405}
+        ]
+      },
+      "common_name": {"english": "Octant", "native": "Octans"},
+      "iau": "Oct"
+    },
+    {
+      "id": "CON western Aps",
+      "lines": [[72370, 81065, 81852]],
+      "image": {
+        "file": "illustrations/apus.webp",
+        "size": [256, 256],
+        "anchors": [
+          {"pos": [66, 60], "hip": 81852},
+          {"pos": [76, 87], "hip": 81065},
+          {"pos": [163, 110], "hip": 72370}
+        ]
+      },
+      "common_name": {"english": "Bird of Paradise", "native": "Apus"},
+      "iau": "Aps"
+    },
+    {
+      "id": "CON western Oph",
+      "lines": [[86032, 86742], [84012, 86742], [86032, 83000, 79882, 81377, 84012, 85755]],
+      "image": {
+        "file": "illustrations/ophiuchus.webp",
+        "size": [512, 512],
+        "anchors": [
+          {"pos": [5, 183], "hip": 92946},
+          {"pos": [452, 47], "hip": 77233},
+          {"pos": [238, 453], "hip": 85755}
+        ]
+      },
+      "common_name": {"english": "Serpent Bearer", "native": "Ophiuchus"},
+      "iau": "Oph"
+    },
+    {
+      "id": "CON western Ori",
+      "lines": [[26727, 26311, 25930], [28691, 29426, 29038, 27913], [29426, 28614, 27989, 26727, 27366, 24436, 25930, 25336, 26207, 27989], [25336, 22449, 22549, 22730, 23123], [22449, 22509, 22845], [29038, 28614]],
+      "image": {
+        "file": "illustrations/orion.webp",
+        "size": [512, 512],
+        "anchors": [
+          {"pos": [59, 11], "hip": 27913},
+          {"pos": [329, 477], "hip": 27366},
+          {"pos": [421, 91], "hip": 22449}
+        ]
+      },
+      "common_name": {"english": "Hunter", "native": "Orion"},
+      "iau": "Ori"
+    },
+    {
+      "id": "CON western Pav",
+      "lines": [[100751, 105858, 102395, 99240, 100751], [99240, 98495, 91792, 93015, 99240], [93015, 92609, 90098, 88866, 92609], [88866, 86929]],
+      "image": {
+        "file": "illustrations/pavo.webp",
+        "size": [256, 256],
+        "anchors": [
+          {"pos": [55, 60], "hip": 100751},
+          {"pos": [110, 208], "hip": 98495},
+          {"pos": [235, 146], "hip": 86929}
+        ]
+      },
+      "common_name": {"english": "Peacock", "native": "Pavo"},
+      "iau": "Pav"
+    },
+    {
+      "id": "CON western Peg",
+      "lines": [[1067, 113963], [113881, 112158, 109352], [113881, 112748, 112440, 109176, 107354], [113963, 112447, 112029, 109427, 107315], [677, 113881], [677, 1067], [113881, 113963]],
+      "image": {
+        "file": "illustrations/pegasus.webp",
+        "size": [512, 512],
+        "anchors": [
+          {"pos": [164, 41], "hip": 107315},
+          {"pos": [47, 283], "hip": 109410},
+          {"pos": [409, 349], "hip": 1067}
+        ]
+      },
+      "common_name": {"english": "Winged Horse", "native": "Pegasus"},
+      "iau": "Peg"
+    },
+    {
+      "id": "CON western Pic",
+      "lines": [[32607, 27530, 27321]],
+      "image": {
+        "file": "illustrations/pictor.webp",
+        "size": [256, 256],
+        "anchors": [
+          {"pos": [4, 252], "hip": 32607},
+          {"pos": [148, 138], "hip": 27530},
+          {"pos": [167, 38], "hip": 27321}
+        ]
+      },
+      "common_name": {"english": "Painter's Easel", "native": "Pictor"},
+      "iau": "Pic"
+    },
+    {
+      "id": "CON western Per",
+      "lines": [[17448, 18246, 18614, 18532, 17358, 15863, 14328, 13268], [15863, 14576, 14354, 13254]],
+      "image": {
+        "file": "illustrations/perseus.webp",
+        "size": [512, 512],
+        "anchors": [
+          {"pos": [164, 323], "hip": 18532},
+          {"pos": [299, 175], "hip": 15863},
+          {"pos": [385, 386], "hip": 13254}
+        ]
+      },
+      "common_name": {"english": "Hero", "native": "Perseus"},
+      "iau": "Per"
+    },
+    {
+      "id": "CON western Equ",
+      "lines": [[104521, 104858, 105570, 104987, 104521]],
+      "image": {
+        "file": "illustrations/equuleus.webp",
+        "size": [256, 256],
+        "anchors": [
+          {"pos": [17, 180], "hip": 104521},
+          {"pos": [149, 86], "hip": 104987},
+          {"pos": [160, 160], "hip": 105570}
+        ]
+      },
+      "common_name": {"english": "Little Horse", "native": "Equuleus"},
+      "iau": "Equ"
+    },
+    {
+      "id": "CON western CMi",
+      "lines": [[37279, 36188]],
+      "image": {
+        "file": "illustrations/canis-minor.webp",
+        "size": [256, 256],
+        "anchors": [
+          {"pos": [96, 43], "hip": 37921},
+          {"pos": [101, 171], "hip": 37279},
+          {"pos": [184, 124], "hip": 36188}
+        ]
+      },
+      "common_name": {"english": "Lesser Dog", "native": "Canis Minor"},
+      "iau": "CMi"
+    },
+    {
+      "id": "CON western LMi",
+      "lines": [[53229, 51233, 49593, 46952], [49593, 53229]],
+      "image": {
+        "file": "illustrations/leo-minor.webp",
+        "size": [256, 256],
+        "anchors": [
+          {"pos": [8, 40], "hip": 53229},
+          {"pos": [214, 127], "hip": 46952},
+          {"pos": [61, 155], "hip": 50303}
+        ]
+      },
+      "common_name": {"english": "Lesser Lion", "native": "Leo Minor"},
+      "iau": "LMi"
+    },
+    {
+      "id": "CON western Vul",
+      "lines": [[95771, 98543]],
+      "image": {
+        "file": "illustrations/vulpecula.webp",
+        "size": [256, 256],
+        "anchors": [
+          {"pos": [35, 133], "hip": 98543},
+          {"pos": [174, 111], "hip": 95771},
+          {"pos": [242, 135], "hip": 94703}
+        ]
+      },
+      "common_name": {"english": "Fox", "native": "Vulpecula"},
+      "iau": "Vul"
+    },
+    {
+      "id": "CON western UMi",
+      "lines": [[11767, 85822, 82080, 77055, 79822, 75097, 72607, 77055]],
+      "image": {
+        "file": "illustrations/ursa-minor.webp",
+        "size": [256, 256],
+        "anchors": [
+          {"pos": [15, 20], "hip": 11767},
+          {"pos": [193, 51], "hip": 59504},
+          {"pos": [93, 209], "hip": 79822}
+        ]
+      },
+      "common_name": {"english": "Little Bear", "native": "Ursa Minor"},
+      "iau": "UMi"
+    },
+    {
+      "id": "CON western Phe",
+      "lines": [[5348, 5165, 2072, 5348], [5165, 7083, 8837, 5165, 6867, 2072, 2081, 765, 2072]],
+      "image": {
+        "file": "illustrations/phoenix.webp",
+        "size": [256, 256],
+        "anchors": [
+          {"pos": [55, 243], "hip": 8837},
+          {"pos": [209, 15], "hip": 765},
+          {"pos": [229, 214], "hip": 5348}
+        ]
+      },
+      "common_name": {"english": "Phoenix", "native": "Phoenix"},
+      "iau": "Phe"
+    },
+    {
+      "id": "CON western Psc",
+      "lines": [[4889, 5742], [4889, 6193, 5742, 7097, 8198, 9487, 8833, 7884, 7007, 4906, 3786, 1645, 118268, 116771, 116928, 115738, 114971, 115830, 116771]],
+      "image": {
+        "file": "illustrations/pisces.webp",
+        "size": [512, 512],
+        "anchors": [
+          {"pos": [24, 104], "hip": 4889},
+          {"pos": [111, 489], "hip": 9487},
+          {"pos": [481, 155], "hip": 114971}
+        ]
+      },
+      "common_name": {"english": "Fishes", "native": "Pisces"},
+      "iau": "Psc"
+    },
+    {
+      "id": "CON western PsA",
+      "lines": [[113368, 111954, 108661, 107608, 109422, 111188, 113246]],
+      "image": {
+        "file": "illustrations/piscis-austrinus.webp",
+        "size": [256, 256],
+        "anchors": [
+          {"pos": [190, 5], "hip": 113246},
+          {"pos": [82, 202], "hip": 107608},
+          {"pos": [236, 92], "hip": 111954}
+        ]
+      },
+      "common_name": {"english": "Southern Fish", "native": "Piscis Austrinus"},
+      "iau": "PsA"
+    },
+    {
+      "id": "CON western Vol",
+      "lines": [[37504, 34481, 39794, 37504], [39794, 35228], [39794, 41312, 44382, 39794]],
+      "image": {
+        "file": "illustrations/volans.webp",
+        "size": [256, 256],
+        "anchors": [
+          {"pos": [55, 85], "hip": 44382},
+          {"pos": [210, 122], "hip": 35228},
+          {"pos": [207, 163], "hip": 34481}
+        ]
+      },
+      "common_name": {"english": "Flying Fish", "native": "Volans"},
+      "iau": "Vol"
+    },
+    {
+      "id": "CON western Pup",
+      "lines": [[39757, 38146, 35264, 31685, 32768, 36377, 39429, 39757]],
+      "common_name": {"english": "Stern", "native": "Puppis"},
+      "iau": "Pup"
+    },
+    {
+      "id": "CON western Ret",
+      "lines": [[19780, 19921, 18597, 17440, 19780]],
+      "image": {
+        "file": "illustrations/reticulum.webp",
+        "size": [128, 128],
+        "anchors": [
+          {"pos": [47, 56], "hip": 18597},
+          {"pos": [78, 88], "hip": 19780},
+          {"pos": [16, 111], "hip": 19921}
+        ]
+      },
+      "common_name": {"english": "Reticle", "native": "Reticulum"},
+      "iau": "Ret"
+    },
+    {
+      "id": "CON western Sgr",
+      "lines": [[89931, 90496], [89642, 90185, 88635, 87072], [88635, 89931, 90185, 93506, 92041, 89931], [92041, 90496, 89341], [93506, 93864, 92855, 92041], [92855, 93085, 93683, 94820, 95168], [93864, 96406, 98688, 98412, 98032, 95347], [98032, 95294]],
+      "image": {
+        "file": "illustrations/sagittarius.webp",
+        "size": [512, 512],
+        "anchors": [
+          {"pos": [96, 82], "hip": 95168},
+          {"pos": [307, 492], "hip": 95294},
+          {"pos": [506, 100], "hip": 87072}
+        ]
+      },
+      "common_name": {"english": "Archer", "native": "Sagittarius"},
+      "iau": "Sgr"
+    },
+    {
+      "id": "CON western Sco",
+      "lines": [[85927, 86670, 87073, 86228, 84143, 82671, 82514, 82396, 81266, 80763, 78401], [80763, 78265], [80763, 78820]],
+      "image": {
+        "file": "illustrations/scorpius.webp",
+        "size": [512, 512],
+        "anchors": [
+          {"pos": [447, 29], "hip": 78820},
+          {"pos": [62, 365], "hip": 85927},
+          {"pos": [217, 462], "hip": 82729}
+        ]
+      },
+      "common_name": {"english": "Scorpion", "native": "Scorpius"},
+      "iau": "Sco"
+    },
+    {
+      "id": "CON western Ser",
+      "lines": [[77516, 77622, 77070, 76276, 77233, 78072, 77450, 77233], [92946, 89962, 86565, 86263, 84880]],
+      "common_name": {"english": "Serpent", "native": "Serpens"},
+      "iau": "Ser"
+    },
+    {
+      "id": "CON western Sex",
+      "lines": [[51437, 49641]],
+      "image": {
+        "file": "illustrations/sextans.webp",
+        "size": [128, 128],
+        "anchors": [
+          {"pos": [26, 54], "hip": 51437},
+          {"pos": [68, 36], "hip": 49641},
+          {"pos": [118, 84], "hip": 48437}
+        ]
+      },
+      "common_name": {"english": "Sextant", "native": "Sextans"},
+      "iau": "Sex"
+    },
+    {
+      "id": "CON western Men",
+      "lines": [[25918, 21949]],
+      "image": {
+        "file": "illustrations/mensa.webp",
+        "size": [256, 256],
+        "anchors": [
+          {"pos": [100, 67], "hip": 21949},
+          {"pos": [179, 136], "hip": 25918},
+          {"pos": [54, 183], "hip": 29134}
+        ]
+      },
+      "common_name": {"english": "Table Mountain", "native": "Mensa"},
+      "iau": "Men"
+    },
+    {
+      "id": "CON western Tau",
+      "lines": [[25428, 21881, 20889], [21421, 26451], [20205, 20455], [20205, 18724, 15900], [21421, 20889], [21421, 20894, 20205], [20889, 20648, 20455, 17847]],
+      "image": {
+        "file": "illustrations/taurus.webp",
+        "size": [512, 512],
+        "anchors": [
+          {"pos": [13, 92], "hip": 26451},
+          {"pos": [399, 438], "hip": 15900},
+          {"pos": [382, 192], "hip": 17847}
+        ]
+      },
+      "common_name": {"english": "Bull", "native": "Taurus"},
+      "iau": "Tau"
+    },
+    {
+      "id": "CON western Tel",
+      "lines": [[90568, 90422]],
+      "image": {
+        "file": "illustrations/telescopium.webp",
+        "size": [128, 128],
+        "anchors": [
+          {"pos": [30, 66], "hip": 91589},
+          {"pos": [101, 40], "hip": 90422},
+          {"pos": [106, 92], "hip": 90568}
+        ]
+      },
+      "common_name": {"english": "Telescope", "native": "Telescopium"},
+      "iau": "Tel"
+    },
+    {
+      "id": "CON western Tuc",
+      "lines": [[110130, 114996, 1599], [114996, 2484]],
+      "image": {
+        "file": "illustrations/tucana.webp",
+        "size": [256, 256],
+        "anchors": [
+          {"pos": [53, 121], "hip": 2484},
+          {"pos": [154, 86], "hip": 114996},
+          {"pos": [224, 141], "hip": 110130}
+        ]
+      },
+      "common_name": {"english": "Toucan", "native": "Tucana"},
+      "iau": "Tuc"
+    },
+    {
+      "id": "CON western Tri",
+      "lines": [[10670, 10064, 8796, 10670]],
+      "image": {
+        "file": "illustrations/triangulum.webp",
+        "size": [128, 128],
+        "anchors": [
+          {"pos": [16, 42], "hip": 10064},
+          {"pos": [13, 70], "hip": 10559},
+          {"pos": [97, 78], "hip": 8796}
+        ]
+      },
+      "common_name": {"english": "Triangle", "native": "Triangulum"},
+      "iau": "Tri"
+    },
+    {
+      "id": "CON western Tra",
+      "lines": [[82273, 74946, 77952, 82273]],
+      "image": {
+        "file": "illustrations/triangulum-australe.webp",
+        "size": [128, 128],
+        "anchors": [
+          {"pos": [26, 12], "hip": 77952},
+          {"pos": [108, 15], "hip": 74946},
+          {"pos": [60, 106], "hip": 82273}
+        ]
+      },
+      "common_name": {"english": "Southern Triangle", "native": "Triangulum Australe"},
+      "iau": "Tra"
+    },
+    {
+      "id": "CON western Aqr",
+      "lines": [[106278, 109074, 110395, 110960, 111497, 112961, 114855, 115438], [109074, 110003, 109139], [110003, 111123, 112716, 113136, 114341], [102618, 106278]],
+      "image": {
+        "file": "illustrations/aquarius.webp",
+        "size": [512, 512],
+        "anchors": [
+          {"pos": [144, 464], "hip": 115438},
+          {"pos": [179, 98], "hip": 109074},
+          {"pos": [465, 49], "hip": 102618}
+        ]
+      },
+      "common_name": {"english": "Water Bearer", "native": "Aquarius"},
+      "iau": "Aqr"
+    },
+    {
+      "id": "CON western Vir",
+      "lines": [[57380, 60030, 61941, 65474, 69427, 69701, 71957], [65474, 66249, 68520, 72220], [66249, 63090, 63608], [63090, 61941]],
+      "image": {
+        "file": "illustrations/virgo.webp",
+        "size": [512, 512],
+        "anchors": [
+          {"pos": [65, 389], "hip": 72220},
+          {"pos": [454, 57], "hip": 57380},
+          {"pos": [338, 382], "hip": 65474}
+        ]
+      },
+      "common_name": {"english": "Maiden", "native": "Virgo"},
+      "iau": "Vir"
+    },
+    {
+      "id": "CON western Vel",
+      "lines": [[39953, 42536, 42913, 45941, 48774, 52727, 51986, 50191, 46651, 44816, 39953]],
+      "common_name": {"english": "Sails", "native": "Vela"},
+      "iau": "Vel"
+    }
+  ],
+  "edges_type": "IAU",
+  "asterisms": [
+    {
+      "id": "AST western RH1",
+      "is_ray_helper": true,
+      "lines": [[67301, 69673, 65474]]
+    },
+    {
+      "id": "AST western RH2",
+      "is_ray_helper": true,
+      "lines": [[53910, 54061, 11767, 113881, 113963, 113368]]
+    },
+    {
+      "id": "AST western RH3",
+      "is_ray_helper": true,
+      "lines": [[65378, 11767, 6686]]
+    },
+    {
+      "id": "AST western RH4",
+      "is_ray_helper": true,
+      "lines": [[25336, 21421, 17847]]
+    },
+    {
+      "id": "AST western RH5",
+      "is_ray_helper": true,
+      "lines": [[25930, 26311, 26727, 32349]]
+    },
+    {
+      "id": "AST western RH6",
+      "is_ray_helper": true,
+      "lines": [[102098, 59774, 58001, 49669]]
+    },
+    {
+      "id": "AST western RH7",
+      "is_ray_helper": true,
+      "lines": [[58001, 54061, 15863]]
+    },
+    {
+      "id": "AST western RH8",
+      "is_ray_helper": true,
+      "lines": [[59774, 54061, 24608]]
+    },
+    {
+      "id": "AST western RH9",
+      "is_ray_helper": true,
+      "lines": [[59774, 53910, 36850]]
+    },
+    {
+      "id": "AST western RHA",
+      "is_ray_helper": true,
+      "lines": [[59774, 11767, 746, 677]]
+    },
+    {
+      "id": "AST western GDi",
+      "common_name": {"english": "Great Diamond"},
+      "lines": [[69673, 65474, 57632, 63125, 69673]]
+    },
+    {
+      "id": "AST western SpT",
+      "common_name": {"english": "Spring Triangle"},
+      "lines": [[69673, 65474, 49669, 69673]]
+    },
+    {
+      "id": "AST western STr",
+      "common_name": {"english": "Summer Triangle"},
+      "lines": [[91262, 97649, 102098, 91262]]
+    },
+    {
+      "id": "AST western GSP",
+      "common_name": {"english": "Great Square of Pegasus"},
+      "lines": [[113963, 113881, 677, 1067, 113963]]
+    },
+    {
+      "id": "AST western WTr",
+      "common_name": {"english": "Winter Triangle"},
+      "lines": [[32349, 37279, 27989, 32349]]
+    },
+    {
+      "id": "AST western WHx",
+      "common_name": {"english": "Winter Hexagon (Winter Circle)"},
+      "lines": [[32349, 37279, 37826, 24608, 21421, 24436, 32349]]
+    },
+    {
+      "id": "AST western HeG",
+      "common_name": {"english": "Heavenly G"},
+      "lines": [[21421, 24608, 36850, 37826, 37279, 32349, 24436, 25336, 27989]]
+    },
+    {
+      "id": "AST western SoP",
+      "common_name": {"english": "Segment of Perseus"},
+      "lines": [[13268, 14328, 15863, 17358, 18532, 18246]]
+    },
+    {
+      "id": "AST western NCr",
+      "common_name": {"english": "Northern Cross"},
+      "lines": [[102098, 100453, 95947], [102488, 100453, 97165]]
+    },
+    {
+      "id": "AST western WAs",
+      "common_name": {"english": "W"},
+      "lines": [[8886, 6686, 4427, 3179, 746]]
+    },
+    {
+      "id": "AST western KSt",
+      "common_name": {"english": "Keystone"},
+      "lines": [[83207, 81693, 81833, 84380, 83207]]
+    },
+    {
+      "id": "AST western Bfl",
+      "common_name": {"english": "Butterfly"},
+      "lines": [[83207, 81693, 81833, 84380, 83207, 84379, 80816, 81693]]
+    },
+    {
+      "id": "AST western Kit",
+      "common_name": {"english": "Kite"},
+      "lines": [[69673, 72105, 74666, 73555, 71075, 71053, 69673]]
+    },
+    {
+      "id": "AST western Sal",
+      "common_name": {"english": "Sail"},
+      "lines": [[59316, 61359, 60965, 59803, 59316, 59199]]
+    },
+    {
+      "id": "AST western CoH",
+      "common_name": {"english": "Coathanger"},
+      "lines": [[95818, 95700, 95584, 95487, 95340, 95291], [95584, 95560, 95582, 95498, 95432]]
+    },
+    {
+      "id": "AST western JbC",
+      "common_name": {"english": "Job's Coffin"},
+      "lines": [[102532, 101958, 101769, 102281, 102532]]
+    },
+    {
+      "id": "AST western VTa",
+      "common_name": {"english": "V of Taurus"},
+      "lines": [[21421, 20894, 20205, 20455, 20648, 20889]]
+    },
+    {
+      "id": "AST western TrM",
+      "common_name": {"english": "Triangulum Minus"},
+      "lines": [[11486, 10793, 10280, 11486]]
+    },
+    {
+      "id": "AST western TrP",
+      "common_name": {"english": "Ptolemy's Triangle"},
+      "lines": [[69673, 76267, 71075, 69673]]
+    },
+    {
+      "id": "AST western Bie",
+      "common_name": {"english": "Bier"},
+      "lines": [[54061, 53910, 58001, 59774, 54061]]
+    },
+    {
+      "id": "AST western GoP",
+      "common_name": {"english": "Guardians of the Pole (Guards)"},
+      "lines": [[72607, 75097]]
+    },
+    {
+      "id": "AST western MCs",
+      "common_name": {"english": "Mini-Cassiopeia"},
+      "lines": [[97679, 97886, 98375, 98636, 99080]]
+    },
+    {
+      "id": "AST western BDr",
+      "common_name": {"english": "Big Dipper (Plough)"},
+      "lines": [[67301, 65378, 62956, 59774, 54061, 53910, 58001, 59774]]
+    },
+    {
+      "id": "AST western LDr",
+      "common_name": {"english": "Little Dipper"},
+      "lines": [[11767, 85822, 82080, 77055, 79822, 75097, 72607, 77055]]
+    },
+    {
+      "id": "AST western SSR",
+      "common_name": {"english": "Seven Stars Row"},
+      "lines": [[15863, 9640, 5447, 3092, 677, 113881, 112158]]
+    },
+    {
+      "id": "AST western Ptr",
+      "common_name": {"english": "The Pointers"},
+      "lines": [[71683, 68702, 62434]]
+    },
+    {
+      "id": "AST western HDr",
+      "common_name": {"english": "Dragon Head (Lozenge)"},
+      "lines": [[85670, 87833, 87585, 85819, 85670]]
+    },
+    {
+      "id": "AST western HMG",
+      "common_name": {"english": "Head of Medusa Gorgon"},
+      "lines": [[14576, 13879, 14354, 14817, 14576]]
+    },
+    {
+      "id": "AST western Goa",
+      "common_name": {"english": "Goatlings (Kids)"},
+      "lines": [[23767, 23453, 23416, 23767]]
+    },
+    {
+      "id": "AST western Urn",
+      "common_name": {"english": "The Y in Aquarius (The Urn or Water Jar)"},
+      "lines": [[110395, 110960], [111497, 110960], [110672, 110960]]
+    },
+    {
+      "id": "AST western OrB",
+      "common_name": {"english": "Orion's Belt"},
+      "lines": [[25930, 26311, 26727]]
+    },
+    {
+      "id": "AST western OrS",
+      "common_name": {"english": "Orion's Sword"},
+      "lines": [[26241, 26221, 26237]]
+    },
+    {
+      "id": "AST western OSh",
+      "common_name": {"english": "Orion's Shield"},
+      "lines": [[22845, 22509, 22449, 22549, 22797, 23123]]
+    },
+    {
+      "id": "AST western OrC",
+      "common_name": {"english": "Orion's Cudgel"},
+      "lines": [[27913, 28716, 29434, 29426, 29038, 27913]]
+    },
+    {
+      "id": "AST western HWl",
+      "common_name": {"english": "Head of Whale"},
+      "lines": [[14135, 13954, 12828, 11484, 12706, 14135]]
+    },
+    {
+      "id": "AST western HSr",
+      "common_name": {"english": "Head of Serpent"},
+      "lines": [[78481, 77450, 77233, 78072, 78481], [78072, 77450]]
+    },
+    {
+      "id": "AST western HHy",
+      "common_name": {"english": "Head of Hydra"},
+      "lines": [[43813, 43109, 42313, 42402, 42799, 43813]]
+    },
+    {
+      "id": "AST western Tea",
+      "common_name": {"english": "Teapot"},
+      "lines": [[93506, 92041, 89931, 90185, 93506, 93864, 92855, 92041, 90496, 89931, 88635, 90185]]
+    },
+    {
+      "id": "AST western Mlk",
+      "common_name": {"english": "Milk Dipper"},
+      "lines": [[92041, 92855, 93864, 93506, 92041, 90496]]
+    },
+    {
+      "id": "AST western Ter",
+      "common_name": {"english": "Terebellum"},
+      "lines": [[98066, 98688], [98353, 98162]]
+    },
+    {
+      "id": "AST western ECr",
+      "common_name": {"english": "Egyptian Cross"},
+      "lines": [[32349, 37279], [32349, 27989], [32349, 26634], [32349, 39429]]
+    },
+    {
+      "id": "AST western FCr",
+      "common_name": {"english": "False Cross"},
+      "lines": [[42913, 45556], [45941, 41037]]
+    },
+    {
+      "id": "AST western Sic",
+      "common_name": {"english": "Sickle"},
+      "lines": [[49669, 49583, 50583, 50335, 48455, 47908]]
+    },
+    {
+      "id": "AST western DCr",
+      "common_name": {"english": "Diamond Cross"},
+      "lines": [[45238, 52419], [48002, 50099]]
+    },
+    {
+      "id": "AST western Cir",
+      "common_name": {"english": "Circlet"},
+      "lines": [[114971, 115738, 116928, 117245, 116771, 115830, 115227, 114971]]
+    },
+    {
+      "id": "AST western TAK",
+      "common_name": {"english": "The Arc of the King"},
+      "lines": [[116727, 114222, 111532, 109400, 107119, 106032]]
+    },
+    {
+      "id": "AST western HCn",
+      "common_name": {"english": "Head of Centaurus"},
+      "lines": [[67153, 67457, 67669, 67786, 67153]]
+    },
+    {
+      "id": "AST western SuO",
+      "common_name": {"english": "Sudor Ophiuchi"},
+      "lines": [[83613, 83504, 83478, 83430, 83435, 83308, 83221, 83083, 82915, 82870, 83034, 83083]]
+    },
+    {
+      "id": "AST western VMr",
+      "common_name": {"english": "Venus' Mirror"},
+      "lines": [[26241, 26237, 25281, 25930, 26311, 26727, 26237]]
+    },
+    {
+      "id": "AST western OBf",
+      "common_name": {"english": "The Butterfly of Orion"},
+      "lines": [[27366, 24436, 27989, 25336, 25930, 26311, 26727, 27366]]
+    },
+    {
+      "id": "AST western FHA",
+      "common_name": {"english": "The Fish Hook"},
+      "lines": [[85927, 86670, 87073, 86228, 84143, 82729, 82514, 82396, 81266, 80763, 80112]]
+    },
+    {
+      "id": "AST western BPN",
+      "common_name": {"english": "The Bull of Poniatowski"},
+      "lines": [[88149, 88192, 88290, 88601, 88964]]
+    },
+    {
+      "id": "AST western TrB",
+      "common_name": {"english": "The Trapezoid"},
+      "lines": [[71075, 73555, 75411, 74666, 71075]]
+    },
+    {
+      "id": "AST western TPT",
+      "common_name": {"english": "The Three Patriarchs"},
+      "lines": [[10064, 8796, 10670, 10064]]
+    },
+    {
+      "id": "AST western NFy",
+      "common_name": {"english": "The Northern Fly"},
+      "lines": [[13061, 13209, 12719, 13061]]
+    },
+    {
+      "id": "AST western BA1",
+      "common_name": {"english": "Davis' Dog"},
+      "lines": [[20789, 20711, 20635, 20557], [20842, 20557], [20712, 20557, 20349], [20493, 20349], [20417, 20349, 20171, 20186], [20171, 20087], [20171, 19990]]
+    },
+    {
+      "id": "AST western BA2",
+      "common_name": {"english": "Honores Friderici (Frederick's Glory)"},
+      "lines": [[116805, 116584, 117221, 116805, 116631]]
+    },
+    {
+      "id": "AST western EnP",
+      "common_name": {"english": "Engagement ring of Polaris"},
+      "lines": [[[2.5306, 89.2643], [3.6803, 89.1048], [4.1186, 88.9226], [4.5414, 88.7523], [4.5383, 88.6288], [3.94, 88.4947], [3.4308, 88.4172], [2.5764, 88.4708], [1.8969, 88.5516], [1.5231, 88.6572], [1.5653, 89.0155], [2.5306, 89.2643]]]
+    },
+    {
+      "id": "AST western ChG",
+      "common_name": {"english": "Christmas Goose"},
+      "lines": [[15669, 15770, 15988, 16118, 16210, 16244, 16447], [15988, 16147, 16244, 16424]]
+    },
+    {
+      "id": "AST western Arr",
+      "common_name": {"english": "The Arrow"},
+      "lines": [[61212, 61296], [60994, 61296, 61466]]
+    },
+    {
+      "id": "AST western FMi",
+      "common_name": {"english": "The Flying Minnow"},
+      "lines": [[24727, 24799, 24879, 24832, 24740, 24727]]
+    },
+    {
+      "id": "AST western Hr7",
+      "common_name": {"english": "Harrington 7"},
+      "lines": [[79952, 79947, 79858, 79767]]
+    },
+    {
+      "id": "AST western TA1",
+      "common_name": {"english": "Kemble's Cascade"},
+      "lines": [[[3.8441167, 63.707111], [3.886789, 63.483444], [3.9042944, 63.317639], [3.935356, 63.22936], [3.957069, 63.072278], [4.0029, 62.766472], [4.032875, 62.5140833], [4.048656, 62.421306], [4.081483, 62.322333], [4.1022417, 62.101683]]]
+    },
+    {
+      "id": "AST western TA2",
+      "common_name": {"english": "Kemble's Kite"},
+      "lines": [[[3.369006, 71.100028], [3.382736, 71.28025], [3.392528, 71.418556], [3.424067, 71.684694], [3.444603, 72.205722], [3.523592, 72.169889], [3.526103, 72.017583], [3.524553, 71.859417], [3.505394, 71.863889], [3.424067, 71.684694]]]
+    },
+    {
+      "id": "AST western TA3",
+      "common_name": {"english": "Mini-Cassiopeia (Kemble 2)"},
+      "lines": [[[18.579964, 72.535806], [18.571139, 72.411194], [18.598583, 72.380333], [18.58755, 72.274167], [18.616283, 72.267167]]]
+    },
+    {
+      "id": "AST western TA4",
+      "common_name": {"english": "Napoleon's Hat"},
+      "lines": [[[14.26071, 18.620694], [14.255533, 18.582861], [14.248164, 18.604861], [14.244167, 18.60625], [14.243525, 18.572972], [14.243797, 18.503778], [14.241222, 18.42975]]]
+    },
+    {
+      "id": "AST western TA5",
+      "common_name": {"english": "The Hercules Keystone"},
+      "lines": [[[0.364164, -22.643278], [0.364622, -23.008667], [0.346831, -23.630222], [0.319208, -24.252722]], [[0.346831, -23.630222], [0.372222, -23.840528], [0.373797, -24.266083], [0.412769, -24.286]], [[0.372222, -23.840528], [0.403697, -23.403472], [0.413394, -23.454278]], [[0.403697, -23.403472], [0.364622, -23.008667]]]
+    },
+    {
+      "id": "AST western TA6",
+      "common_name": {"english": "Pouring Cup"},
+      "lines": [[[2.216658, 8.846667], [2.205889, 8.788667], [2.198106, 8.701083], [2.189144, 8.569083], [2.180364, 8.368583], [2.150194, 8.4245], [2.138727, 8.50225], [2.132044, 8.629722], [2.127094, 8.846389], [2.138756, 8.850028], [2.174417, 8.864472], [2.200461, 8.899778], [2.216658, 8.846667]], [[2.150194, 8.4245], [2.146967, 8.550972], [2.138756, 8.850028]], [[2.146967, 8.550972], [2.159439, 8.61925], [2.178947, 8.695889], [2.185078, 8.660639], [2.189144, 8.569083]]]
+    },
+    {
+      "id": "AST western TA7",
+      "common_name": {"english": "Mini-Dipper"},
+      "lines": [[54061, 53860, 53463, 52877, 52353, 52425, 50685], [52353, 50933, 50685, 49765, 47594, 46977]]
+    },
+    {
+      "id": "AST western TA8",
+      "common_name": {"english": "The Stargate"},
+      "lines": [[[12.5925, -12.02111], [12.597981, -12.068889], [12.5973389, -11.9803], [12.5925, -12.02111], [12.59541, -12.024861], [12.597981, -12.068889]], [[12.59541, -12.024861], [12.5973389, -11.9803]]]
+    },
+    {
+      "id": "AST western TA9",
+      "common_name": {"english": "The Jaws"},
+      "lines": [[[12.65791, -11.169306], [12.6475861, -11.219306], [12.6462139, -11.238472], [12.6437861, -11.321528], [12.6427, -11.358889], [12.636744, -11.351528], [12.6437861, -11.321528]], [[12.6427, -11.358889], [12.641483, -11.4465], [12.642631, -11.5381], [12.6388583, -11.516861], [12.641483, -11.4465]]]
+    },
+    {
+      "id": "AST western TA10",
+      "common_name": {"english": "Red-Necked Emu"},
+      "lines": [[99770, 99777, 99769, 99719, 99628], [99719, 99667]]
+    },
+    {
+      "id": "AST western TA11",
+      "common_name": {"english": "Medium Bull"},
+      "lines": [[[17.93347, 5.1591], [17.94146, 5.048], [17.94772, 4.9857], [17.95532, 4.885], [17.94638, 4.8343], [17.93645, 4.8313]]]
+    },
+    {
+      "id": "AST western TA12",
+      "common_name": {"english": "Minor Bull"},
+      "lines": [[[17.95658, 4.6005], [17.9595, 4.5837], [17.95579, 4.5597]]]
+    }
+  ]
+}

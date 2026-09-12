@@ -267,7 +267,7 @@ export default function PenggunaPage() {
       role: user.role[0].toUpperCase() + user.role.slice(1),
       status: user.status === 'active' ? 'Aktif' : 'Nonaktif',
       resortId: user.resort_id || '',
-      institusi: user.resort_name || 'SpaceCat Astrotourism',
+      institusi: user.resort_name || 'SpaceCat ASTROTOURISM',
       kota: user.resort_location || '-',
       createdAt: user.created_at,
       presence: user.presence,
@@ -518,7 +518,7 @@ export default function PenggunaPage() {
               Manajemen Pengguna
             </h1>
             <p style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 6 }}>
-              Kelola akun, peran, dan hak akses seluruh pengguna sistem SpaceCat Astrotourism.
+              Kelola akun, peran, dan hak akses seluruh pengguna sistem SpaceCat ASTROTOURISM.
             </p>
           </div>
         </div>

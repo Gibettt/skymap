@@ -332,7 +332,7 @@ CREATE TABLE IF NOT EXISTS booking_experiences (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   booking_id uuid NOT NULL REFERENCES bookings(id) ON DELETE CASCADE,
   package_id uuid NOT NULL REFERENCES packages(id),
-  sky_event_id uuid REFERENCES sky_events(id) ON DELETE SET NULL,
+  sky_event_id uuid,
   event_date date NOT NULL,
   time_start time NOT NULL,
   time_end time NOT NULL,
@@ -652,6 +652,20 @@ ALTER TABLE bookings ADD COLUMN IF NOT EXISTS sky_event_id uuid REFERENCES sky_e
 ALTER TABLE bookings ADD COLUMN IF NOT EXISTS observation_spot varchar(120);
 CREATE INDEX IF NOT EXISTS idx_bookings_assigned_internal ON bookings(assigned_internal_id, event_date);
 CREATE INDEX IF NOT EXISTS idx_bookings_sky_event ON bookings(sky_event_id);
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'booking_experiences_sky_event_id_fkey'
+  ) THEN
+    ALTER TABLE booking_experiences
+      ADD CONSTRAINT booking_experiences_sky_event_id_fkey
+      FOREIGN KEY (sky_event_id) REFERENCES sky_events(id) ON DELETE SET NULL;
+  END IF;
+END $$;
+CREATE INDEX IF NOT EXISTS idx_booking_experiences_sky_event
+  ON booking_experiences(sky_event_id);
+
 
 CREATE OR REPLACE VIEW resort_staff_coverage AS
 SELECT

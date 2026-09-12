@@ -2,8 +2,9 @@
 
 import { type FormEvent, useState } from "react";
 
-import { Eye, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
+
+import { Eye, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 import {
@@ -42,6 +43,7 @@ import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectVa
 import { Spinner } from "@/components/ui/spinner";
 import { Textarea } from "@/components/ui/textarea";
 
+import { PackageImageField, type PackageImageValue } from "../../_components/package-image-field";
 import type { PackageRow } from "../../_lib/admin-data";
 import { formatUsd, titleCase } from "../../_lib/format";
 
@@ -67,6 +69,7 @@ export function PackageActions({ packageData, resorts }: PackageActionsProps) {
   const [resortId, setResortId] = useState(packageData.resort_id ?? resorts[0]?.id ?? "");
   const [status, setStatus] = useState(packageData.is_active ? "active" : "inactive");
   const [billing, setBilling] = useState(packageData.is_chargeable ? "chargeable" : "complimentary");
+  const [image, setImage] = useState<PackageImageValue>(undefined);
 
   function openEditDialog() {
     setPackageType(packageData.package_type);
@@ -74,38 +77,33 @@ export function PackageActions({ packageData, resorts }: PackageActionsProps) {
     setResortId(packageData.resort_id ?? resorts[0]?.id ?? "");
     setStatus(packageData.is_active ? "active" : "inactive");
     setBilling(packageData.is_chargeable ? "chargeable" : "complimentary");
+    setImage(undefined);
     setEditOpen(true);
   }
 
   async function updatePackage(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
-    const childPriceUsd = form.get("childPriceUsd");
     const inclusions = String(form.get("inclusions") ?? "")
       .split("\n")
       .map((item) => item.trim())
       .filter(Boolean);
 
+    const payload = new FormData(event.currentTarget);
+    payload.set("packageType", packageType);
+    payload.set("experienceType", experienceType);
+    payload.set("resortId", resortId);
+    payload.set("isChargeable", String(billing === "chargeable"));
+    payload.set("isActive", String(status === "active"));
+    payload.set("inclusions", JSON.stringify(inclusions));
+    if (image === null) payload.set("image", "");
+    else if (image instanceof File) payload.set("image", image);
+
     setEditPending(true);
     try {
       const response = await fetch(`/api/packages/${packageData.id}`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: form.get("name"),
-          packageType,
-          experienceType,
-          location: form.get("location"),
-          description: form.get("description"),
-          schedule: form.get("schedule"),
-          resortId,
-          adultPriceUsd: form.get("adultPriceUsd"),
-          childPriceUsd: childPriceUsd === "" ? null : childPriceUsd,
-          childAgeRange: form.get("childAgeRange"),
-          inclusions,
-          isChargeable: billing === "chargeable",
-          isActive: status === "active",
-        }),
+        body: payload,
       });
       const result = (await response.json().catch(() => ({}))) as { error?: string };
       if (!response.ok) throw new Error(result.error ?? "Package could not be updated.");
@@ -400,6 +398,9 @@ export function PackageActions({ packageData, resorts }: PackageActionsProps) {
                   defaultValue={inclusions.join("\n")}
                 />
               </Field>
+              <div className="md:col-span-2">
+                <PackageImageField currentImageUrl={packageData.image_url} onChange={setImage} />
+              </div>
             </FieldGroup>
             <DialogFooter>
               <DialogClose asChild>

@@ -1,0 +1,13 @@
+hips_order            = 0
+hips_order_min        = 0
+hips_tile_width       = 512
+hips_tile_format      = webp
+dataproduct_type      = image
+obs_title             = venus
+hips_release_date     = 2023-05-24T00:00Z
+source_md5            = 
+type                  = planet
+obs_description       = The texture for planet Venus was prepared by Oleg Pluton a.k.a Helleformer under Creative Commons Attribution 4.0 International license (original data for this texture was obtained from NASA website under public domain license).
+hips_frame            = venus
+obs_copyright         = Oleg Pluton a.k.a Helleformer
+hips_status           = public mirror clonableOnce

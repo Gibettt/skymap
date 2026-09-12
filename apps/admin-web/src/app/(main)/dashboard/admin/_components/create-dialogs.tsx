@@ -23,6 +23,8 @@ import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectVa
 import { Spinner } from "@/components/ui/spinner";
 import { Textarea } from "@/components/ui/textarea";
 
+import { PackageImageField, type PackageImageValue } from "./package-image-field";
+
 interface ResortOption {
   id: string;
   name: string;
@@ -35,6 +37,12 @@ async function postJson(url: string, body: object, fallbackMessage = "Data gagal
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
   });
+  const result = (await response.json().catch(() => ({}))) as { error?: string };
+  if (!response.ok) throw new Error(result.error ?? fallbackMessage);
+}
+
+async function postForm(url: string, body: FormData, fallbackMessage = "Data gagal disimpan.") {
+  const response = await fetch(url, { method: "POST", body });
   const result = (await response.json().catch(() => ({}))) as { error?: string };
   if (!response.ok) throw new Error(result.error ?? fallbackMessage);
 }
@@ -284,6 +292,7 @@ export function CreatePackageDialog({ resorts }: { resorts: ResortOption[] }) {
   const [packageType, setPackageType] = useState("regular");
   const [experienceType, setExperienceType] = useState("communal");
   const [resortId, setResortId] = useState(resorts[0]?.id ?? "");
+  const [image, setImage] = useState<PackageImageValue>(undefined);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -292,29 +301,19 @@ export function CreatePackageDialog({ resorts }: { resorts: ResortOption[] }) {
       .split("\n")
       .map((item) => item.trim())
       .filter(Boolean);
-    const childPriceUsd = form.get("childPriceUsd");
+    const payload = new FormData(event.currentTarget);
+    payload.set("packageType", packageType);
+    payload.set("experienceType", experienceType);
+    payload.set("resortId", resortId);
+    payload.set("isChargeable", "true");
+    payload.set("isActive", "true");
+    payload.set("inclusions", JSON.stringify(inclusions));
+    if (image instanceof File) payload.set("image", image);
     setPending(true);
     try {
-      await postJson(
-        "/api/packages",
-        {
-          name: form.get("name"),
-          packageType,
-          experienceType,
-          location: form.get("location"),
-          description: form.get("description"),
-          schedule: form.get("schedule"),
-          resortId,
-          adultPriceUsd: form.get("adultPriceUsd"),
-          childPriceUsd: childPriceUsd === "" ? null : childPriceUsd,
-          childAgeRange: form.get("childAgeRange"),
-          inclusions,
-          isChargeable: true,
-          isActive: true,
-        },
-        "Package data could not be saved.",
-      );
+      await postForm("/api/packages", payload, "Package data could not be saved.");
       toast.success("Package added.");
+      setImage(undefined);
       setOpen(false);
       router.refresh();
     } catch (error) {
@@ -325,7 +324,13 @@ export function CreatePackageDialog({ resorts }: { resorts: ResortOption[] }) {
   }
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog
+      open={open}
+      onOpenChange={(next) => {
+        setOpen(next);
+        if (next) setImage(undefined);
+      }}
+    >
       <DialogTrigger asChild>
         <Button size="sm" disabled={!resorts.length}>
           <Plus data-icon="inline-start" />
@@ -418,6 +423,9 @@ export function CreatePackageDialog({ resorts }: { resorts: ResortOption[] }) {
               <FieldLabel htmlFor="package-inclusions">Inclusions (one per line)</FieldLabel>
               <Textarea id="package-inclusions" name="inclusions" />
             </Field>
+            <div className="md:col-span-2">
+              <PackageImageField onChange={setImage} />
+            </div>
           </FieldGroup>
           <DialogFooter>
             <Button type="submit" disabled={pending || !resortId}>

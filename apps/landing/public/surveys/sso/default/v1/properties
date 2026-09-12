@@ -1,0 +1,13 @@
+hips_order            = 0
+hips_order_min        = 0
+hips_tile_width       = 512
+hips_tile_format      = webp jpeg
+dataproduct_type      = image
+obs_title             = default
+hips_release_date     = 2019-02-14T13:43Z
+source_md5            = f8bb7ef71b1e29a6cabf59dfb6f9e38f
+type                  = planet
+obs_copyright         = Distributed under Attribution 4.0 International license. You may use, adapt, and share these textures for any purpose, even commercially.
+hips_frame            = default
+hips_status           = public mirror clonableOnce
+obs_description       = Texture under CC licence taken from https://www.solarsystemscope.com/Textures

@@ -66,7 +66,7 @@ export function InvoiceDocument({ invoice }: { invoice: InvoiceRow }) {
         <section className="grid grid-cols-2 gap-14 text-sm leading-relaxed">
           <div>
             <p className="mb-4 font-semibold uppercase">From</p>
-            <p>Ephemeris Administration</p>
+            <p>SpaceCat ASTROTOURISM Administration</p>
             <p>Maldives</p>
             <p>admin@ephemeris.id</p>
           </div>
@@ -133,12 +133,12 @@ export function InvoiceDocument({ invoice }: { invoice: InvoiceRow }) {
       <footer className="absolute right-12.25 bottom-11 left-12.25 grid grid-cols-2 gap-14 text-neutral-500 text-sm leading-relaxed">
         <div>
           <p>admin@ephemeris.id</p>
-          <p>Ephemeris Administration</p>
+          <p>SpaceCat ASTROTOURISM Administration</p>
         </div>
         <div>
           <p>{payout ? "Payout completed and recorded." : "Customer payment confirmed and recorded."}</p>
           <p>
-            Issued by {invoice.issuer_name ?? "Ephemeris Admin"} · {titleCase(invoice.status)}
+            Issued by {invoice.issuer_name ?? "SpaceCat ASTROTOURISM Admin"} · {titleCase(invoice.status)}
           </p>
         </div>
       </footer>

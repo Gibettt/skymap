@@ -5,6 +5,7 @@ import {
   handleBookingAccepted,
   handleBookingFinished,
   handleBookingRescheduled,
+  handleBookingCancelled,
 } from './handlers/booking.js';
 import {
   handlePayoutRequested,
@@ -27,6 +28,7 @@ export function setupDefaultHandlers() {
   bus.on(EventTypes.BOOKING_ACTIVATED, handleBookingAccepted);
   bus.on(EventTypes.BOOKING_COMPLETED, handleBookingFinished);
   bus.on(EventTypes.BOOKING_RESCHEDULED, handleBookingRescheduled);
+  bus.on(EventTypes.BOOKING_CANCELLED, handleBookingCancelled);
 
   // Payout handlers
   bus.on(EventTypes.PAYOUT_REQUESTED, handlePayoutRequested);

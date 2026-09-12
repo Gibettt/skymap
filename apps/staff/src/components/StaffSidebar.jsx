@@ -119,10 +119,10 @@ export default function StaffSidebar({ role = 'Internal', bookingCount = 0, isOp
       {isOpen && <button type="button" className="sidebar-overlay" onClick={onClose} aria-label={t('accessibility_close_menu')} />}
       <aside className={`sidebar${isOpen ? ' open' : ''}`}>
         <div className="sidebar-workspace">
-          <div className="sidebar-brand-icon" title="SpaceCat Astrotourism">
+          <div className="sidebar-brand-icon" title="SpaceCat ASTROTOURISM">
             <Image src="/spacecat-astrotourism-logo.jpg" alt="" width={24} height={24} sizes="24px" />
           </div>
-          <div className="sidebar-brand-copy"><div className="sidebar-brand-text">SpaceCat</div></div>
+          <div className="sidebar-brand-copy"><div className="sidebar-brand-text">SpaceCat ASTROTOURISM</div></div>
           <ChevronsUpDown className="sidebar-workspace-chevron" aria-hidden="true" />
           <Link href={`${basePath}/form-booking`} className="sidebar-create-booking" title={t('btn_new_booking', 'Booking Baru')} aria-label={t('btn_new_booking', 'Booking Baru')}>
             <SquarePen aria-hidden="true" />

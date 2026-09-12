@@ -252,10 +252,10 @@ export async function POST(request) {
 
       // Notifikasi ke Admin selalu dikirim untuk semua booking baru (Internal maupun External)
       const staffRoleLabel = staff.rows[0]?.role === "internal" ? "Internal" : "External";
-      const notifTitle = `Booking baru dari staff ${staffRoleLabel}`;
+      const notifTitle = `New booking from ${staffRoleLabel} staff`;
       const additionalExperienceLabel = preparedExperiences.length > 1 ? ` +${preparedExperiences.length - 1}` : "";
       const notifMsg = `${booking.booking_code} - ${booking.guest_name}, ${primaryExperience.package.name}${additionalExperienceLabel}`;
-      const notifMeta = `${staff.rows[0]?.name || `Staff ${staffRoleLabel}`} - ${new Date(primaryExperience.eventDate).toLocaleDateString("id-ID", { day: "2-digit", month: "short" })}`;
+      const notifMeta = `${staff.rows[0]?.name || `Staff ${staffRoleLabel}`} · ${primaryExperience.eventDate}`;
 
       // 1. Notifikasi ke Admin
       await client.query(

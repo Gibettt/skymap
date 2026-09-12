@@ -268,7 +268,7 @@ export async function PATCH(request, { params }) {
       if (before.status !== nextStatus) {
         if (nextStatus === "active") eventType = EventTypes.BOOKING_ACTIVATED;
         else if (nextStatus === "completed") eventType = EventTypes.BOOKING_COMPLETED;
-        else if (nextStatus.startsWith("cancelled_")) eventType = EventTypes.BOOKING_CANCELLED;
+        else if (nextStatus.startsWith("cancelled_") || nextStatus === "rejected") eventType = EventTypes.BOOKING_CANCELLED;
       }
 
       await emit(

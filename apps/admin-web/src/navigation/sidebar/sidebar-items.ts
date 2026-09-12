@@ -73,7 +73,7 @@ export interface NavGroup {
 export const sidebarItems: NavGroup[] = [
   {
     id: 1,
-    label: "Ephemeris Admin",
+    label: "SpaceCat ASTROTOURISM Admin",
     items: [
       { id: "ephemeris-overview", title: "Overview", url: "/dashboard/admin", icon: LayoutDashboard },
       { id: "ephemeris-bookings", title: "Bookings", url: "/dashboard/admin/bookings", icon: ClipboardList },

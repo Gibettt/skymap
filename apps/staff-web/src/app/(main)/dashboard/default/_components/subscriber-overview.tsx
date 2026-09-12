@@ -1,6 +1,7 @@
 "use client";
 
-import { Download } from "lucide-react";
+import Link from "next/link";
+import { Download, Plus } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -17,10 +18,12 @@ export function SubscriberOverview({
   data,
   total,
   exportFilename = "ephemeris-bookings.csv",
+  newBookingHref,
 }: {
   data: RecentCustomerRow[];
   total: number;
   exportFilename?: string;
+  newBookingHref?: string;
 }) {
   function exportBookings() {
     const rows = [
@@ -50,7 +53,15 @@ export function SubscriberOverview({
       <CardHeader>
         <CardTitle className="leading-none">{total.toLocaleString("en-US")} Bookings</CardTitle>
         <CardDescription>Recent booking records with package, payment, status, and event activity.</CardDescription>
-        <CardAction>
+        <CardAction className="flex items-center gap-2">
+          {newBookingHref ? (
+            <Button size="sm" asChild>
+              <Link href={newBookingHref}>
+                <Plus data-icon="inline-start" />
+                New booking
+              </Link>
+            </Button>
+          ) : null}
           <Button variant="outline" size="sm" onClick={exportBookings} disabled={data.length === 0}>
             <Download />
             Export

@@ -12,10 +12,17 @@ export default function page() {
           You do not have permission to view the requested content. Please contact the site administrator if you believe
           this is an error.
         </p>
-        <div className="mt-6">
+        <div className="mt-6 flex items-center justify-center gap-3">
+          <Link
+            href="/login"
+            className="inline-flex items-center rounded-md bg-primary px-4 py-2 font-medium text-primary-foreground text-sm shadow-xs transition-colors hover:bg-primary/90 focus:outline-hidden focus:ring-2 focus:ring-primary focus:ring-offset-2"
+            prefetch={false}
+          >
+            Back to Login
+          </Link>
           <Link
             href="/dashboard"
-            className="inline-flex items-center rounded-md bg-primary px-4 py-2 font-medium text-primary-foreground text-sm shadow-xs transition-colors hover:bg-primary/90 focus:outline-hidden focus:ring-2 focus:ring-primary focus:ring-offset-2"
+            className="inline-flex items-center rounded-md border border-input bg-background px-4 py-2 font-medium text-sm shadow-xs transition-colors hover:bg-accent hover:text-accent-foreground focus:outline-hidden focus:ring-2 focus:ring-primary focus:ring-offset-2"
             prefetch={false}
           >
             Go to Homepage

@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg id="svg4355" width="24" height="24" version="1.1" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+ <circle id="path4512" cx="12.083" cy="12.083" r="5.4318" fill="#fff"/>
+ <path id="path4514" d="m12.083 2.125v2.7159" fill="none" stroke="#fff" stroke-width="1.8106"/>
+ <use id="use4516" transform="rotate(45 12.083 12.083)" width="100%" height="100%" xlink:href="#path4514"/>
+ <use id="use4518" transform="rotate(45 12.083 12.083)" width="100%" height="100%" xlink:href="#use4516"/>
+ <use id="use4520" transform="rotate(45 12.083 12.083)" width="100%" height="100%" xlink:href="#use4518"/>
+ <use id="use4522" transform="rotate(45 12.083 12.083)" width="100%" height="100%" xlink:href="#use4520"/>
+ <use id="use4524" transform="rotate(45 12.083 12.083)" width="100%" height="100%" xlink:href="#use4522"/>
+ <use id="use4526" transform="rotate(45 12.083 12.083)" width="100%" height="100%" xlink:href="#use4524"/>
+ <use id="use4528" transform="rotate(45 12.083 12.083)" width="100%" height="100%" xlink:href="#use4526"/>
+</svg>

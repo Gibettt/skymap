@@ -126,7 +126,28 @@ export function createBookingsColumns(options: BookingOptions): ColumnDef<DataTa
     accessorKey: "staff_name",
     header: "Staff",
     filterFn: "equalsString",
-    cell: ({ row }) => <div className="max-w-40 truncate">{row.original.staff_name}</div>,
+    cell: ({ row }) => {
+      const staffRole = row.original.staff_role;
+      return (
+        <div className="flex max-w-44 flex-col gap-1">
+          <div className="truncate font-medium text-sm">{row.original.staff_name}</div>
+          {staffRole ? (
+            <div>
+              <Badge
+                variant={staffRole === "external" ? "outline" : "secondary"}
+                className={
+                  staffRole === "external"
+                    ? "border-purple-500/40 bg-purple-500/10 text-[10px] font-medium text-purple-600 dark:text-purple-400"
+                    : "border-cyan-500/40 bg-cyan-500/10 text-[10px] font-medium text-cyan-700 dark:text-cyan-300"
+                }
+              >
+                {titleCase(staffRole)}
+              </Badge>
+            </div>
+          ) : null}
+        </div>
+      );
+    },
   },
   {
     id: "resort",

@@ -413,6 +413,16 @@ export function NewBookingForm({ role, onCreated, onCancel }: NewBookingFormProp
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
+      try {
+        if (typeof window !== "undefined" && "BroadcastChannel" in window) {
+          const channel = new BroadcastChannel("ephemeris_sync_channel");
+          channel.postMessage({ type: "BOOKING_CREATED", bookingId: response.booking.id });
+          channel.close();
+        }
+      } catch {
+        // ignore
+      }
+      window.dispatchEvent(new Event("ephemeris:notifications-changed"));
       toast.success(`${response.booking.booking_code} was created successfully.`);
       await onCreated(response.booking);
     } catch (submitError) {

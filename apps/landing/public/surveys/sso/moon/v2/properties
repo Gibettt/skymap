@@ -1,0 +1,14 @@
+hips_order            = 3
+hips_order_min        = 0
+hips_tile_width       = 512
+hips_tile_format      = webp
+dataproduct_type      = image
+obs_title             = moon
+hips_release_date     = 2023-02-10T16:04Z
+source_md5            = 324050af3f4b152f9555b2ccb5bd5e1e
+type                  = planet
+obs_description       = The texture for the Moon was prepared by Ruslan at Stellarium Labs under Creative Commons Attribution 4.0 International license (original data for this texture was obtained from NASA website under public domain license).
+hips_frame            = moon
+obs_copyright         = Oleg Pluton a.k.a Helleformer
+hips_status           = public mirror clonableOnce
+color_factor          = 0.4

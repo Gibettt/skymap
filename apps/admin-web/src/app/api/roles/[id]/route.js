@@ -30,9 +30,9 @@ async function updateRoleDetails(client, role, data, actor) {
     `UPDATE access_roles
      SET name = $2,
        description = $3,
-       access_level = $4,
+       access_level = $4::varchar,
        permissions_updated_at = CASE
-         WHEN access_level <> $4 THEN now()
+         WHEN access_level <> $4::varchar THEN now()
          ELSE permissions_updated_at
        END,
        updated_by = $5

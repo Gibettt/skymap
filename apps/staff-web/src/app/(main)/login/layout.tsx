@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 
-import { Orbit } from "lucide-react";
+import Image from "next/image";
 
 import { Separator } from "@/components/ui/separator";
 
@@ -10,8 +10,14 @@ export default function StaffLoginLayout({ children }: Readonly<{ children: Reac
       <div className="grid min-h-dvh justify-center p-2 lg:grid-cols-2">
         <div className="relative order-2 hidden rounded-3xl bg-primary lg:sticky lg:top-2 lg:flex lg:h-[calc(100dvh-1rem)]">
           <div className="absolute top-10 flex flex-col gap-1 px-10 text-primary-foreground">
-            <Orbit className="size-10" />
-            <h1 className="font-medium text-2xl">Ephemeris Staff</h1>
+            <Image
+              src="/spacecat-astrotourism-logo.jpg"
+              alt="SpaceCat ASTROTOURISM"
+              width={48}
+              height={48}
+              className="size-12 rounded-lg object-cover"
+            />
+            <h1 className="font-medium text-2xl">SpaceCat ASTROTOURISM Staff</h1>
             <p className="text-sm">Coordinate. Observe. Deliver.</p>
           </div>
 

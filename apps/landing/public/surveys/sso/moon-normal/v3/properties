@@ -1,0 +1,13 @@
+hips_order            = 3
+hips_order_min        = 0
+hips_tile_width       = 512
+hips_tile_format      = webp
+dataproduct_type      = image
+obs_title             = moon-normal
+hips_release_date     = 2023-06-14T15:28Z
+source_md5            = 
+type                  = planet-normal
+obs_description       = The normal map for the Moon was prepared by Ruslan Kabatsayev at Stellarium Labs. The original elevation map was taken from SLDEM2015 for latitudes -60Â°..60Â°, and from NASA's CGI Moon Kit for the rest. The original elevation maps were processed by utilities from https://github.com/10110111/map-bumper using the following commands: "sldem-img2png -r 1727.4 -k 0.5e-3 -i SLDEM2015_256_60S_60N_000_360_FLOAT.IMG -o mixed-height-map.png -b ldem_64_uint.tif && heightmap2normalmap 1727.4 0.5e-3 mixed-height-map.png moon-normals.png 11520 256 --full-range"
+hips_frame            = moon
+obs_copyright         = Stellarium Labs S.R.L, CC BY 4.0
+hips_status           = public mirror clonableOnce

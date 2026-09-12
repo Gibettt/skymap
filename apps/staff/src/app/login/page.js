@@ -11,7 +11,7 @@ const DEMO_USERS = {
 };
 
 export const metadata = {
-  title: 'Login Staff | SpaceCat Astrotourism',
+  title: 'Login Staff | SpaceCat ASTROTOURISM',
 };
 
 export default function StaffLoginPage() {

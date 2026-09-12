@@ -273,6 +273,20 @@ export function BookingActions({ booking, options }: BookingActionsProps) {
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="min-w-48">
           <DropdownMenuLabel>{booking.booking_code}</DropdownMenuLabel>
+          {canActivate ? (
+            <>
+              <DropdownMenuGroup>
+                <DropdownMenuItem
+                  className="font-medium text-emerald-600 focus:text-emerald-700"
+                  onSelect={() => void updateStatus("active")}
+                >
+                  <CirclePlay className="text-emerald-600" />
+                  Acc / Activate booking
+                </DropdownMenuItem>
+              </DropdownMenuGroup>
+              <DropdownMenuSeparator />
+            </>
+          ) : null}
           <DropdownMenuGroup>
             <DropdownMenuItem onSelect={() => setViewOpen(true)}>
               <Eye />
@@ -412,7 +426,14 @@ export function BookingActions({ booking, options }: BookingActionsProps) {
             </Field>
             <Field>
               <FieldLabel>Staff</FieldLabel>
-              <Input readOnly value={booking.staff_name} />
+              <Input
+                readOnly
+                value={
+                  booking.staff_role
+                    ? `${booking.staff_name} (${titleCase(booking.staff_role)})`
+                    : booking.staff_name
+                }
+              />
             </Field>
             <Field>
               <FieldLabel>Resort</FieldLabel>
@@ -516,7 +537,24 @@ export function BookingActions({ booking, options }: BookingActionsProps) {
               <Textarea readOnly value={booking.notes ?? "No notes"} />
             </Field>
           </FieldGroup>
-          <DialogFooter showCloseButton />
+          <DialogFooter>
+            {canActivate ? (
+              <Button
+                type="button"
+                className="bg-emerald-600 text-white hover:bg-emerald-700"
+                onClick={() => {
+                  setViewOpen(false);
+                  void updateStatus("active");
+                }}
+              >
+                <CirclePlay data-icon="inline-start" />
+                Acc / Activate booking
+              </Button>
+            ) : null}
+            <DialogClose asChild>
+              <Button type="button" variant="outline">Close</Button>
+            </DialogClose>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 

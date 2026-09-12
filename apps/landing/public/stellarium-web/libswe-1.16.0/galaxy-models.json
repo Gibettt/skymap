@@ -1,0 +1,894 @@
+
+{
+  "SAb": {
+    "arms_count": 2,
+    "arm_0": 0,
+    "arm_1": 180,
+    "arm_2": 90,
+    "arm_3": 270,
+    "winding": {
+      "n": 4,
+      "a": 0.5,
+      "b": 0.6
+    },
+    "bulge": {
+      "enabled": true,
+      "strength": 49.0,
+      "r0": 12.0,
+      "z0": 0.6,
+      "color": "#f6bfa3",
+      "soften": 0.5
+    },
+    "disk": {
+      "enabled": true,
+      "strength": 3000.0,
+      "aw": 0.1,
+      "z0": 0.02,
+      "r0": 0.4,
+      "inner": 0.6,
+      "color": "#72a5ff",
+      "noise_twirl": 0.1,
+      "noise_scale": 10,
+      "noise_tilt": 1.0,
+      "noise_offset": 0.1
+    },
+    "stars": {
+      "enabled": true,
+      "strength": 15.0,
+      "aw": 0.16,
+      "z0": 0.034,
+      "r0": 0.31,
+      "inner": 0.3,
+      "color": "#cce5ff",
+      "noise_twirl": 0.0,
+      "noise_scale": 6.0,
+      "noise_tilt": 20.0,
+      "noise_offset": 0.0
+    },
+    "dust": {
+      "enabled": true,
+      "strength": 173.0,
+      "aw": 0.55,
+      "z0": 0.015,
+      "r0": 0.5,
+      "inner": 0.24,
+      "color": "#72a5ff",
+      "noise_twirl": 0.07,
+      "noise_scale": 5.0,
+      "noise_tilt": 1.5,
+      "noise_offset": 1.0
+    }
+  },
+
+  "SAab": {
+    "template": null,
+    "arms_count": 2,
+    "arm_0": 0,
+    "arm_1": 180,
+    "arm_2": 90,
+    "arm_3": 270,
+    "winding": {
+      "n": 4,
+      "a": 0.5,
+      "b": 0.5
+    },
+    "bulge": {
+      "enabled": true,
+      "strength": 32,
+      "r0": 9,
+      "z0": 0.6,
+      "color": "#f6bfa3",
+      "soften": 0
+    },
+    "disk": {
+      "enabled": true,
+      "strength": 4000,
+      "aw": 0.35,
+      "z0": 0.02,
+      "r0": 0.4,
+      "inner": 0.6,
+      "color": "#72a5ff",
+      "noise_twirl": 0.1,
+      "noise_scale": 10,
+      "noise_tilt": 1,
+      "noise_offset": 0.1
+    },
+    "stars": {
+      "enabled": true,
+      "strength": 10,
+      "aw": 0.16,
+      "z0": 0.034,
+      "r0": 0.31,
+      "inner": 0.3,
+      "color": "#cce5ff",
+      "noise_twirl": 0,
+      "noise_scale": 6,
+      "noise_tilt": 20,
+      "noise_offset": 0
+    },
+    "dust": {
+      "enabled": true,
+      "strength": 150,
+      "aw": 0.8,
+      "z0": 0.015,
+      "r0": 0.7,
+      "inner": 0.24,
+      "color": "#72a5ff",
+      "noise_twirl": 0.1,
+      "noise_scale": 5,
+      "noise_tilt": 1.5,
+      "noise_offset": 1
+    }
+  },
+
+  "SAcd": {
+    "template": null,
+    "arms_count": 2,
+    "arm_0": 0,
+    "arm_1": 180,
+    "arm_2": 90,
+    "arm_3": 270,
+    "winding": {
+      "n": 4,
+      "a": 0.47,
+      "b": 0.74
+    },
+    "bulge": {
+      "enabled": true,
+      "strength": 14.8,
+      "r0": 18.1,
+      "z0": 0.8,
+      "color": "#fefcdd",
+      "soften": 0
+    },
+    "disk": {
+      "enabled": true,
+      "strength": 2240,
+      "aw": 0.1,
+      "z0": 0.028,
+      "r0": 0.39,
+      "inner": 0,
+      "color": "#a8c6fe",
+      "noise_twirl": 0.1,
+      "noise_scale": 10,
+      "noise_tilt": 1,
+      "noise_offset": 0.05425839099682417
+    },
+    "stars": {
+      "enabled": true,
+      "strength": 11,
+      "aw": 0.2,
+      "z0": 0.03,
+      "r0": 0.33,
+      "inner": 0,
+      "color": "#fd0270",
+      "noise_twirl": 0,
+      "noise_scale": 4.4,
+      "noise_tilt": 20,
+      "noise_offset": 0
+    },
+    "dust": {
+      "enabled": true,
+      "strength": 220,
+      "aw": 0.3,
+      "z0": 0.02,
+      "r0": 0.4,
+      "inner": 0.24,
+      "color": "#72a5ff",
+      "noise_twirl": 0.07,
+      "noise_scale": 5,
+      "noise_tilt": 1.5,
+      "noise_offset": 1
+    }
+  },
+
+  "SBbc": {
+    "template": null,
+    "arms_count": 3,
+    "arm_0": 0,
+    "arm_1": 177,
+    "arm_2": 150,
+    "arm_3": 333,
+    "winding": {
+      "n": 4,
+      "a": 2,
+      "b": 0.3
+    },
+    "bulge": {
+      "enabled": true,
+      "strength": 17.3,
+      "r0": 10.5,
+      "z0": 0.8,
+      "color": "#ffcda4",
+      "soften": 0
+    },
+    "disk": {
+      "enabled": true,
+      "strength": 4000,
+      "aw": 0.49,
+      "z0": 0.028,
+      "r0": 0.39,
+      "inner": 0,
+      "color": "#91c9fc",
+      "noise_twirl": 0.2,
+      "noise_scale": 10,
+      "noise_tilt": 0.8,
+      "noise_offset": 0.05
+    },
+    "stars": {
+      "enabled": true,
+      "strength": 18.6,
+      "aw": 0.54,
+      "z0": 0.034,
+      "r0": 0.31,
+      "inner": 0.3,
+      "color": "#ffffff",
+      "noise_twirl": 0,
+      "noise_scale": 6,
+      "noise_tilt": 20,
+      "noise_offset": 0
+    },
+    "dust": {
+      "enabled": true,
+      "strength": 100,
+      "aw": 1.15,
+      "z0": 0.02,
+      "r0": 0.81,
+      "inner": 0,
+      "color": "#63a6d6",
+      "noise_twirl": 0.07,
+      "noise_scale": 5.7,
+      "noise_tilt": 5.8,
+      "noise_offset": 1
+    }
+  },
+
+  "SBab": {
+    "template": null,
+    "arms_count": 2,
+    "arm_0": 0,
+    "arm_1": 180,
+    "arm_2": 90,
+    "arm_3": 270,
+    "winding": {
+      "n": 4,
+      "a": 1.19,
+      "b": 0.2
+    },
+    "bulge": {
+      "enabled": true,
+      "strength": 4.6,
+      "r0": 6.4,
+      "z0": 0.6,
+      "color": "#d2dfff",
+      "soften": 0
+    },
+    "disk": {
+      "enabled": true,
+      "strength": 4000,
+      "aw": 0.08,
+      "z0": 0.02,
+      "r0": 0.4,
+      "inner": 0,
+      "color": "#72a5ff",
+      "noise_twirl": 0.1,
+      "noise_scale": 10,
+      "noise_tilt": 1,
+      "noise_offset": 0.1
+    },
+    "stars": {
+      "enabled": true,
+      "strength": 10,
+      "aw": 0.13,
+      "z0": 0.034,
+      "r0": 0.31,
+      "inner": 0.3,
+      "color": "#cce5ff",
+      "noise_twirl": 0,
+      "noise_scale": 4.7,
+      "noise_tilt": 20,
+      "noise_offset": 0
+    },
+    "dust": {
+      "enabled": true,
+      "strength": 0,
+      "aw": 0.49,
+      "z0": 0.015,
+      "r0": 0.7,
+      "inner": 0,
+      "color": "#72a5ff",
+      "noise_twirl": 0.1,
+      "noise_scale": 5,
+      "noise_tilt": 1.5,
+      "noise_offset": 1
+    }
+  },
+
+  "SBm": {
+    "template": null,
+    "arms_count": 2,
+    "arm_0": 0,
+    "arm_1": 180,
+    "arm_2": 39,
+    "arm_3": 223,
+    "winding": {
+      "n": 4,
+      "a": 2,
+      "b": 0.3
+    },
+    "bulge": {
+      "enabled": false,
+      "strength": 0.0,
+      "r0": 10,
+      "z0": 0.8,
+      "color": "#fefcdd",
+      "soften": 0
+    },
+    "disk": {
+      "enabled": true,
+      "strength": 1364.3292990045609,
+      "aw": 0.23,
+      "z0": 0.028,
+      "r0": 0.39,
+      "inner": 0,
+      "color": "#72a5ff",
+      "noise_twirl": 0.1,
+      "noise_scale": 10,
+      "noise_tilt": 1,
+      "noise_offset": 0.11988826320660662
+    },
+    "stars": {
+      "enabled": true,
+      "strength": 10,
+      "aw": 0.39,
+      "z0": 0.034,
+      "r0": 0.31,
+      "inner": 0,
+      "color": "#f1c9fe",
+      "noise_twirl": 0,
+      "noise_scale": 6,
+      "noise_tilt": 20,
+      "noise_offset": 0
+    },
+    "dust": {
+      "enabled": true,
+      "strength": 0,
+      "aw": 0.59,
+      "z0": 0.02,
+      "r0": 0.4,
+      "inner": 0.24,
+      "color": "#72a5ff",
+      "noise_twirl": 0.07,
+      "noise_scale": 5,
+      "noise_tilt": 1.5,
+      "noise_offset": 1
+    }
+  },
+
+  "S0": {
+    "template": null,
+    "arms_count": 2,
+    "arm_0": 0,
+    "arm_1": 180,
+    "arm_2": 90,
+    "arm_3": 270,
+    "winding": {
+      "n": 4,
+      "a": 0.47,
+      "b": 0.2
+    },
+    "bulge": {
+      "enabled": true,
+      "strength": 32,
+      "r0": 12,
+      "z0": 0.6,
+      "color": "#ffffff",
+      "soften": 0
+    },
+    "disk": {
+      "enabled": false,
+      "strength": 2900,
+      "aw": 0.11,
+      "z0": 0.028,
+      "r0": 0.39,
+      "inner": 0.6,
+      "color": "#72a5ff",
+      "noise_twirl": 0.1,
+      "noise_scale": 10,
+      "noise_tilt": 0.2,
+      "noise_offset": 0.1
+    },
+    "stars": {
+      "enabled": false,
+      "strength": 15,
+      "aw": 0.16,
+      "z0": 0.034,
+      "r0": 0.31,
+      "inner": 0.3,
+      "color": "#cce5ff",
+      "noise_twirl": 0,
+      "noise_scale": 6,
+      "noise_tilt": 20,
+      "noise_offset": 0
+    },
+    "dust": {
+      "enabled": true,
+      "strength": 270,
+      "aw": 0.18,
+      "z0": 0.01,
+      "r0": 0.26,
+      "inner": 0.24,
+      "color": "#72a5ff",
+      "noise_twirl": 0.07,
+      "noise_scale": 5,
+      "noise_tilt": 1.5,
+      "noise_offset": 1
+    }
+  },
+
+  "M 31": {
+    "template": "SAb"
+  },
+
+  "NGC 891": {
+    "template": "SAb",
+    "bulge": { "color": "#ffefe1" },
+    "dust": { "strength": 600 }
+  },
+
+  "M 81": {
+    "template": "SAab"
+  },
+
+  "NGC 3898": {
+    "template": "SAab",
+    "bulge": { "r0": 12, "color": "#ffd0a9" },
+    "disk": { "aw": 0.16 },
+    "dust": { "strength": 100, "aw": 0.27, "inner": 0.35 }
+  },
+
+  "NGC 4845": {
+    "template": "SAab",
+    "dust": { "aw": 0.33, "inner": 0.1 }
+  },
+
+  "NGC 7814": {
+    "template": "SAab",
+    "bulge": {
+      "strength": 72,
+      "r0": 18.6,
+      "color": "#ffe2d6"
+    },
+    "dust": {
+      "aw": 0.33
+    }
+  },
+
+  "M 33": {
+    "template": "SAcd",
+    "arms_count": 3,
+    "bulge": {
+      "strength": 2,
+      "r0": 4.1,
+      "z0": 0.1,
+      "color": "#cadbff"
+    },
+    "disk": {
+      "aw": 0.12,
+      "inner": 0.4,
+      "color": "#bfd3f8",
+      "noise_offset": 0
+    },
+    "stars": {
+      "strength": 36.4,
+      "aw": 0.29,
+      "z0": 0.012,
+      "color": "#c7fdff",
+      "noise_scale": 8.5
+    },
+    "dust": {
+      "strength": 118,
+      "color": "#81a9ee"
+    }
+  },
+
+  "NGC 2403": {
+    "template": "SAcd",
+    "bulge": {
+      "color": "#ffb16e"
+    }
+  },
+
+  "NGC 300": {
+    "template": "SAcd",
+    "bulge": {
+      "strength": 5.9
+    },
+    "disk": {
+      "aw": 0
+    }
+  },
+
+  "NGC 7793": {
+    "template": "SAcd",
+    "bulge": {
+      "strength": 38.9,
+      "color": "#ffb645"
+    },
+    "disk": {
+      "aw": 0
+    },
+    "stars": {
+      "aw": 0,
+      "color": "#caf0fe"
+    },
+    "dust": {
+      "aw": 0.07,
+      "inner": 0
+    }
+  },
+
+  "NGC 247": {
+    "template": "SAcd"
+  },
+
+  "M 101": {
+    "template": "SAcd",
+    "arms_count": 4,
+    "arm_1": 200,
+    "bulge": {
+      "strength": 26.2,
+      "color": "#fbc795"
+    },
+    "disk": {
+      "color": "#d4e3fe"
+    },
+    "stars": {
+      "strength": 40,
+      "aw": 2.12,
+      "z0": 0.02,
+      "color": "#d4e3fe"
+    },
+    "dust": {
+      "strength": 118,
+      "inner": 0,
+      "color": "#a8c6fe"
+    }
+  },
+
+  "LMC": {
+    "template": "SBm",
+    "arms_count": 3,
+    "arm_2": 39
+  },
+
+  "M 104": {
+    "template": null,
+    "arms_count": 2,
+    "arm_0": 0,
+    "arm_1": 180,
+    "arm_2": 90,
+    "arm_3": 270,
+    "winding": {
+      "n": 4,
+      "a": 0.47,
+      "b": 0.5
+    },
+    "bulge": {
+      "enabled": true,
+      "strength": 100,
+      "r0": 10,
+      "z0": 0.6,
+      "color": "#ffffff",
+      "soften": 0
+    },
+    "disk": {
+      "enabled": true,
+      "strength": 3000,
+      "aw": 0.06,
+      "z0": 0.028,
+      "r0": 0.39,
+      "inner": 0.6,
+      "color": "#ffffff",
+      "noise_twirl": 0.1,
+      "noise_scale": 10,
+      "noise_tilt": 1,
+      "noise_offset": 0
+    },
+    "stars": {
+      "enabled": true,
+      "strength": 0,
+      "aw": 0.16,
+      "z0": 0.034,
+      "r0": 0.31,
+      "inner": 0.6,
+      "color": "#cce6ff",
+      "noise_twirl": 0,
+      "noise_scale": 6,
+      "noise_tilt": 20,
+      "noise_offset": 0
+    },
+    "dust": {
+      "enabled": true,
+      "strength": 1160,
+      "aw": 0,
+      "z0": 0.015,
+      "r0": 0.38,
+      "inner": 0.85,
+      "color": "#caf0fe",
+      "noise_twirl": 0.1,
+      "noise_scale": 5,
+      "noise_tilt": 1.2,
+      "noise_offset": 1.2
+    }
+  },
+
+  "NGC 4826": {
+    "template": "SAab",
+    "bulge": {
+      "color": "#ffefe1"
+    },
+    "stars": {
+      "color": "#ff26a6"
+    },
+    "dust": {
+      "strength": 200,
+      "aw": 0.13,
+      "r0": 0.52,
+      "noise_tilt": 2
+    }
+  },
+
+  "NGC 1300": {
+    "template": "SBbc"
+  },
+
+  "NGC 1365": {
+    "template": "SBbc",
+    "arms_count": 2,
+    "dust": {
+      "strength": 194,
+      "aw": 2.02,
+      "z0": 0.011,
+      "r0": 0.41,
+      "color": "#008cb4"
+    }
+  },
+
+  "Hoag's Object": {
+    "template": null,
+    "arms_count": 2,
+    "arm_0": 0,
+    "arm_1": 180,
+    "arm_2": 90,
+    "arm_3": 270,
+    "winding": {
+      "n": 4,
+      "a": 0.3,
+      "b": 1.28
+    },
+    "bulge": {
+      "enabled": true,
+      "strength": 4.000000000000001,
+      "r0": 10,
+      "z0": 0.92,
+      "color": "#fff6ec",
+      "soften": 0
+    },
+    "disk": {
+      "enabled": true,
+      "strength": 0,
+      "aw": 0.6,
+      "z0": 0.028,
+      "r0": 0.39,
+      "inner": 0.6,
+      "color": "#72a5ff",
+      "noise_twirl": 0.1,
+      "noise_scale": 10,
+      "noise_tilt": 1,
+      "noise_offset": 0.1591035847462855
+    },
+    "stars": {
+      "enabled": true,
+      "strength": 100,
+      "aw": 0.16,
+      "z0": 0.034,
+      "r0": 0.31,
+      "inner": 0.6,
+      "color": "#cce5ff",
+      "noise_twirl": 0,
+      "noise_scale": 6,
+      "noise_tilt": 20,
+      "noise_offset": 0
+    },
+    "dust": {
+      "enabled": true,
+      "strength": 0,
+      "aw": 0.5,
+      "z0": 0.02,
+      "r0": 0.38,
+      "inner": 0.81,
+      "color": "#72a5ff",
+      "noise_twirl": 0.07,
+      "noise_scale": 5,
+      "noise_tilt": 1.5,
+      "noise_offset": 1.2
+    }
+  },
+
+  "NGC 4921": {
+    "template": "SBab",
+    "disk": {
+      "color": "#a8c6fe"
+    },
+    "dust": {
+      "strength": 320,
+      "aw": 0.13,
+      "r0": 0.41,
+      "inner": 0.44,
+      "noise_twirl": 0.13,
+      "noise_scale": 3.8,
+      "noise_tilt": 2.4
+    }
+  },
+
+  "NGC 2841": {
+    "template": "SAab",
+    "winding": { "b": 0.3 },
+    "stars": { "color": "#d9cafe" }
+  },
+
+  "NGC 1055": {
+    "template": "SBbc",
+    "arms_count": 2,
+    "winding": { "b": 0.2 },
+    "bulge": {
+      "strength": 27.5,
+      "color": "#e2e8ff"
+    },
+    "disk": { "strength": 7960, "r0": 0.31 },
+    "dust": {
+      "strength": 194,
+      "aw": 0.74,
+      "r0": 1,
+      "noise_twirl": 0.1,
+      "noise_tilt": 1.5
+    }
+  },
+
+  "NGC 1097": {
+    "template": "SBbc",
+    "arms_count": 2,
+    "winding": {
+      "b": 0.4
+    },
+    "bulge": {
+      "color": "#ecefff"
+    },
+    "dust": {
+      "strength": 194,
+      "noise_tilt": 1.6
+    }
+  },
+
+  "UGC 2885 (Rubin's Galaxy)": {
+    "template": "SAab",
+    "winding": {
+      "b": 1
+    },
+    "bulge": {
+      "color": "#ffcda4"
+    },
+    "dust": {
+      "inner": 0.17
+    }
+  },
+
+  "M 106": {
+    "template": "SAb",
+    "bulge": {
+      "color": "#fff2e7"
+    },
+    "dust": {
+      "strength": 422,
+      "aw": 0.29,
+      "r0": 1,
+      "color": "#005a8f"
+    }
+  },
+
+  "NGC 4395": {
+    "template": "SAcd",
+    "arms_count": 3,
+    "arm_0": 17,
+    "arm_1": 236,
+    "arm_2": 154,
+    "winding": {
+      "b": 1.3
+    },
+    "bulge": {
+      "strength": 0
+    },
+    "disk": {
+      "aw": 0.29
+    },
+    "stars": {
+      "strength": 4.6
+    }
+  },
+
+  "M 58": {
+    "template": "SAb",
+    "winding": {
+      "a": 1.03
+    },
+    "bulge": {
+      "color": "#ffe9d7"
+    },
+    "disk": {
+      "inner": 0.4
+    },
+    "dust": {
+      "inner": 0.16
+    }
+  },
+
+  "NGC 5866": {
+    "template": "S0"
+  },
+
+  "NGC 2787": {
+    "template": "S0"
+  },
+
+  "NGC 1387": {
+    "template": "S0",
+    "dust": {
+      "strength": 100,
+      "aw": 0,
+      "r0": 0.27,
+      "inner": 0,
+      "color": "#9bc5fc",
+      "noise_twirl": 0.1,
+      "noise_tilt": 2
+    }
+  },
+
+  "NGC 4030": {
+    "template": "SAb",
+    "arms_count": 4,
+    "bulge": {
+      "color": "#fff2e7"
+    },
+    "disk": {
+      "aw": 0.23,
+      "color": "#a8c6fe"
+    },
+    "dust": {
+      "strength": 50
+    }
+  },
+
+  "NGC 253": {
+    "template": "SAcd",
+    "winding": {
+      "a": 0.63,
+      "b": 0.8
+    },
+    "bulge": {
+      "color": "#fff6ec"
+    },
+    "stars": {
+      "color": "#f9d3e0"
+    },
+    "dust": {
+      "strength": 398,
+      "r0": 0.54
+    }
+  },
+
+  "NGC 6946": {
+    "template": "SAcd"
+  }
+
+}

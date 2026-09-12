@@ -12,7 +12,13 @@ function packagePrice(pkg) {
 }
 
 export function packageToExperience(pkg, staticExperiences = []) {
-  const staticExperience = staticExperiences.find((item) => item.title === pkg.name);
+  const staticExperience = staticExperiences.find(
+    (item) =>
+      item.title === pkg.name ||
+      (pkg.name === 'Solar Observation' && item.title === 'Sun Observation') ||
+      (pkg.name === 'Private Stargazing' && item.title === 'Private Beach Stargazing') ||
+      (pkg.name === 'Moon Observation' && item.title === 'Moonlight Table')
+  );
 
   return {
     ...(staticExperience || {}),

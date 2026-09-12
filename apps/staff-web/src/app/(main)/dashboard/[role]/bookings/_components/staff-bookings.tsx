@@ -678,7 +678,28 @@ function createStaffBookingsColumns(actions: BookingActionContext): ColumnDef<Da
       accessorKey: "staff_name",
       header: "Staff",
       filterFn: "equalsString",
-      cell: ({ row }) => <div className="max-w-40 truncate">{row.original.staff_name}</div>,
+      cell: ({ row }) => {
+        const staffRole = row.original.staff_role;
+        return (
+          <div className="flex max-w-44 flex-col gap-1">
+            <div className="truncate font-medium text-sm">{row.original.staff_name}</div>
+            {staffRole ? (
+              <div>
+                <Badge
+                  variant={staffRole === "external" ? "outline" : "secondary"}
+                  className={
+                    staffRole === "external"
+                      ? "border-purple-500/40 bg-purple-500/10 text-[10px] font-medium text-purple-600 dark:text-purple-400"
+                      : "border-cyan-500/40 bg-cyan-500/10 text-[10px] font-medium text-cyan-700 dark:text-cyan-300"
+                  }
+                >
+                  {titleCase(staffRole)}
+                </Badge>
+              </div>
+            ) : null}
+          </div>
+        );
+      },
     },
     {
       id: "resort",
@@ -852,10 +873,28 @@ function StaffBookingsGrid({
               <div className="truncate font-medium">{formatDate(booking.event_date)}</div>
             </div>
             <div className="min-w-0">
+              <div className="text-muted-foreground text-xs">Staff</div>
+              <div className="flex items-center gap-1.5 truncate font-medium">
+                <span className="truncate">{booking.staff_name}</span>
+                {booking.staff_role ? (
+                  <Badge
+                    variant={booking.staff_role === "external" ? "outline" : "secondary"}
+                    className={
+                      booking.staff_role === "external"
+                        ? "border-purple-500/40 bg-purple-500/10 text-[10px] font-medium text-purple-600 dark:text-purple-400"
+                        : "border-cyan-500/40 bg-cyan-500/10 text-[10px] font-medium text-cyan-700 dark:text-cyan-300"
+                    }
+                  >
+                    {titleCase(booking.staff_role)}
+                  </Badge>
+                ) : null}
+              </div>
+            </div>
+            <div className="min-w-0">
               <div className="text-muted-foreground text-xs">Resort</div>
               <div className="truncate font-medium">{booking.resort_name ?? "Unassigned"}</div>
             </div>
-            <div>
+            <div className="col-span-2">
               <div className="text-muted-foreground text-xs">Guests</div>
               <div className="font-medium tabular-nums">{booking.adult_count + booking.child_count} guests</div>
             </div>
@@ -975,6 +1014,7 @@ export function StaffBookings({ role, initialNewBooking = false }: { role: Staff
   const [rescheduleBooking, setRescheduleBooking] = React.useState<StaffBooking | null>(null);
   const [statusAction, setStatusAction] = React.useState<StatusAction | null>(null);
   const [pendingId, setPendingId] = React.useState<string | null>(null);
+  const [internalFilterTab, setInternalFilterTab] = React.useState<"all" | "pending" | "internal" | "external">("all");
 
   const loadData = React.useCallback(async () => {
     setLoading(true);
@@ -1005,6 +1045,24 @@ export function StaffBookings({ role, initialNewBooking = false }: { role: Staff
     void loadData();
   }, [loadData]);
 
+  React.useEffect(() => {
+    let channel: BroadcastChannel | null = null;
+    try {
+      if (typeof window !== "undefined" && "BroadcastChannel" in window) {
+        channel = new BroadcastChannel("ephemeris_sync_channel");
+        channel.onmessage = () => {
+          void loadData();
+          window.dispatchEvent(new Event("ephemeris:notifications-changed"));
+        };
+      }
+    } catch {
+      // ignore
+    }
+    return () => {
+      channel?.close();
+    };
+  }, [loadData]);
+
   const closeNewBooking = React.useCallback(() => {
     setNewBookingOpen(false);
     const url = new URL(window.location.href);
@@ -1031,6 +1089,16 @@ export function StaffBookings({ role, initialNewBooking = false }: { role: Staff
           body: JSON.stringify(payload),
         });
         toast.success(message);
+        try {
+          if (typeof window !== "undefined" && "BroadcastChannel" in window) {
+            const channel = new BroadcastChannel("ephemeris_sync_channel");
+            channel.postMessage({ type: "BOOKING_STATUS_UPDATED", bookingId: booking.id, payload });
+            channel.close();
+          }
+        } catch {
+          // ignore
+        }
+        window.dispatchEvent(new Event("ephemeris:notifications-changed"));
         await loadData();
         return true;
       } catch (updateError) {
@@ -1113,6 +1181,16 @@ export function StaffBookings({ role, initialNewBooking = false }: { role: Staff
       });
       setDeleteBooking(null);
       toast.success(`${booking.booking_code} was deleted.`);
+      try {
+        if (typeof window !== "undefined" && "BroadcastChannel" in window) {
+          const channel = new BroadcastChannel("ephemeris_sync_channel");
+          channel.postMessage({ type: "BOOKING_DELETED", bookingId: booking.id });
+          channel.close();
+        }
+      } catch {
+        // ignore
+      }
+      window.dispatchEvent(new Event("ephemeris:notifications-changed"));
       await loadData();
     } catch (deleteError) {
       toast.error(deleteError instanceof Error ? deleteError.message : "Unable to delete booking.");
@@ -1145,6 +1223,16 @@ export function StaffBookings({ role, initialNewBooking = false }: { role: Staff
       });
       setRescheduleBooking(null);
       toast.success(`${booking.booking_code} was rescheduled.`);
+      try {
+        if (typeof window !== "undefined" && "BroadcastChannel" in window) {
+          const channel = new BroadcastChannel("ephemeris_sync_channel");
+          channel.postMessage({ type: "BOOKING_RESCHEDULED", bookingId: booking.id });
+          channel.close();
+        }
+      } catch {
+        // ignore
+      }
+      window.dispatchEvent(new Event("ephemeris:notifications-changed"));
       await loadData();
     } catch (rescheduleError) {
       toast.error(rescheduleError instanceof Error ? rescheduleError.message : "Unable to reschedule booking.");
@@ -1152,6 +1240,29 @@ export function StaffBookings({ role, initialNewBooking = false }: { role: Staff
       setPendingId(null);
     }
   }
+
+  const totals = React.useMemo(() => {
+    return bookings.reduce(
+      (acc, b) => {
+        acc.total += 1;
+        acc.pending += b.status === "pending" ? 1 : 0;
+        acc.accepted += ["active", "rescheduled"].includes(b.status) ? 1 : 0;
+        acc.completed += b.status === "completed" ? 1 : 0;
+        acc.internal += b.staff_role === "internal" ? 1 : 0;
+        acc.external += b.staff_role === "external" ? 1 : 0;
+        return acc;
+      },
+      { total: 0, pending: 0, accepted: 0, completed: 0, internal: 0, external: 0 },
+    );
+  }, [bookings]);
+
+  const displayedBookings = React.useMemo(() => {
+    if (role !== "internal" || internalFilterTab === "all") return bookings;
+    if (internalFilterTab === "pending") return bookings.filter((b) => b.status === "pending");
+    if (internalFilterTab === "internal") return bookings.filter((b) => b.staff_role === "internal");
+    if (internalFilterTab === "external") return bookings.filter((b) => b.staff_role === "external");
+    return bookings;
+  }, [bookings, role, internalFilterTab]);
 
   const actionContext = React.useMemo<BookingActionContext>(
     () => ({
@@ -1169,7 +1280,7 @@ export function StaffBookings({ role, initialNewBooking = false }: { role: Staff
   const columns = React.useMemo(() => createStaffBookingsColumns(actionContext), [actionContext]);
   const table = useTable({
     features: dataTableFeatures,
-    data: bookings,
+    data: displayedBookings,
     columns,
     state: { rowSelection, sorting, columnFilters, columnVisibility, pagination },
     getRowId: (row) => row.id,
@@ -1275,12 +1386,78 @@ export function StaffBookings({ role, initialNewBooking = false }: { role: Staff
         </Alert>
       ) : null}
 
+      {role === "internal" ? (
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <Card size="sm" className="shadow-xs">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1">
+              <CardDescription className="font-medium text-xs">Total Bookings</CardDescription>
+              <CalendarClock className="size-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="font-bold text-2xl tabular-nums">{totals.total}</div>
+              <p className="text-muted-foreground text-xs">All resort bookings</p>
+            </CardContent>
+          </Card>
+          <Card size="sm" className="shadow-xs">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1">
+              <CardDescription className="font-medium text-xs">Pending Review</CardDescription>
+              <CirclePlay className="size-4 text-amber-500" />
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center gap-2">
+                <span className="font-bold text-2xl tabular-nums">{totals.pending}</span>
+                {totals.pending > 0 ? (
+                  <Badge
+                    variant="outline"
+                    className="border-amber-500/40 bg-amber-500/10 text-[10px] font-semibold text-amber-600 dark:text-amber-400"
+                  >
+                    Review Needed
+                  </Badge>
+                ) : null}
+              </div>
+              <p className="text-muted-foreground text-xs">Waiting for operational approval</p>
+            </CardContent>
+          </Card>
+          <Card size="sm" className="shadow-xs">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1">
+              <CardDescription className="font-medium text-xs">Active Bookings</CardDescription>
+              <CheckCircle2 className="size-4 text-primary" />
+            </CardHeader>
+            <CardContent>
+              <div className="font-bold text-2xl tabular-nums">{totals.accepted}</div>
+              <p className="text-muted-foreground text-xs">Confirmed or rescheduled</p>
+            </CardContent>
+          </Card>
+          <Card size="sm" className="shadow-xs">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1">
+              <CardDescription className="font-medium text-xs">Completed</CardDescription>
+              <CheckCircle2 className="size-4 text-emerald-500" />
+            </CardHeader>
+            <CardContent>
+              <div className="font-bold text-2xl tabular-nums">{totals.completed}</div>
+              <p className="text-muted-foreground text-xs">Successfully executed sessions</p>
+            </CardContent>
+          </Card>
+        </div>
+      ) : null}
+
+      {role === "internal" && totals.pending > 0 ? (
+        <Alert className="border-amber-500/30 bg-amber-500/10 text-amber-900 dark:text-amber-200">
+          <CirclePlay className="size-4 text-amber-600 dark:text-amber-400" />
+          <AlertTitle>Pending Bookings Require Review</AlertTitle>
+          <AlertDescription>
+            There {totals.pending === 1 ? "is 1 booking" : `are ${totals.pending} bookings`} submitted by external staff
+            waiting for your operational approval.
+          </AlertDescription>
+        </Alert>
+      ) : null}
+
       <Card>
         <CardHeader className="border-b has-data-[slot=card-action]:grid-cols-1 md:has-data-[slot=card-action]:grid-cols-[1fr_auto]">
           <CardTitle className="text-xl leading-none">Bookings</CardTitle>
           <CardDescription className="max-w-sm leading-snug">
             {role === "internal"
-              ? "Manage booking schedules and statuses assigned to your resort."
+              ? "Manage booking schedules, review external submissions, and operate sessions for your resort."
               : "Track bookings submitted from your external staff account."}
             {readOnly ? " Your assigned access is view only." : null}
           </CardDescription>
@@ -1344,6 +1521,57 @@ export function StaffBookings({ role, initialNewBooking = false }: { role: Staff
         </CardHeader>
 
         <CardContent className="flex flex-col gap-4 px-0">
+          {role === "internal" ? (
+            <div className="border-b px-4 pb-3">
+              <Tabs
+                value={internalFilterTab}
+                onValueChange={(value) => {
+                  const nextTab = value as "all" | "pending" | "internal" | "external";
+                  setInternalFilterTab(nextTab);
+                  if (nextTab === "pending") {
+                    table.getColumn("status")?.setFilterValue(undefined);
+                  }
+                  table.setPageIndex(0);
+                }}
+              >
+                <TabsList className="h-9">
+                  <TabsTrigger value="all" className="gap-1.5 text-xs sm:text-sm">
+                    All Bookings
+                    <Badge variant="secondary" className="px-1.5 py-0 text-[11px] font-normal">
+                      {totals.total}
+                    </Badge>
+                  </TabsTrigger>
+                  <TabsTrigger value="pending" className="gap-1.5 text-xs sm:text-sm">
+                    Needs Review
+                    {totals.pending > 0 ? (
+                      <Badge
+                        variant="default"
+                        className="bg-amber-500 px-1.5 py-0 text-[11px] font-medium text-white hover:bg-amber-600"
+                      >
+                        {totals.pending}
+                      </Badge>
+                    ) : (
+                      <Badge variant="secondary" className="px-1.5 py-0 text-[11px] font-normal">
+                        0
+                      </Badge>
+                    )}
+                  </TabsTrigger>
+                  <TabsTrigger value="internal" className="gap-1.5 text-xs sm:text-sm">
+                    Internal
+                    <Badge variant="secondary" className="px-1.5 py-0 text-[11px] font-normal">
+                      {totals.internal}
+                    </Badge>
+                  </TabsTrigger>
+                  <TabsTrigger value="external" className="gap-1.5 text-xs sm:text-sm">
+                    External
+                    <Badge variant="secondary" className="px-1.5 py-0 text-[11px] font-normal">
+                      {totals.external}
+                    </Badge>
+                  </TabsTrigger>
+                </TabsList>
+              </Tabs>
+            </div>
+          ) : null}
           <div className="flex flex-wrap items-center justify-between gap-3 px-4">
             <div className="flex flex-wrap items-center gap-3">
               <Select value={statusFilter} onValueChange={(value) => setColumnSelectFilter("status", value)}>

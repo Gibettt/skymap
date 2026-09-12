@@ -32,6 +32,15 @@ export async function currentUser() {
 export async function getUserPermissions(user) {
   if (!user) return [];
 
+  if (user.access_role_level === 'full') {
+    const app = user.role === 'admin' ? 'admin' : 'staff';
+    const { rows: allPerms } = await query(
+      `SELECT permission_key FROM access_permissions WHERE application = $1 ORDER BY permission_key`,
+      [app]
+    );
+    return allPerms.map((row) => row.permission_key);
+  }
+
   const { rows } = await query(
     `SELECT permission.permission_key
      FROM access_role_permissions permission

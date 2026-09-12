@@ -8,14 +8,14 @@ import styles from './SkyExperience.module.css';
 
 // ─── Default & Preset Locations ───────────────────────────────────
 const DEFAULT_LOCATION = {
-  name: 'Jakarta (SpaceCat Astrotourism Pilot HQ)',
+  name: 'Jakarta (SpaceCat ASTROTOURISM Pilot HQ)',
   latitude: -6.2088,
   longitude: 106.8456,
   timezone: 'Asia/Jakarta',
 };
 
 const LOCATION_PRESETS = [
-  { name: 'Jakarta (SpaceCat Astrotourism Pilot HQ)', latitude: -6.2088, longitude: 106.8456, timezone: 'Asia/Jakarta' },
+  { name: 'Jakarta (SpaceCat ASTROTOURISM Pilot HQ)', latitude: -6.2088, longitude: 106.8456, timezone: 'Asia/Jakarta' },
   { name: 'Bosscha Observatory, Lembang', latitude: -6.8247, longitude: 107.6167, timezone: 'Asia/Jakarta' },
   { name: 'Bali Coastal Resort', latitude: -8.7482, longitude: 115.1672, timezone: 'Asia/Makassar' },
   { name: 'Le Meridien Maldives', latitude: 5.3725, longitude: 73.4912, timezone: 'Indian/Maldives' },
@@ -1499,7 +1499,7 @@ export default function SkyExperience() {
   return (
     <main className={`${styles.page} ${nightMode ? styles.nightMode : ''}`}>
       {/* 3D WebGL Canvas Viewport */}
-      <div ref={hostRef} className={styles.viewport} aria-label="SpaceCat Astrotourism 3D Stellarium Sky" />
+      <div ref={hostRef} className={styles.viewport} aria-label="SpaceCat ASTROTOURISM 3D Stellarium Sky" />
 
       {/* Floating 3D/2D Object Labels on Sky View */}
       {showLabels && (
@@ -1533,7 +1533,7 @@ export default function SkyExperience() {
       <header className={styles.topBar}>
         <div className={styles.brandGroup}>
           <Link href="/" className={styles.brandLogo}>
-            <span>★</span> SpaceCat Astrotourism <span>Sky Guide</span>
+            <span>★</span> SpaceCat ASTROTOURISM <span>Sky Guide</span>
           </Link>
           <div className={styles.brandDivider} />
           <button
