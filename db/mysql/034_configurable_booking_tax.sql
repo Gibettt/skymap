@@ -1,0 +1,11 @@
+START TRANSACTION;
+
+ALTER TABLE bookings
+  ADD COLUMN tax_label VARCHAR(80) NOT NULL DEFAULT 'Tourism GST (TGST)' AFTER gst_17_usd,
+  ADD COLUMN tax_rate_percent DECIMAL(5,2) NOT NULL DEFAULT 17.00 AFTER tax_label;
+
+ALTER TABLE invoices
+  ADD COLUMN tax_label VARCHAR(80) NOT NULL DEFAULT 'Tourism GST (TGST)' AFTER tax_usd,
+  ADD COLUMN tax_rate_percent DECIMAL(5,2) NOT NULL DEFAULT 17.00 AFTER tax_label;
+
+COMMIT;

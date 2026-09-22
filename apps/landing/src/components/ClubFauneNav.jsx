@@ -66,7 +66,6 @@ export default function ClubFauneNav({ whatsappLink }) {
             <a href="#resorts" className="cf-nav-link">Destinations</a>
             <a href="#valeurs" className="cf-nav-link">Our Values</a>
             <Link href="/sky" className="cf-nav-link">Sky Guide 3D</Link>
-            <a href="#masterclass" className="cf-nav-link">Masterclass</a>
             <a href="#magazine" className="cf-nav-link">The Magazine</a>
           </nav>
 
@@ -146,15 +145,9 @@ export default function ClubFauneNav({ whatsappLink }) {
             </Link>
           </li>
           <li>
-            <a href="#masterclass" onClick={() => setDrawerOpen(false)}>
-              <span>Astronomy Masterclasses</span>
-              <span className="biotif" style={{ fontSize: "16px", color: "var(--orange)" }}>05</span>
-            </a>
-          </li>
-          <li>
             <a href="#magazine" onClick={() => setDrawerOpen(false)}>
               <span>The Celestial Magazine</span>
-              <span className="biotif" style={{ fontSize: "16px", color: "var(--orange)" }}>06</span>
+              <span className="biotif" style={{ fontSize: "16px", color: "var(--orange)" }}>05</span>
             </a>
           </li>
         </ul>

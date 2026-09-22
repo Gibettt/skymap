@@ -8,6 +8,13 @@ function eventPrice(event) {
   return price == null ? 'Contact resort' : `USD ${Number(price).toFixed(2)}`;
 }
 
+function eventTypeLabel(value) {
+  return String(value || '')
+    .split(/[_-]+/)
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ');
+}
+
 export default function ResortEventCalendar({ resortName, timeZone, events }) {
   const [reminder, setReminder] = useState(null);
 
@@ -30,7 +37,7 @@ export default function ResortEventCalendar({ resortName, timeZone, events }) {
         {events.map((event) => (
           <article className="resort-event-card" key={event.id}>
             {event.image_url && <Image src={event.image_url} alt="" width={640} height={360} unoptimized />}
-            <p className="stargazing-kicker">{event.event_type} · {event.status}</p>
+            <p className="stargazing-kicker">{eventTypeLabel(event.event_type)} · {event.status}</p>
             <h3>{event.title}</h3>
             <time dateTime={event.starts_at}>
               {new Intl.DateTimeFormat('en-GB', {

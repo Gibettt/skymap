@@ -19,7 +19,7 @@ function mapEvent(row) {
     observationSpot: row.observation_spot || '',
     capacity: row.capacity,
     priceOverrideUsd: row.price_override_usd == null ? null : Number(row.price_override_usd),
-    imageUrl: row.image_url || null,
+    imageUrl: row.image_data ? `/api/sky-events/${row.id}/image` : row.image_url || null,
     status: row.status,
     isPublished: row.is_published,
     calculated: false,

@@ -1,4 +1,4 @@
-import { Ellipsis, FileDown, FileUp, RefreshCw, Share2 } from "lucide-react";
+import { Ellipsis, FileDown, FileUp, Share2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -7,7 +7,6 @@ import {
   DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -49,13 +48,6 @@ export function AnalyticsToolbar() {
             <DropdownMenuItem>
               <Share2 />
               Share dashboard
-            </DropdownMenuItem>
-          </DropdownMenuGroup>
-          <DropdownMenuSeparator />
-          <DropdownMenuGroup>
-            <DropdownMenuItem>
-              <RefreshCw />
-              Refresh metrics
             </DropdownMenuItem>
           </DropdownMenuGroup>
         </DropdownMenuContent>

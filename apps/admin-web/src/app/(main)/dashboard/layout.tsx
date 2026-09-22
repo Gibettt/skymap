@@ -59,17 +59,19 @@ export default async function Layout({ children }: Readonly<{ children: ReactNod
             "[html[data-navbar-style=sticky]_&]:sticky [html[data-navbar-style=sticky]_&]:top-0 [html[data-navbar-style=sticky]_&]:z-50 [html[data-navbar-style=sticky]_&]:overflow-hidden [html[data-navbar-style=sticky]_&]:rounded-t-[inherit] [html[data-navbar-style=sticky]_&]:bg-background/50 [html[data-navbar-style=sticky]_&]:backdrop-blur-md",
           )}
         >
-          <div className="flex w-full items-center justify-between px-4 lg:px-6">
-            <div className="flex items-center gap-1 lg:gap-2">
+          <div className="flex w-full min-w-0 items-center justify-between gap-2 px-2 sm:px-4 lg:px-6">
+            <div className="flex min-w-0 items-center gap-1 lg:gap-2">
               <SidebarTrigger className="-ml-1" />
               <Separator
                 orientation="vertical"
-                className="mx-2 data-[orientation=vertical]:h-4 data-[orientation=vertical]:self-center"
+                className="mx-2 hidden data-[orientation=vertical]:h-4 data-[orientation=vertical]:self-center sm:block"
               />
               <SearchDialog />
             </div>
-            <div className="flex items-center gap-2">
-              <LayoutControls />
+            <div className="flex shrink-0 items-center gap-1 sm:gap-2">
+              <div className="hidden sm:block">
+                <LayoutControls />
+              </div>
               <ThemeSwitcher />
               {sessionUser?.role === "admin" && permissions?.includes("admin.notifications") ? (
                 <NotificationCenter />
@@ -93,7 +95,7 @@ export default async function Layout({ children }: Readonly<{ children: ReactNod
           </div>
         </header>
         {/* Pages can set data-content-padding="false" to render full-bleed app layouts. */}
-        <div className="min-h-0 min-w-0 flex-1 overflow-x-hidden p-4 has-data-[content-padding=false]:p-0 md:p-6 md:has-data-[content-padding=false]:p-0">
+        <div className="min-h-0 min-w-0 flex-1 overflow-x-hidden p-2 has-data-[content-padding=false]:p-0 sm:p-4 md:p-6 md:has-data-[content-padding=false]:p-0">
           {children}
         </div>
       </SidebarInset>

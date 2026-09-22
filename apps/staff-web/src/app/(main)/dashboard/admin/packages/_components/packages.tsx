@@ -2,6 +2,7 @@
 
 import * as React from "react";
 
+import { downloadExcelReport } from "@ephemeris/export";
 import {
   type ColumnFiltersState,
   type ColumnVisibilityState,
@@ -12,14 +13,7 @@ import {
 import { Download, Grid, Rows3, Search, SlidersHorizontal } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardAction,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -31,14 +25,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group";
 import { Kbd } from "@/components/ui/kbd";
-import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { dataTableFeatures } from "@/lib/data-table-features";
 
@@ -47,6 +34,7 @@ import type { PackageRow } from "../../_lib/admin-data";
 import { titleCase } from "../../_lib/format";
 import { getPackagesColumns, type PackageResortOption } from "./packages-columns";
 import { PackagesGrid } from "./packages-grid";
+import { PackagesPagination } from "./packages-pagination";
 import { PackagesTable } from "./packages-table";
 
 type PackageView = "list" | "grid";
@@ -65,10 +53,6 @@ const columnLabels: Record<string, string> = {
 
 function uniqueOptions(values: string[]) {
   return ["All", ...Array.from(new Set(values.filter(Boolean))).sort()];
-}
-
-function csvCell(value: string | number | boolean | null | undefined) {
-  return `"${String(value ?? "").replaceAll('"', '""')}"`;
 }
 
 export function Packages({ packages, resorts }: { packages: PackageRow[]; resorts: PackageResortOption[] }) {
@@ -120,8 +104,7 @@ export function Packages({ packages, resorts }: { packages: PackageRow[]; resort
 
   const searchQuery = (table.getColumn("search")?.getFilterValue() as string | undefined) ?? "";
   const packageTypeFilter = (table.getColumn("package_type")?.getFilterValue() as string | undefined) ?? "All";
-  const experienceFilter =
-    (table.getColumn("experience_type")?.getFilterValue() as string | undefined) ?? "All";
+  const experienceFilter = (table.getColumn("experience_type")?.getFilterValue() as string | undefined) ?? "All";
   const statusFilter = (table.getColumn("status")?.getFilterValue() as string | undefined) ?? "All";
   const resortFilter = (table.getColumn("resort_name")?.getFilterValue() as string | undefined) ?? "All";
   const hideableColumns = table
@@ -134,47 +117,49 @@ export function Packages({ packages, resorts }: { packages: PackageRow[]; resort
   }
 
   function changeView(value: string) {
-    if (value === "list" || value === "grid") setView(value);
+    if (value !== "list" && value !== "grid") return;
+
+    setView(value);
+    table.setPageSize(value === "grid" ? 9 : 10);
+    table.setPageIndex(0);
   }
 
-  function exportPackages() {
-    const header = [
-      "Name",
-      "Package type",
-      "Experience type",
-      "Resort",
-      "Location",
-      "Schedule",
-      "Adult price (USD)",
-      "Child price (USD)",
-      "Child age range",
-      "Chargeable",
-      "Status",
-      "Inclusions",
-    ];
-    const rows = table.getFilteredRowModel().rows.map(({ original }) => [
-      original.name,
-      titleCase(original.package_type),
-      titleCase(original.experience_type),
-      original.resort_name ?? "Unassigned",
-      original.location,
-      original.schedule,
-      Number(original.adult_price_usd),
-      original.child_price_usd == null ? "" : Number(original.child_price_usd),
-      original.child_age_range ?? "",
-      original.is_chargeable ? "Yes" : "No",
-      original.is_active ? "Active" : "Inactive",
-      Array.isArray(original.inclusions) ? original.inclusions.join("; ") : "",
-    ]);
-    const csv = [header, ...rows].map((row) => row.map(csvCell).join(",")).join("\n");
-    const url = URL.createObjectURL(new Blob([`\uFEFF${csv}`], { type: "text/csv;charset=utf-8" }));
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = "ephemeris-packages.csv";
-    document.body.append(link);
-    link.click();
-    link.remove();
-    URL.revokeObjectURL(url);
+  async function exportPackages() {
+    const rows = table.getFilteredRowModel().rows.map(({ original }) => original);
+    await downloadExcelReport({
+      title: "SpaceCat ASTROTOURISM — Packages",
+      subtitle: "Filtered experience package records",
+      filename: `ephemeris-packages-${new Date().toISOString().slice(0, 10)}.xlsx`,
+      sheetName: "Packages",
+      columns: [
+        { key: "name", header: "Name", width: 28 },
+        { key: "packageType", header: "Package type", width: 18 },
+        { key: "experienceType", header: "Experience type", width: 20 },
+        { key: "resort", header: "Resort", width: 28 },
+        { key: "location", header: "Location", width: 24 },
+        { key: "schedule", header: "Schedule", width: 24 },
+        { key: "adultPrice", header: "Adult price (USD)", width: 18, kind: "currency" },
+        { key: "childPrice", header: "Child price (USD)", width: 18, kind: "currency" },
+        { key: "childAgeRange", header: "Child age range", width: 17 },
+        { key: "chargeable", header: "Chargeable", width: 13 },
+        { key: "status", header: "Status", width: 14, kind: "status" },
+        { key: "inclusions", header: "Inclusions", width: 40 },
+      ],
+      rows: rows.map((pkg) => ({
+        name: pkg.name,
+        packageType: titleCase(pkg.package_type),
+        experienceType: titleCase(pkg.experience_type),
+        resort: pkg.resort_name ?? "Unassigned",
+        location: pkg.location,
+        schedule: pkg.schedule,
+        adultPrice: Number(pkg.adult_price_usd),
+        childPrice: pkg.child_price_usd == null ? null : Number(pkg.child_price_usd),
+        childAgeRange: pkg.child_age_range ?? "",
+        chargeable: pkg.is_chargeable ? "Yes" : "No",
+        status: pkg.is_active ? "Active" : "Inactive",
+        inclusions: Array.isArray(pkg.inclusions) ? pkg.inclusions.join("; ") : "",
+      })),
+    });
   }
 
   return (
@@ -240,10 +225,7 @@ export function Packages({ packages, resorts }: { packages: PackageRow[]; resort
       <CardContent className="flex flex-col gap-4 px-0">
         <div className="flex flex-wrap items-center justify-between gap-3 px-4">
           <div className="flex flex-wrap items-center gap-3">
-            <Select
-              value={packageTypeFilter}
-              onValueChange={(value) => setColumnSelectFilter("package_type", value)}
-            >
+            <Select value={packageTypeFilter} onValueChange={(value) => setColumnSelectFilter("package_type", value)}>
               <SelectTrigger size="sm">
                 <span className="text-muted-foreground">Type:</span>
                 <SelectValue />
@@ -259,10 +241,7 @@ export function Packages({ packages, resorts }: { packages: PackageRow[]; resort
               </SelectContent>
             </Select>
 
-            <Select
-              value={experienceFilter}
-              onValueChange={(value) => setColumnSelectFilter("experience_type", value)}
-            >
+            <Select value={experienceFilter} onValueChange={(value) => setColumnSelectFilter("experience_type", value)}>
               <SelectTrigger size="sm">
                 <span className="text-muted-foreground">Experience:</span>
                 <SelectValue />
@@ -331,6 +310,7 @@ export function Packages({ packages, resorts }: { packages: PackageRow[]; resort
 
         {view === "list" ? <PackagesTable table={table} /> : <PackagesGrid table={table} resorts={resorts} />}
       </CardContent>
+      {table.getFilteredRowModel().rows.length ? <PackagesPagination table={table} /> : null}
     </Card>
   );
 }

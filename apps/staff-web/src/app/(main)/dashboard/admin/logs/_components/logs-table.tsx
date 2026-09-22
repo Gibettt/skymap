@@ -15,14 +15,7 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from "@/components/ui/pagination";
-import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import type { DataTableFeatures } from "@/lib/data-table-features";
@@ -48,7 +41,7 @@ export function LogsTable({ table }: { table: ReactTable<DataTableFeatures, Audi
   const rows = table.getRowModel().rows;
 
   return (
-    <div className="flex flex-1 flex-col gap-4">
+    <div className="flex flex-1 flex-col">
       {rows.length ? (
         <div>
           <Table className="**:data-[slot='table-cell']:px-4 **:data-[slot='table-head']:px-4">
@@ -91,7 +84,7 @@ export function LogsTable({ table }: { table: ReactTable<DataTableFeatures, Audi
 
       <Separator />
 
-      <div className="flex flex-col gap-3 px-4 md:flex-row md:items-center md:justify-between">
+      <div className="flex flex-col gap-3 px-5 py-5 sm:px-6 md:flex-row md:items-center md:justify-between">
         <div className="flex flex-wrap items-center gap-4 text-muted-foreground text-sm">
           <div className="flex items-center gap-2">
             <span>Rows per page</span>

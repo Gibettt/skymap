@@ -1,0 +1,17 @@
+{
+  "name": "@ephemeris/export",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "index.js",
+  "types": "index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./index.d.ts",
+      "default": "./index.js"
+    }
+  },
+  "dependencies": {
+    "exceljs": "^4.4.0"
+  }
+}

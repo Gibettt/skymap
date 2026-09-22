@@ -3,6 +3,8 @@ import { query, transaction } from '@ephemeris/db';
 import { createSkyEventSchema } from '@ephemeris/db/validators/sky-event';
 import { normalizeSkyEventInput, getOfficialPresets } from '@ephemeris/sky';
 
+import { assertAvailableEventType } from './_lib/event-type';
+
 function mapEvent(row) {
   return {
     id: row.id,
@@ -126,6 +128,7 @@ export async function POST(request) {
       return Response.json({ error: 'Data sky event tidak valid', details: parsed.error.flatten() }, { status: 400 });
     }
     const event = normalizeSkyEventInput(parsed.data);
+    await assertAvailableEventType({ query }, user.resort_id, event.eventType);
     if (event.packageId) {
       const pkg = await query('SELECT id FROM packages WHERE id = $1 AND resort_id = $2 AND is_active = true', [event.packageId, user.resort_id]);
       if (!pkg.rows[0]) throw new ApiError(400, 'Package is not available for this resort');

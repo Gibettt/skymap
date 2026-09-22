@@ -93,7 +93,7 @@ export function RolesTable({ table }: { table: ReactTable<DataTableFeatures, Rol
         </TableBody>
       </Table>
 
-      <div className="flex items-center border-border/70 border-t p-4">
+      <div className="flex items-center border-border/70 border-t px-5 py-5 sm:px-6">
         <div className="text-muted-foreground text-sm">
           Showing {start} to {end} of {filteredRows.length} roles
         </div>

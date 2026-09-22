@@ -6,6 +6,7 @@ import { emit, EventTypes } from '@ephemeris/events';
 import { normalizeSkyEventInput } from '@ephemeris/sky';
 
 import { mapSkyEvent, selectSkyEvent, validateRelations } from './_lib/sky-event';
+import { assertAvailableEventType } from './_lib/event-type';
 
 export async function POST(request) {
   try {
@@ -26,6 +27,7 @@ export async function POST(request) {
         resortId: resortId.data,
         packageId: input.packageId,
       });
+      await assertAvailableEventType(client, resortId.data, input.eventType);
       const { rows } = await client.query(
         `INSERT INTO sky_events
           (title, event_type, starts_at, ends_at, description, source_name, source_url, visibility,

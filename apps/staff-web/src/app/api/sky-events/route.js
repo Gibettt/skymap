@@ -3,6 +3,8 @@ import { query, transaction } from "@ephemeris/db";
 import { createSkyEventSchema } from "@ephemeris/db/validators/sky-event";
 import { getOfficialPresets, normalizeSkyEventInput } from "@ephemeris/sky";
 
+import { assertAvailableEventType } from "./_lib/event-type";
+
 function mapEvent(row) {
   return {
     id: row.id,
@@ -20,7 +22,7 @@ function mapEvent(row) {
     observationSpot: row.observation_spot || "",
     capacity: row.capacity,
     priceOverrideUsd: row.price_override_usd == null ? null : Number(row.price_override_usd),
-    imageUrl: row.image_url || null,
+    imageUrl: row.image_data ? `/api/sky-events/${row.id}/image` : row.image_url || null,
     status: row.status,
     isPublished: row.is_published,
     calculated: false,
@@ -130,6 +132,7 @@ export async function POST(request) {
       return Response.json({ error: "Data sky event tidak valid", details: parsed.error.flatten() }, { status: 400 });
     }
     const event = normalizeSkyEventInput(parsed.data);
+    await assertAvailableEventType({ query }, user.resort_id, event.eventType);
     if (event.packageId) {
       const pkg = await query("SELECT id FROM packages WHERE id = $1 AND resort_id = $2 AND is_active = true", [
         event.packageId,

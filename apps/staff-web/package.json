@@ -25,6 +25,7 @@
     "@ephemeris/auth": "workspace:*",
     "@ephemeris/db": "workspace:*",
     "@ephemeris/events": "workspace:*",
+    "@ephemeris/export": "workspace:*",
     "@ephemeris/finance": "workspace:*",
     "@ephemeris/sky": "workspace:*",
     "@fullcalendar/react": "^7.0.2",

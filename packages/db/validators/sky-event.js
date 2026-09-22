@@ -5,7 +5,8 @@ const validDateTime = (value) => !Number.isNaN(new Date(value).getTime());
 
 const skyEventShape = {
   title: z.string().trim().min(1, 'Judul wajib diisi').max(120),
-  eventType: z.enum(['astronomy', 'meteor', 'resort']),
+  eventType: z.string().trim().min(1, 'Tipe event wajib dipilih').max(80)
+    .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, 'Tipe event tidak valid'),
   startsAt: z.string().refine(validDateTime, 'Waktu mulai tidak valid'),
   endsAt: cleanTextSchema(80).refine((value) => !value || validDateTime(value), 'Waktu selesai tidak valid'),
   description: cleanTextSchema(1500),

@@ -1,4 +1,10 @@
-const EVENT_TYPES = new Set(['astronomy', 'meteor', 'resort']);
+export const DEFAULT_SKY_EVENT_TYPES = Object.freeze([
+  { slug: 'astronomy', name: 'Astronomy', isSystem: true },
+  { slug: 'meteor', name: 'Meteor', isSystem: true },
+  { slug: 'resort', name: 'Resort', isSystem: true },
+]);
+
+const EVENT_TYPE_SLUG = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const DIRECTIONS = new Set(['north', 'south', 'both']);
 const EVENT_STATUSES = new Set(['draft', 'published', 'cancelled', 'sold_out']);
 
@@ -19,7 +25,7 @@ export function normalizeSkyEventInput(input) {
   if (title.length > 120) throw new Error('Title is too long');
 
   const eventType = text(input.eventType, 'Event type', true);
-  if (!EVENT_TYPES.has(eventType)) throw new Error('Event type is invalid');
+  if (eventType.length > 80 || !EVENT_TYPE_SLUG.test(eventType)) throw new Error('Event type is invalid');
 
   const startsAt = dateValue(input.startsAt, 'Start date');
   const endsAt = input.endsAt ? dateValue(input.endsAt, 'End date') : null;

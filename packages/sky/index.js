@@ -7,6 +7,7 @@ export {
   getOfficialPresets,
 } from './calendar.js';
 export {
+  DEFAULT_SKY_EVENT_TYPES,
   normalizeSkyEventInput,
   rollingDateWindow,
   nearestResort,

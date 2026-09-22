@@ -57,6 +57,8 @@ import {
 } from "@/components/ui/select";
 import { Spinner } from "@/components/ui/spinner";
 import { Textarea } from "@/components/ui/textarea";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { PackageImageField, type PackageImageValue } from "../../_components/package-image-field";
 
 import type { CalendarOptions } from "../../_lib/admin-data";
 
@@ -64,6 +66,7 @@ const views = [
   { key: "dayGridMonth", label: "Month" },
   { key: "timeGridWeek", label: "Week" },
   { key: "timeGridDay", label: "Day" },
+  { key: "listMonth", label: "Agenda" },
 ] as const;
 
 const calendars = [
@@ -104,7 +107,7 @@ type SkyEvent = {
   title: string;
   startsAt: string;
   endsAt: string | null;
-  eventType: "astronomy" | "meteor" | "resort";
+  eventType: string;
   description: string;
   sourceName: string;
   sourceUrl: string | null;
@@ -140,7 +143,6 @@ type EventFormState = {
   description: string;
   sourceName: string;
   sourceUrl: string;
-  imageUrl: string;
 };
 
 function dateTimeInput(value: string | null) {
@@ -170,7 +172,6 @@ function newEventForm(resortId: string, date = new Date()): EventFormState {
     description: "",
     sourceName: "",
     sourceUrl: "",
-    imageUrl: "",
   };
 }
 
@@ -190,7 +191,6 @@ function editEventForm(event: SkyEvent): EventFormState {
     description: event.description,
     sourceName: event.sourceName,
     sourceUrl: event.sourceUrl ?? "",
-    imageUrl: event.imageUrl ?? "",
   };
 }
 
@@ -207,7 +207,7 @@ function formatCurrency(value: number) {
 }
 
 function humanize(value: string) {
-  return value.replaceAll("_", " ").replace(/\b\w/g, (character) => character.toUpperCase());
+  return value.replaceAll("_", " ").replaceAll("-", " ").replace(/\b\w/g, (character) => character.toUpperCase());
 }
 
 async function responseError(response: Response) {
@@ -235,6 +235,7 @@ function StatusBadge({ value }: { value: string }) {
 
 export function Calendar({ options }: { options: CalendarOptions }) {
   const controller = useCalendarController();
+  const isMobile = useIsMobile();
   const [records, setRecords] = React.useState<CalendarRecord[]>([]);
   const [loading, setLoading] = React.useState(false);
   const [refreshKey, setRefreshKey] = React.useState(0);
@@ -254,8 +255,15 @@ export function Calendar({ options }: { options: CalendarOptions }) {
   const [editingEvent, setEditingEvent] = React.useState<SkyEvent | null>(null);
   const [form, setForm] = React.useState<EventFormState>(() => newEventForm(options.resorts[0]?.id ?? ""));
   const [saving, setSaving] = React.useState(false);
+  const [eventImage, setEventImage] = React.useState<PackageImageValue>(undefined);
   const [deleteOpen, setDeleteOpen] = React.useState(false);
   const [deleting, setDeleting] = React.useState(false);
+
+  React.useEffect(() => {
+    if (!isMobile) return;
+    const frame = window.requestAnimationFrame(() => controller.changeView("listMonth"));
+    return () => window.cancelAnimationFrame(frame);
+  }, [controller, isMobile]);
 
   React.useEffect(() => {
     void refreshKey;
@@ -314,6 +322,21 @@ export function Calendar({ options }: { options: CalendarOptions }) {
     [form.packageId, form.resortId, options.packages],
   );
 
+  const availableEventTypes = React.useMemo(() => {
+    const types = new Map([
+      ["astronomy", "Astronomy"],
+      ["meteor", "Meteor"],
+      ["resort", "Resort"],
+    ]);
+    for (const record of records) {
+      if (record.kind === "sky_event" && record.resortId === form.resortId) {
+        types.set(record.eventType, humanize(record.eventType));
+      }
+    }
+    if (editingEvent) types.set(editingEvent.eventType, humanize(editingEvent.eventType));
+    return [...types.entries()].map(([slug, name]) => ({ slug, name }));
+  }, [editingEvent, form.resortId, records]);
+
   function openCreate(date = new Date()) {
     if (!preferredResortId) {
       toast.error("Create a resort before adding a sky event");
@@ -321,6 +344,7 @@ export function Calendar({ options }: { options: CalendarOptions }) {
     }
     setEditingEvent(null);
     setForm(newEventForm(preferredResortId, date));
+    setEventImage(undefined);
     setFormOpen(true);
   }
 
@@ -328,6 +352,7 @@ export function Calendar({ options }: { options: CalendarOptions }) {
     setDetailsOpen(false);
     setEditingEvent(event);
     setForm(editEventForm(event));
+    setEventImage(undefined);
     setFormOpen(true);
   }
 
@@ -362,10 +387,27 @@ export function Calendar({ options }: { options: CalendarOptions }) {
           description: form.description,
           sourceName: form.sourceName,
           sourceUrl: form.sourceUrl,
-          imageUrl: form.imageUrl,
         }),
       });
-      if (!response.ok) throw new Error(await responseError(response));
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(result.error || `Request failed with status ${response.status}`);
+
+      const eventId = editingEvent?.id ?? result.event?.id;
+      if (eventId && eventImage !== undefined) {
+        try {
+          let imageResponse: Response;
+          if (eventImage instanceof File) {
+            const imageForm = new FormData();
+            imageForm.set("image", eventImage);
+            imageResponse = await fetch(`/api/sky-events/${eventId}/image`, { method: "PUT", body: imageForm });
+          } else {
+            imageResponse = await fetch(`/api/sky-events/${eventId}/image`, { method: "DELETE" });
+          }
+          if (!imageResponse.ok) throw new Error(await responseError(imageResponse));
+        } catch (imageError) {
+          toast.error(`Event saved, but image failed: ${imageError instanceof Error ? imageError.message : "Unknown error"}`);
+        }
+      }
       toast.success(editingEvent ? "Sky event updated" : "Sky event created");
       setFormOpen(false);
       setEditingEvent(null);
@@ -406,7 +448,7 @@ export function Calendar({ options }: { options: CalendarOptions }) {
             </p>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="grid w-full grid-cols-1 gap-2 sm:flex sm:w-auto sm:flex-wrap sm:items-center">
             <Select value={selectedCalendar} onValueChange={setSelectedCalendar}>
               <SelectTrigger className="w-full sm:w-44">
                 <CalendarIcon />
@@ -434,7 +476,7 @@ export function Calendar({ options }: { options: CalendarOptions }) {
                 </SelectGroup>
               </SelectContent>
             </Select>
-            <ButtonGroup>
+            <ButtonGroup className="w-full sm:w-auto">
               <Button aria-label="Previous date range" size="icon" variant="outline" onClick={() => controller.prev()}>
                 <ChevronLeft />
               </Button>
@@ -444,14 +486,14 @@ export function Calendar({ options }: { options: CalendarOptions }) {
               </Button>
             </ButtonGroup>
             <Select value={controller.view?.type ?? views[0].key} onValueChange={(value) => controller.changeView(value)}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectTrigger className="w-full sm:w-auto"><SelectValue /></SelectTrigger>
               <SelectContent align="end">
                 <SelectGroup>
                   {views.map((view) => <SelectItem key={view.key} value={view.key}>{view.label}</SelectItem>)}
                 </SelectGroup>
               </SelectContent>
             </Select>
-            <Button disabled={!options.resorts.length} onClick={() => openCreate()}>
+            <Button className="w-full sm:w-auto" disabled={!options.resorts.length} onClick={() => openCreate()}>
               <Plus />
               Add event
             </Button>
@@ -460,7 +502,7 @@ export function Calendar({ options }: { options: CalendarOptions }) {
 
         <EventCalendarViews
           controller={controller}
-          initialView={views[0].key}
+          initialView={isMobile ? "listMonth" : views[0].key}
           plugins={[...plugins]}
           popoverCloseContent={() => <XIcon className="size-5 text-muted-foreground group-hover:text-foreground" />}
           events={calendarEvents}
@@ -536,7 +578,6 @@ export function Calendar({ options }: { options: CalendarOptions }) {
               ) : (
                 <dl className="grid gap-4 sm:grid-cols-2">
                   <Detail label="Event type" value={humanize(selectedRecord.eventType)} />
-                  <Detail label="Visibility" value={humanize(selectedRecord.visibility)} />
                   <Detail label="Start" value={formatDateTime(selectedRecord.startsAt)} />
                   <Detail label="End" value={formatDateTime(selectedRecord.endsAt)} />
                   <Detail label="Partner resort" value={selectedRecord.resortName} />
@@ -589,12 +630,12 @@ export function Calendar({ options }: { options: CalendarOptions }) {
               </Field>
               <Field>
                 <FieldLabel htmlFor="event-type">Event type</FieldLabel>
-                <Select value={form.eventType} onValueChange={(value) => setForm({ ...form, eventType: value as SkyEvent["eventType"] })}>
+                <Select value={form.eventType} onValueChange={(value) => setForm({ ...form, eventType: value })}>
                   <SelectTrigger id="event-type" className="w-full"><SelectValue /></SelectTrigger>
                   <SelectContent><SelectGroup>
-                    <SelectItem value="astronomy">Astronomy</SelectItem>
-                    <SelectItem value="meteor">Meteor</SelectItem>
-                    <SelectItem value="resort">Resort</SelectItem>
+                    {availableEventTypes.map((type) => (
+                      <SelectItem key={type.slug} value={type.slug}>{type.name}</SelectItem>
+                    ))}
                   </SelectGroup></SelectContent>
                 </Select>
               </Field>
@@ -624,17 +665,6 @@ export function Calendar({ options }: { options: CalendarOptions }) {
                     <SelectItem value="draft">Draft</SelectItem>
                     <SelectItem value="sold_out">Sold out</SelectItem>
                     <SelectItem value="cancelled">Cancelled</SelectItem>
-                  </SelectGroup></SelectContent>
-                </Select>
-              </Field>
-              <Field>
-                <FieldLabel htmlFor="event-visibility">Sky visibility</FieldLabel>
-                <Select value={form.visibility} onValueChange={(value) => setForm({ ...form, visibility: value as SkyEvent["visibility"] })}>
-                  <SelectTrigger id="event-visibility" className="w-full"><SelectValue /></SelectTrigger>
-                  <SelectContent><SelectGroup>
-                    <SelectItem value="both">North and south</SelectItem>
-                    <SelectItem value="north">North</SelectItem>
-                    <SelectItem value="south">South</SelectItem>
                   </SelectGroup></SelectContent>
                 </Select>
               </Field>
@@ -673,10 +703,15 @@ export function Calendar({ options }: { options: CalendarOptions }) {
                 <FieldLabel htmlFor="event-source-url">Source URL</FieldLabel>
                 <Input id="event-source-url" type="url" maxLength={500} value={form.sourceUrl} onChange={(event) => setForm({ ...form, sourceUrl: event.target.value })} />
               </Field>
-              <Field className="md:col-span-2">
-                <FieldLabel htmlFor="event-image-url">Image URL</FieldLabel>
-                <Input id="event-image-url" type="url" maxLength={500} value={form.imageUrl} onChange={(event) => setForm({ ...form, imageUrl: event.target.value })} />
-              </Field>
+              <div className="md:col-span-2">
+                <PackageImageField
+                  currentImageUrl={editingEvent?.imageUrl}
+                  onChange={setEventImage}
+                  description="JPG, PNG, or WEBP up to 2MB. Displayed on the public landing page."
+                  savedDescription="Displayed on the public landing page"
+                  previewAlt="Event preview"
+                />
+              </div>
             </FieldGroup>
             <DialogFooter>
               <Button type="button" variant="outline" disabled={saving} onClick={() => setFormOpen(false)}>Cancel</Button>

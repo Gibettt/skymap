@@ -1,5 +1,4 @@
 import { formatUsd, titleCase } from "../../_lib/staff-api";
-
 import type { InvoiceRow } from "./types";
 
 export const INVOICE_PAPER_WIDTH = 816;
@@ -84,10 +83,7 @@ export function InvoiceDocument({ invoice }: { invoice: InvoiceRow }) {
             <span className="text-right">Line total</span>
           </div>
           {invoice.line_items.map((item) => (
-            <div
-              key={item.id}
-              className="grid grid-cols-[1fr_74px_116px_116px] border-neutral-300 border-b px-3 py-4"
-            >
+            <div key={item.id} className="grid grid-cols-[1fr_74px_116px_116px] border-neutral-300 border-b px-3 py-4">
               <div className="min-w-0">
                 <p>{item.description}</p>
                 {item.detail ? <p className="text-neutral-500 text-xs">{item.detail}</p> : null}
@@ -111,7 +107,10 @@ export function InvoiceDocument({ invoice }: { invoice: InvoiceRow }) {
                 <span>{formatUsd(invoice.service_charge_usd)}</span>
               </div>
               <div className="flex justify-between gap-8">
-                <span>GST</span>
+                <span>
+                  {invoice.tax_label}
+                  {invoice.tax_rate_percent > 0 ? ` (${invoice.tax_rate_percent}%)` : ""}
+                </span>
                 <span>{formatUsd(invoice.tax_usd)}</span>
               </div>
             </div>

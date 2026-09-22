@@ -93,7 +93,7 @@ export function TransactionsOverviewCard({
   } satisfies ChartConfig;
 
   return (
-    <Card>
+    <Card className="[--card-spacing:--spacing(3)] sm:[--card-spacing:--spacing(4)]">
       <CardHeader>
         <CardTitle className="font-normal">{title}</CardTitle>
         <CardAction>
@@ -113,7 +113,7 @@ export function TransactionsOverviewCard({
       </CardHeader>
 
       <CardContent>
-        <ChartContainer config={chartConfig} className="h-50 w-full">
+        <ChartContainer config={chartConfig} className="h-44 w-full sm:h-50">
           <LineChart accessibilityLayer data={chartData} margin={{ bottom: 0, left: 0, right: 0, top: 0 }}>
             <CartesianGrid vertical={false} />
             <XAxis
@@ -121,7 +121,7 @@ export function TransactionsOverviewCard({
               dataKey="timestamp"
               domain={chartDomain}
               scale="time"
-              tickFormatter={formatWeekday}
+              tickFormatter={(value) => formatWeekday(value).slice(0, 3)}
               tickLine={false}
               tickMargin={10}
               ticks={weekdayTicks}

@@ -1,0 +1,672 @@
+/* Landing-page responsive guardrails. Loaded last so legacy theme rules cannot
+   push content beyond the viewport on phones and tablets. */
+
+html,
+body,
+.cf-body {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: clip;
+}
+
+.cf-body main,
+.cf-body main > *,
+.cf-header-inner,
+.cf-logo,
+.cf-logo-text {
+  min-width: 0;
+}
+
+.cf-body img,
+.cf-body video,
+.cf-body svg {
+  max-width: 100%;
+}
+
+#valeurs,
+#experiences,
+#celestial-events,
+#mosaique,
+#magazine,
+#resorts {
+  scroll-margin-top: 86px;
+}
+
+.cf-hero .home-hero-action {
+  margin-top: 0;
+  color: #fff;
+  text-shadow: 0 1px 12px rgba(0, 0, 0, 0.45);
+}
+
+/* Keep the full desktop navigation for screens that actually have room. */
+@media (max-width: 1279px) {
+  .cf-nav-links {
+    display: none;
+  }
+
+  .cf-header,
+  .cf-header.scrolled {
+    padding-right: clamp(20px, 4vw, 34px);
+    padding-left: clamp(20px, 4vw, 34px);
+  }
+
+  .cf-header-inner {
+    gap: 18px;
+  }
+
+  .cf-logo {
+    max-width: calc(100% - 190px);
+    flex: 1 1 auto;
+  }
+
+  .cf-logo-text {
+    overflow: hidden;
+  }
+
+  .cf-logo-title,
+  .cf-logo-sub {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .cf-header-right {
+    flex: 0 0 auto;
+  }
+}
+
+@media (max-width: 991px) {
+  .cf-hero {
+    height: 100svh;
+    min-height: 680px;
+    padding-bottom: clamp(76px, 10vh, 110px);
+  }
+
+  .cf-hero-media img {
+    object-position: 56% center;
+  }
+
+  .cf-hero-content {
+    padding-right: clamp(24px, 5vw, 42px);
+    padding-left: clamp(24px, 5vw, 42px);
+  }
+
+  .cf-hero-title {
+    width: min(100%, 720px);
+    max-width: 100%;
+    font-size: clamp(42px, 7.5vw, 64px);
+    overflow-wrap: anywhere;
+  }
+
+  .cf-hero-actions {
+    gap: 12px;
+  }
+
+  .cf-hero .home-hero-action,
+  .cf-hero .btn {
+    min-height: 48px;
+    margin-top: 0;
+    color: #fff;
+  }
+
+  .cf-valeurs {
+    padding: 76px 28px 68px;
+  }
+
+  .cf-valeurs-header {
+    margin-bottom: 44px;
+  }
+
+  section.experiences-coup-de-coeur .content,
+  section.experiences-coup-de-coeur .home-featured-heading {
+    max-width: 680px;
+  }
+
+  .home-image-story,
+  section#mosaique {
+    padding-top: 68px !important;
+  }
+
+  .home-image-story .container.big {
+    padding-right: 28px;
+    padding-left: 28px;
+  }
+
+  .home-image-story .cards-mosaique {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .home-image-story .cards-mosaique > div {
+    min-height: 360px;
+  }
+
+  .home-image-story .cards-mosaique .bloc-mosaique-texte {
+    grid-column: 1 / -1;
+    min-height: 300px;
+  }
+
+  section.trois-entrees .wrapper {
+    padding: 70px 0 76px;
+  }
+
+  section.banner-full-screen .container.big {
+    padding-right: 28px;
+    padding-left: 28px;
+  }
+
+  section.banner-full-screen .titre-wrapper {
+    right: 56px;
+    left: 56px;
+  }
+
+  section.magazine .container.big {
+    padding-right: 28px;
+    padding-left: 28px;
+  }
+
+  section.magazine .articles-wrapper .articles {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .cf-resorts {
+    padding: 76px 28px;
+  }
+
+  .newsletter-wrapper-footer .container.big,
+  footer.cf-footer-authentic .footer-haut.container.big,
+  footer.cf-footer-authentic .footer-milieu,
+  footer.cf-footer-authentic .footer-bas {
+    padding-right: 28px;
+    padding-left: 28px;
+  }
+}
+
+@media (max-width: 767px) {
+  .cf-header,
+  .cf-header.scrolled {
+    padding: 16px;
+  }
+
+  .cf-header-inner {
+    gap: 8px;
+  }
+
+  .cf-logo {
+    max-width: calc(100% - 52px);
+    gap: 9px;
+  }
+
+  .cf-logo-mark {
+    width: 38px;
+    height: 38px;
+    flex: 0 0 38px;
+  }
+
+  .cf-logo-title {
+    font-size: clamp(15px, 4.7vw, 19px);
+    letter-spacing: 0.01em;
+  }
+
+  .cf-logo-sub {
+    font-size: 8px;
+    letter-spacing: 0.16em;
+  }
+
+  .cf-header-right {
+    gap: 0;
+  }
+
+  .cf-tel-btn {
+    display: none;
+  }
+
+  .cf-burger-btn {
+    width: 44px;
+    height: 44px;
+    flex: 0 0 44px;
+  }
+
+  .cf-drawer {
+    max-width: none;
+    padding: 24px 20px;
+  }
+
+  .cf-drawer-menu {
+    margin: 24px 0;
+    gap: 14px;
+  }
+
+  .cf-drawer-menu li a {
+    gap: 18px;
+    font-size: clamp(24px, 8vw, 30px);
+  }
+
+  .cf-hero {
+    min-height: max(620px, 100svh);
+    padding-bottom: 74px;
+  }
+
+  .cf-hero-content {
+    padding-right: 20px;
+    padding-left: 20px;
+  }
+
+  .cf-hero-title {
+    width: 100%;
+    margin-bottom: 22px;
+    font-size: clamp(30px, 8.8vw, 40px);
+    line-height: 1.07;
+    overflow-wrap: normal;
+    word-break: normal;
+  }
+
+  .cf-hero-title .ogg,
+  .cf-hero-title .biotif {
+    width: 100%;
+    white-space: normal;
+  }
+
+  .cf-hero-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    width: 100%;
+    gap: 10px;
+  }
+
+  .cf-hero .home-hero-action {
+    display: flex;
+    min-width: 0;
+    min-height: 44px;
+    padding: 9px 8px;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-family: var(--font-biotif), sans-serif;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-align: center;
+    text-transform: uppercase;
+    border: 1px solid rgba(255, 255, 255, 0.72);
+    background: rgba(9, 13, 21, 0.24);
+    backdrop-filter: blur(8px);
+  }
+
+  .cf-hero .btn {
+    grid-column: 1 / -1;
+    width: 100%;
+    min-height: 46px;
+    padding: 11px 16px;
+    font-size: 11px;
+  }
+
+  .cf-hero-scroll {
+    display: none;
+  }
+
+  .cf-valeurs {
+    padding: 58px 20px 54px;
+  }
+
+  .cf-valeurs-header {
+    margin-bottom: 30px;
+    text-align: left;
+  }
+
+  .cf-valeurs-header h2 {
+    font-size: clamp(28px, 9vw, 38px);
+  }
+
+  .cf-valeurs-header p {
+    font-size: 14px;
+  }
+
+  .cf-valeurs-grid {
+    gap: 14px;
+  }
+
+  .cf-valeur-card {
+    padding: 30px 22px;
+  }
+
+  section.experiences-coup-de-coeur {
+    padding-top: 52px;
+  }
+
+  section.experiences-coup-de-coeur .content,
+  section.experiences-coup-de-coeur .home-featured-heading {
+    width: 100%;
+    max-width: none;
+    padding-right: 20px;
+    padding-left: 20px;
+  }
+
+  section.experiences-coup-de-coeur .titre {
+    font-size: clamp(31px, 9vw, 38px);
+    line-height: 1.08;
+    overflow-wrap: anywhere;
+  }
+
+  section.experiences-coup-de-coeur .content .texte,
+  section.experiences-coup-de-coeur .home-featured-heading .texte {
+    font-size: 14px;
+    line-height: 1.65;
+  }
+
+  .cf-upcoming-events {
+    padding: 58px 0;
+  }
+
+  .cf-upcoming-events-inner {
+    width: calc(100% - 32px);
+  }
+
+  .cf-upcoming-events-heading h2 .ogg {
+    font-size: clamp(39px, 12vw, 54px);
+    overflow-wrap: anywhere;
+  }
+
+  .cf-upcoming-events-heading > p {
+    font-size: 14px;
+    line-height: 1.6;
+  }
+
+  .cf-upcoming-event-media {
+    min-height: clamp(220px, 67vw, 300px);
+  }
+
+  .cf-upcoming-event-content {
+    padding: 26px 20px 30px;
+  }
+
+  .cf-upcoming-event-location {
+    margin-bottom: 16px;
+    line-height: 1.5;
+  }
+
+  .cf-upcoming-event-content h3 {
+    font-size: clamp(34px, 11vw, 44px);
+    overflow-wrap: anywhere;
+  }
+
+  .cf-upcoming-event-content time {
+    font-size: 12px;
+    line-height: 1.55;
+  }
+
+  .cf-upcoming-event-meta {
+    gap: 8px;
+    font-size: 12px;
+  }
+
+  .cf-upcoming-event-meta strong {
+    white-space: normal;
+  }
+
+  .home-image-story,
+  section#mosaique {
+    padding-top: 56px !important;
+    padding-bottom: 28px !important;
+  }
+
+  .home-image-story .container.big {
+    padding-right: 20px;
+    padding-left: 20px;
+  }
+
+  .home-image-story .titre {
+    font-size: clamp(32px, 10vw, 43px);
+    overflow-wrap: anywhere;
+  }
+
+  .home-image-story .texte {
+    margin-top: 18px;
+    font-size: 14px;
+  }
+
+  .home-image-story .cards-mosaique {
+    grid-template-columns: 1fr;
+    margin-top: 28px;
+  }
+
+  .home-image-story .cards-mosaique > div,
+  .home-image-story .cards-mosaique .bloc-mosaique-texte {
+    grid-column: auto;
+    min-height: 0;
+    aspect-ratio: 4 / 3;
+  }
+
+  .home-image-story .cards-mosaique .card figure .content {
+    padding-right: 18px;
+    padding-left: 18px;
+  }
+
+  .home-image-story .cards-mosaique figure .content .accroche {
+    font-size: 12px;
+  }
+
+  section.trois-entrees .wrapper {
+    padding: 56px 0 60px;
+  }
+
+  section.trois-entrees .container.medium {
+    padding-right: 20px;
+    padding-left: 20px;
+  }
+
+  section.trois-entrees .titre {
+    font-size: clamp(29px, 9vw, 36px);
+    line-height: 1.12;
+  }
+
+  section.trois-entrees .entrees .entree {
+    min-height: 150px;
+    padding: 34px 22px;
+  }
+
+  section.trois-entrees .entrees .entree span {
+    font-size: 20px;
+    line-height: 1.25;
+    text-align: center;
+  }
+
+  section.banner-full-screen .container.big {
+    padding: 0;
+  }
+
+  section.banner-full-screen img {
+    min-height: 360px;
+    aspect-ratio: 4 / 5;
+  }
+
+  section.banner-full-screen .titre-wrapper {
+    top: 28px;
+    right: 20px;
+    left: 20px;
+  }
+
+  section.banner-full-screen .titre-wrapper h2 {
+    font-size: clamp(32px, 10vw, 46px);
+  }
+
+  section.banner-full-screen .bloc {
+    padding: 28px 20px 32px;
+  }
+
+  section.banner-full-screen .bloc .btn {
+    width: 100%;
+    padding: 14px 16px;
+    text-align: center;
+  }
+
+  section.magazine {
+    padding: 56px 0;
+  }
+
+  section.magazine .container.big {
+    padding-right: 20px;
+    padding-left: 20px;
+  }
+
+  section.magazine .content .texte-btn {
+    display: block;
+  }
+
+  section.magazine .titre {
+    font-size: clamp(30px, 9vw, 38px);
+    overflow-wrap: anywhere;
+  }
+
+  section.magazine .content .texte {
+    font-size: 14px;
+  }
+
+  section.magazine .articles-wrapper {
+    margin-top: 32px;
+  }
+
+  section.magazine .articles-wrapper .articles {
+    grid-template-columns: 1fr;
+    gap: 38px;
+  }
+
+  section.magazine .articles-wrapper .articles .article .infos-article .titre {
+    font-size: 24px;
+  }
+
+  .cf-resorts {
+    padding: 58px 20px;
+  }
+
+  .cf-resorts-header {
+    margin-bottom: 34px;
+    text-align: left;
+  }
+
+  .cf-resorts-header h2 {
+    font-size: clamp(31px, 10vw, 42px);
+    line-height: 1.08;
+  }
+
+  .cf-resorts-header p {
+    font-size: 14px;
+  }
+
+  .cf-resorts-grid {
+    gap: 18px;
+  }
+
+  .cf-resort-body {
+    padding: 23px 20px;
+  }
+
+  .newsletter-wrapper-footer {
+    padding-top: 48px;
+  }
+
+  .newsletter-wrapper-footer .container.big {
+    padding-right: 16px;
+    padding-left: 16px;
+  }
+
+  .newsletter-wrapper-footer .form-wrapper {
+    padding: 28px 20px 8px;
+  }
+
+  .newsletter-wrapper-footer #submitInput {
+    width: 100%;
+  }
+
+  .newsletter-wrapper-footer .wrapper label {
+    padding: 12px 20px 24px;
+  }
+
+  footer.cf-footer-authentic {
+    padding-top: 58px;
+  }
+
+  footer.cf-footer-authentic .footer-haut.container.big,
+  footer.cf-footer-authentic .footer-milieu,
+  footer.cf-footer-authentic .footer-bas {
+    padding-right: 20px;
+    padding-left: 20px;
+  }
+
+  footer.cf-footer-authentic .footer-haut.container.big {
+    gap: 32px;
+  }
+
+  footer.cf-footer-authentic .footer-bas {
+    align-items: flex-start;
+  }
+}
+
+@media (max-width: 374px) {
+  .cf-logo-title {
+    font-size: 14px;
+  }
+
+  .cf-logo-sub {
+    font-size: 7px;
+  }
+
+  .cf-hero-content {
+    padding-right: 16px;
+    padding-left: 16px;
+  }
+
+  .cf-hero-title {
+    font-size: 29px;
+  }
+
+  .cf-hero .home-hero-action {
+    font-size: 9px;
+  }
+}
+
+@media (orientation: landscape) and (max-height: 620px) and (max-width: 991px) {
+  .cf-header,
+  .cf-header.scrolled {
+    padding-top: 10px;
+    padding-bottom: 10px;
+  }
+
+  .cf-hero {
+    min-height: 560px;
+    padding-bottom: 42px;
+  }
+
+  .cf-hero-content {
+    max-width: 720px;
+    margin-right: auto;
+    margin-left: 0;
+  }
+
+  .cf-hero-title {
+    margin-bottom: 16px;
+    font-size: clamp(32px, 6vw, 46px);
+  }
+
+  .cf-hero-actions {
+    display: flex;
+  }
+
+  .cf-hero .home-hero-action,
+  .cf-hero .btn {
+    width: auto;
+    min-height: 42px;
+  }
+
+  .cf-hero .btn {
+    grid-column: auto;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cf-hero-media img,
+  .cf-upcoming-events-track,
+  .cf-upcoming-event-media img {
+    animation: none;
+    transition-duration: 1ms;
+  }
+}

@@ -118,7 +118,7 @@ export function RecentCustomersTable({ data }: { data: RecentCustomerRow[] }) {
   }, [sorting]);
 
   return (
-    <div className="space-y-4">
+    <div className="flex min-w-0 flex-col gap-4">
       <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
         <div className="flex flex-wrap items-center gap-2">
           <div className="relative w-full lg:w-80">
@@ -180,7 +180,7 @@ export function RecentCustomersTable({ data }: { data: RecentCustomerRow[] }) {
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center xl:w-auto">
+        <div className="grid grid-cols-2 gap-2 sm:flex sm:items-center xl:w-auto">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline" size="sm">
@@ -265,12 +265,12 @@ export function RecentCustomersTable({ data }: { data: RecentCustomerRow[] }) {
         </Table>
       </div>
 
-      <div className="flex items-center justify-between px-1">
+      <div className="flex min-w-0 items-center justify-between px-5 py-5 sm:px-6">
         <div className="hidden flex-1 text-muted-foreground text-sm lg:flex">
           {table.getFilteredSelectedRowModel().rows.length} of {table.getFilteredRowModel().rows.length} row(s)
           selected.
         </div>
-        <div className="flex w-full items-center gap-8 lg:w-fit">
+        <div className="flex w-full min-w-0 items-center justify-between gap-3 lg:w-fit lg:justify-start lg:gap-8">
           <div className="hidden items-center gap-2 lg:flex">
             <Label htmlFor="recent-customers-rows-per-page" className="font-medium text-sm">
               Rows per page

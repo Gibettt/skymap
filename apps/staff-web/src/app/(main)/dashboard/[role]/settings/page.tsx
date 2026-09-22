@@ -20,6 +20,9 @@ export default async function SettingsPage({ params }: { params: Promise<{ role:
       }}
       readOnly={context.readOnly}
       canManageSkySettings={context.role === "internal" && context.permissions.includes("staff.sky_guide")}
+      canManagePublicProfile={
+        context.role === "internal" && context.permissions.includes("staff.resort_profile")
+      }
     />
   );
 }

@@ -15,7 +15,7 @@ export default async function SettingsPage() {
 
   return (
     <div className="flex flex-col gap-4 md:gap-6">
-      <PageHeader title="Pengaturan" description="Konfigurasi operasional yang tersimpan di PostgreSQL." />
+      <PageHeader title="Pengaturan" description="Konfigurasi operasional yang tersimpan di MySQL." />
       <Card className="max-w-3xl">
         <CardHeader className="border-b">
           <CardTitle>Reward bintang</CardTitle>

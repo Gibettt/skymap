@@ -2096,82 +2096,6 @@ section.magazine .btn-mobile {
 }
 
 /* ===================================================================
-   MASTERCLASS LIST SECTION
-   =================================================================== */
-.cf-masterclass {
-  padding: 90px 32px;
-  background: var(--white);
-}
-
-.cf-masterclass-inner {
-  max-width: 1080px;
-  margin: 0 auto;
-}
-
-.cf-masterclass-header {
-  text-align: center;
-  margin-bottom: 56px;
-}
-
-.cf-masterclass-header h2 {
-  font-family: var(--font-ogg);
-  font-size: clamp(30px, 4vw, 44px);
-  color: var(--black);
-  margin-bottom: 12px;
-}
-
-.cf-masterclass-header p {
-  font-family: var(--font-biotif);
-  font-size: 16px;
-  color: var(--gris3);
-  font-weight: 300;
-}
-
-.cf-masterclass-table {
-  border-top: 1px solid var(--black);
-  border-bottom: 1px solid var(--black);
-}
-
-.cf-masterclass-row {
-  display: grid;
-  grid-template-columns: 2fr 1fr 1.5fr;
-  align-items: center;
-  padding: 24px 16px;
-  border-bottom: 1px solid var(--gris);
-  transition: background-color 0.25s ease;
-}
-
-.cf-masterclass-row:last-child {
-  border-bottom: none;
-}
-
-.cf-masterclass-row:hover {
-  background: var(--beige);
-}
-
-.cf-mc-name {
-  font-family: var(--font-ogg);
-  font-size: 22px;
-  color: var(--black);
-}
-
-.cf-mc-dur {
-  font-family: var(--font-biotif);
-  font-size: 14px;
-  color: var(--gris3);
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-}
-
-.cf-mc-price {
-  font-family: var(--font-biotif);
-  font-size: 16px;
-  font-weight: 600;
-  color: var(--bleu);
-  text-align: right;
-}
-
-/* ===================================================================
    FOOTER & NEWSLETTER
    =================================================================== */
 .cf-footer {
@@ -2672,4 +2596,420 @@ footer.cf-footer-authentic .footer-bas span {
   line-height: 18px;
   text-transform: uppercase;
   letter-spacing: 0.2px;
+}
+
+/* ================================================================
+   Homepage: upcoming celestial events
+   ================================================================ */
+.cf-upcoming-events {
+  position: relative;
+  overflow: hidden;
+  padding: clamp(76px, 8vw, 132px) 0;
+  color: #fff;
+  background:
+    radial-gradient(circle at 86% 12%, rgba(93, 78, 168, 0.25), transparent 30%),
+    radial-gradient(circle at 8% 88%, rgba(53, 101, 130, 0.2), transparent 32%),
+    #090d15;
+}
+
+.cf-upcoming-events::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.38;
+  background-image:
+    radial-gradient(circle at 12% 22%, #fff 0 1px, transparent 1.5px),
+    radial-gradient(circle at 68% 18%, #fff 0 1px, transparent 1.5px),
+    radial-gradient(circle at 88% 62%, #fff 0 1px, transparent 1.5px),
+    radial-gradient(circle at 34% 74%, #fff 0 1px, transparent 1.5px);
+  background-size: 190px 190px, 260px 260px, 230px 230px, 310px 310px;
+}
+
+.cf-upcoming-events-inner {
+  position: relative;
+  z-index: 1;
+  width: min(100% - 80px, 1640px);
+  margin: 0 auto;
+}
+
+.cf-upcoming-events-heading {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(300px, 0.65fr);
+  gap: clamp(36px, 7vw, 120px);
+  align-items: end;
+  margin-bottom: clamp(40px, 5vw, 72px);
+}
+
+.cf-upcoming-events-eyebrow {
+  margin: 0 0 19px;
+  font-family: var(--font-biotif), 'Biotif', sans-serif;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: #bbb4e8;
+}
+
+.cf-upcoming-events-heading h2 {
+  margin: 0;
+  line-height: 0.92;
+}
+
+.cf-upcoming-events-heading h2 span {
+  display: block;
+}
+
+.cf-upcoming-events-heading h2 .biotif {
+  margin-bottom: 9px;
+  font-family: var(--font-biotif), 'Biotif', sans-serif;
+  font-size: clamp(19px, 2vw, 31px);
+  font-weight: 600;
+  letter-spacing: 0.03em;
+}
+
+.cf-upcoming-events-heading h2 .ogg {
+  font-family: var(--font-ogg), 'Times New Roman', serif;
+  font-size: clamp(48px, 6.5vw, 104px);
+  font-weight: 400;
+}
+
+.cf-upcoming-events-heading > p {
+  max-width: 540px;
+  margin: 0 0 7px;
+  font-family: var(--font-biotif), 'Biotif', sans-serif;
+  font-size: clamp(15px, 1.2vw, 19px);
+  line-height: 1.7;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.cf-upcoming-events-carousel {
+  touch-action: pan-y;
+}
+
+.cf-upcoming-events-viewport {
+  overflow: hidden;
+}
+
+.cf-upcoming-events-track {
+  display: flex;
+  transition: transform 700ms cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: transform;
+}
+
+.cf-upcoming-event-slide {
+  min-width: 0;
+  padding: 1px;
+  flex: 0 0 100%;
+}
+
+.cf-upcoming-event-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(360px, 0.75fr);
+  width: 100%;
+  min-width: 0;
+  overflow: hidden;
+  color: #fff;
+  text-decoration: none;
+  background: rgba(20, 25, 36, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  transition: transform 300ms ease, border-color 300ms ease, box-shadow 300ms ease;
+}
+
+.cf-upcoming-event-card:hover {
+  border-color: rgba(187, 180, 232, 0.65);
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.34);
+}
+
+.cf-upcoming-event-card:focus-visible {
+  outline: 2px solid #bbb4e8;
+  outline-offset: 4px;
+}
+
+.cf-upcoming-event-media {
+  position: relative;
+  min-height: 520px;
+  overflow: hidden;
+}
+
+.cf-upcoming-event-media img {
+  object-fit: cover;
+  transition: transform 700ms cubic-bezier(0.2, 0.7, 0, 1);
+}
+
+.cf-upcoming-event-card:hover .cf-upcoming-event-media img {
+  transform: scale(1.045);
+}
+
+.cf-upcoming-event-shade {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(3, 6, 12, 0.08), rgba(3, 6, 12, 0.58));
+}
+
+.cf-upcoming-event-date {
+  position: absolute;
+  top: 24px;
+  left: 24px;
+  display: grid;
+  width: 72px;
+  height: 82px;
+  place-content: center;
+  text-align: center;
+  color: #11151d;
+  background: rgba(255, 255, 255, 0.94);
+  backdrop-filter: blur(12px);
+}
+
+.cf-upcoming-event-date strong {
+  font-family: var(--font-ogg), 'Times New Roman', serif;
+  font-size: 34px;
+  font-weight: 400;
+  line-height: 0.9;
+}
+
+.cf-upcoming-event-date span {
+  margin-top: 7px;
+  font-family: var(--font-biotif), 'Biotif', sans-serif;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+}
+
+.cf-upcoming-event-type {
+  position: absolute;
+  right: 22px;
+  bottom: 22px;
+  padding: 9px 13px;
+  font-family: var(--font-biotif), 'Biotif', sans-serif;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #fff;
+  background: rgba(9, 13, 21, 0.72);
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  backdrop-filter: blur(12px);
+}
+
+.cf-upcoming-event-content {
+  display: flex;
+  min-width: 0;
+  padding: clamp(28px, 4vw, 62px);
+  flex-direction: column;
+  justify-content: center;
+}
+
+.cf-upcoming-event-location {
+  display: flex;
+  margin-bottom: 22px;
+  gap: 9px;
+  flex-wrap: wrap;
+  font-family: var(--font-biotif), 'Biotif', sans-serif;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  color: #bbb4e8;
+}
+
+.cf-upcoming-event-content h3 {
+  margin: 0 0 17px;
+  font-family: var(--font-ogg), 'Times New Roman', serif;
+  font-size: clamp(38px, 4.4vw, 72px);
+  font-weight: 400;
+  line-height: 1;
+}
+
+.cf-upcoming-event-content time {
+  font-family: var(--font-biotif), 'Biotif', sans-serif;
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.88);
+}
+
+.cf-upcoming-event-content > p {
+  display: -webkit-box;
+  overflow: hidden;
+  margin: 24px 0 0;
+  font-family: var(--font-biotif), 'Biotif', sans-serif;
+  font-size: 15px;
+  line-height: 1.65;
+  color: rgba(255, 255, 255, 0.65);
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+}
+
+.cf-upcoming-event-meta {
+  display: flex;
+  margin-top: 30px;
+  padding-top: 20px;
+  gap: 18px;
+  align-items: center;
+  justify-content: space-between;
+  font-family: var(--font-biotif), 'Biotif', sans-serif;
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.64);
+  border-top: 1px solid rgba(255, 255, 255, 0.13);
+}
+
+.cf-upcoming-event-meta strong {
+  color: #fff;
+  white-space: nowrap;
+}
+
+.cf-upcoming-event-cta {
+  display: inline-flex;
+  width: fit-content;
+  margin-top: 34px;
+  padding-bottom: 7px;
+  gap: 12px;
+  align-items: center;
+  font-family: var(--font-biotif), 'Biotif', sans-serif;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.65);
+}
+
+.cf-upcoming-events-controls {
+  display: flex;
+  margin-top: 30px;
+  gap: 28px;
+  align-items: center;
+  justify-content: center;
+}
+
+.cf-upcoming-events-dots {
+  display: flex;
+  gap: 7px;
+  align-items: center;
+}
+
+.cf-upcoming-events-dots button {
+  display: grid;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  place-items: center;
+  cursor: pointer;
+  background: transparent;
+  border: 0;
+}
+
+.cf-upcoming-events-dots button span {
+  display: block;
+  width: 7px;
+  height: 7px;
+  background: rgba(255, 255, 255, 0.38);
+  border: 1px solid transparent;
+  border-radius: 999px;
+  transition: width 260ms ease, background-color 260ms ease, border-color 260ms ease;
+}
+
+.cf-upcoming-events-dots button:hover span,
+.cf-upcoming-events-dots button:focus-visible span {
+  background: rgba(255, 255, 255, 0.78);
+}
+
+.cf-upcoming-events-dots button:focus-visible {
+  outline: 1px solid #bbb4e8;
+  outline-offset: 1px;
+}
+
+.cf-upcoming-events-dots button.is-active span {
+  width: 26px;
+  background: #fff;
+  border-color: #fff;
+}
+
+.cf-upcoming-events-controls > p {
+  display: flex;
+  margin: 0;
+  gap: 7px;
+  align-items: baseline;
+  font-family: var(--font-biotif), 'Biotif', sans-serif;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  color: rgba(255, 255, 255, 0.42);
+}
+
+.cf-upcoming-events-controls > p strong {
+  font-size: 13px;
+  color: #fff;
+}
+
+@media (max-width: 900px) {
+  .cf-upcoming-events-inner {
+    width: min(100% - 48px, 1640px);
+  }
+
+  .cf-upcoming-events-heading {
+    grid-template-columns: 1fr;
+    gap: 24px;
+  }
+
+  .cf-upcoming-event-card {
+    grid-template-columns: 1fr;
+  }
+
+  .cf-upcoming-event-media {
+    min-height: 430px;
+  }
+}
+
+@media (max-width: 680px) {
+  .cf-upcoming-events {
+    padding: 68px 0;
+  }
+
+  .cf-upcoming-events-inner {
+    width: min(100% - 30px, 1640px);
+  }
+
+  .cf-upcoming-events-heading {
+    margin-bottom: 32px;
+  }
+
+  .cf-upcoming-events-heading h2 .ogg {
+    font-size: clamp(43px, 13vw, 62px);
+  }
+
+  .cf-upcoming-event-card {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .cf-upcoming-event-media {
+    min-height: 300px;
+  }
+
+  .cf-upcoming-events-controls {
+    margin-top: 22px;
+  }
+
+  .cf-upcoming-event-date {
+    top: 16px;
+    left: 16px;
+    width: 62px;
+    height: 72px;
+  }
+
+  .cf-upcoming-event-type {
+    right: 16px;
+    bottom: 16px;
+  }
+
+  .cf-upcoming-event-content {
+    padding: 28px 23px 32px;
+  }
+
+  .cf-upcoming-event-content h3 {
+    font-size: 42px;
+  }
+
+  .cf-upcoming-event-meta {
+    align-items: flex-start;
+    flex-direction: column;
+  }
 }

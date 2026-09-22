@@ -116,7 +116,10 @@ export function InvoiceDocument({ invoice }: { invoice: InvoiceRow }) {
                 <span>{formatUsd(invoice.service_charge_usd)}</span>
               </div>
               <div className="flex justify-between gap-8">
-                <span>GST</span>
+                <span>
+                  {invoice.tax_label}
+                  {invoice.tax_rate_percent > 0 ? ` (${invoice.tax_rate_percent}%)` : ""}
+                </span>
                 <span>{formatUsd(invoice.tax_usd)}</span>
               </div>
             </div>

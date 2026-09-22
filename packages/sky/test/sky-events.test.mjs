@@ -72,6 +72,21 @@ test('normalizes resort event operations without forcing recurrence', () => {
   assert.equal(event.priceOverrideUsd, 45);
 });
 
+test('accepts a resort-managed event type slug', () => {
+  const event = normalizeSkyEventInput({
+    title: 'Full moon photography',
+    eventType: 'astrophotography-night',
+    startsAt: '2026-09-19T20:00:00.000Z',
+  });
+
+  assert.equal(event.eventType, 'astrophotography-night');
+  assert.throws(() => normalizeSkyEventInput({
+    title: 'Invalid custom type',
+    eventType: 'Not a slug!',
+    startsAt: '2026-09-19T20:00:00.000Z',
+  }), /Event type is invalid/);
+});
+
 test('accepts Indonesia pilot coordinates and rejects invalid coordinates', () => {
   assert.deepEqual(validateResortLocation({ latitude: -6.2088, longitude: 106.8456 }), {
     latitude: -6.2088,

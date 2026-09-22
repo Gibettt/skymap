@@ -115,13 +115,13 @@ export function Roles({
 
   return (
     <div className="flex h-full flex-col gap-4">
-      <div className="flex flex-col items-start gap-4 sm:flex-row sm:justify-between">
-        <div className="flex flex-col gap-1">
-          <h1 className="text-3xl tracking-tight">Roles & Permissions</h1>
+      <div className="flex min-w-0 flex-col items-start gap-4 sm:flex-row sm:justify-between">
+        <div className="flex min-w-0 flex-col gap-1">
+          <h1 className="text-2xl tracking-tight sm:text-3xl">Roles & Permissions</h1>
           <p className="text-muted-foreground text-sm">Manage access roles and permissions across your organization.</p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
           <ImportRolesButton readOnly={readOnly} />
           <CreateRoleDialog permissions={permissions} readOnly={readOnly} />
         </div>
@@ -130,7 +130,7 @@ export function Roles({
       <Tabs className="h-full gap-4" value={tab} onValueChange={setTab}>
         <TabsList
           variant="line"
-          className="w-full justify-start gap-2 border-b ps-0 *:data-[slot=tabs-trigger]:flex-none"
+          className="w-full justify-start gap-2 overflow-x-auto border-b ps-0 *:data-[slot=tabs-trigger]:flex-none"
         >
           <TabsTrigger value="roles">Roles</TabsTrigger>
           <TabsTrigger value="permission-sets">Permission sets</TabsTrigger>

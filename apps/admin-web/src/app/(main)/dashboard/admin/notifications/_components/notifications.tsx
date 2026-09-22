@@ -2,6 +2,8 @@
 
 import * as React from "react";
 
+import { useRouter } from "next/navigation";
+
 import { format, formatDistanceToNow } from "date-fns";
 import {
   Bell,
@@ -13,19 +15,11 @@ import {
   MailOpen,
   MailWarning,
 } from "lucide-react";
-import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardAction,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty";
 import {
   Item,
@@ -98,12 +92,15 @@ export function Notifications({ initialNotifications }: { initialNotifications: 
     };
   }, [refreshNotifications]);
 
-  const counts = React.useMemo(() => ({
-    all: notifications.length,
-    unread: notifications.filter((notification) => !notification.read_at).length,
-    booking: notifications.filter((notification) => notification.type === "booking").length,
-    payout: notifications.filter((notification) => notification.type === "payout").length,
-  }), [notifications]);
+  const counts = React.useMemo(
+    () => ({
+      all: notifications.length,
+      unread: notifications.filter((notification) => !notification.read_at).length,
+      booking: notifications.filter((notification) => notification.type === "booking").length,
+      payout: notifications.filter((notification) => notification.type === "payout").length,
+    }),
+    [notifications],
+  );
 
   const filteredNotifications = React.useMemo(() => {
     if (filter === "unread") return notifications.filter((notification) => !notification.read_at);
@@ -113,9 +110,8 @@ export function Notifications({ initialNotifications }: { initialNotifications: 
     return notifications;
   }, [filter, notifications]);
 
-  const selectedNotification = filteredNotifications.find((notification) => notification.id === selectedId)
-    || filteredNotifications[0]
-    || null;
+  const selectedNotification =
+    filteredNotifications.find((notification) => notification.id === selectedId) || filteredNotifications[0] || null;
 
   async function setReadState(notification: AdminNotification, read: boolean) {
     setPendingId(notification.id);
@@ -126,9 +122,11 @@ export function Notifications({ initialNotifications }: { initialNotifications: 
         body: JSON.stringify({ id: notification.id, markUnread: !read }),
       });
       if (!response.ok) throw new Error(await notificationError(response));
-      setNotifications((current) => current.map((item) => (
-        item.id === notification.id ? { ...item, read_at: read ? new Date().toISOString() : null } : item
-      )));
+      setNotifications((current) =>
+        current.map((item) =>
+          item.id === notification.id ? { ...item, read_at: read ? new Date().toISOString() : null } : item,
+        ),
+      );
       toast.success(read ? "Notification marked as read" : "Notification marked as unread");
       window.dispatchEvent(new Event(NOTIFICATIONS_CHANGED_EVENT));
     } catch (error) {
@@ -164,23 +162,28 @@ export function Notifications({ initialNotifications }: { initialNotifications: 
   }
 
   const summary = [
-    { label: "Total notifications", value: counts.all, icon: Bell },
-    { label: "Unread", value: counts.unread, icon: MailWarning },
-    { label: "Booking updates", value: counts.booking, icon: CalendarCheck },
-    { label: "Payout requests", value: counts.payout, icon: CircleDollarSign },
+    { label: "Total notifications", mobileLabel: "Total", value: counts.all, icon: Bell },
+    { label: "Unread", mobileLabel: "Unread", value: counts.unread, icon: MailWarning },
+    { label: "Booking updates", mobileLabel: "Bookings", value: counts.booking, icon: CalendarCheck },
+    { label: "Payout requests", mobileLabel: "Payouts", value: counts.payout, icon: CircleDollarSign },
   ];
 
   return (
     <div className="flex flex-col gap-4 md:gap-6">
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        {summary.map(({ label, value, icon: Icon }) => (
-          <Card key={label} size="sm">
-            <CardHeader>
-              <CardDescription>{label}</CardDescription>
-              <CardAction><Icon /></CardAction>
+      <div className="grid grid-cols-4 gap-2 sm:gap-4">
+        {summary.map(({ label, mobileLabel, value, icon: Icon }) => (
+          <Card key={label} size="sm" className="min-w-0">
+            <CardHeader className="gap-1 px-2 sm:px-3">
+              <CardDescription className="text-[11px] leading-tight sm:text-sm">
+                <span className="sm:hidden">{mobileLabel}</span>
+                <span className="hidden sm:inline">{label}</span>
+              </CardDescription>
+              <CardAction className="hidden sm:block">
+                <Icon />
+              </CardAction>
             </CardHeader>
-            <CardContent>
-              <p className="font-heading font-medium text-2xl">{value}</p>
+            <CardContent className="px-2 sm:px-3">
+              <p className="font-heading font-medium text-xl tabular-nums sm:text-2xl">{value}</p>
             </CardContent>
           </Card>
         ))}
@@ -191,7 +194,7 @@ export function Notifications({ initialNotifications }: { initialNotifications: 
           <CardHeader className="border-b has-data-[slot=card-action]:grid-cols-1 sm:has-data-[slot=card-action]:grid-cols-[1fr_auto]">
             <CardTitle>Notification inbox</CardTitle>
             <CardDescription>Booking and finance activity is retained here after it is read.</CardDescription>
-            <CardAction>
+            <CardAction className="col-start-1 row-start-auto mt-1 justify-self-start sm:col-start-2 sm:row-span-2 sm:row-start-1 sm:mt-0 sm:justify-self-end">
               <Button size="sm" variant="outline" disabled={markingAll || counts.unread === 0} onClick={markAllRead}>
                 {markingAll ? <Spinner data-icon="inline-start" /> : <CheckCheck data-icon="inline-start" />}
                 Mark all read
@@ -200,7 +203,7 @@ export function Notifications({ initialNotifications }: { initialNotifications: 
           </CardHeader>
           <CardContent>
             <Tabs value={filter} onValueChange={(value) => setFilter(value as NotificationFilter)}>
-              <TabsList>
+              <TabsList className="grid h-auto w-full grid-cols-2 sm:grid-cols-4">
                 <TabsTrigger value="all">All {counts.all}</TabsTrigger>
                 <TabsTrigger value="unread">Unread {counts.unread}</TabsTrigger>
                 <TabsTrigger value="booking">Bookings {counts.booking}</TabsTrigger>
@@ -212,11 +215,13 @@ export function Notifications({ initialNotifications }: { initialNotifications: 
                     {filteredNotifications.map((notification) => (
                       <Item
                         key={notification.id}
-                        variant={notification.id === selectedNotification?.id
-                          ? "outline"
-                          : notification.read_at
-                            ? "default"
-                            : "muted"}
+                        variant={
+                          notification.id === selectedNotification?.id
+                            ? "outline"
+                            : notification.read_at
+                              ? "default"
+                              : "muted"
+                        }
                       >
                         <button
                           type="button"
@@ -224,7 +229,9 @@ export function Notifications({ initialNotifications }: { initialNotifications: 
                           aria-pressed={notification.id === selectedNotification?.id}
                           onClick={() => setSelectedId(notification.id)}
                         >
-                          <ItemMedia variant="icon"><NotificationIcon type={notification.type} /></ItemMedia>
+                          <ItemMedia variant="icon">
+                            <NotificationIcon type={notification.type} />
+                          </ItemMedia>
                           <ItemContent>
                             <ItemTitle>
                               {notification.title}
@@ -250,11 +257,13 @@ export function Notifications({ initialNotifications }: { initialNotifications: 
                               void setReadState(notification, Boolean(!notification.read_at));
                             }}
                           >
-                            {pendingId === notification.id
-                              ? <Spinner data-icon="inline-start" />
-                              : notification.read_at
-                                ? <MailWarning data-icon="inline-start" />
-                                : <Check data-icon="inline-start" />}
+                            {pendingId === notification.id ? (
+                              <Spinner data-icon="inline-start" />
+                            ) : notification.read_at ? (
+                              <MailWarning data-icon="inline-start" />
+                            ) : (
+                              <Check data-icon="inline-start" />
+                            )}
                           </Button>
                           {notification.link ? (
                             <Button
@@ -276,7 +285,9 @@ export function Notifications({ initialNotifications }: { initialNotifications: 
                 ) : (
                   <Empty className="min-h-72">
                     <EmptyHeader>
-                      <EmptyMedia variant="icon"><Bell /></EmptyMedia>
+                      <EmptyMedia variant="icon">
+                        <Bell />
+                      </EmptyMedia>
                       <EmptyTitle>No notifications in this view</EmptyTitle>
                       <EmptyDescription>New matching activity will appear here automatically.</EmptyDescription>
                     </EmptyHeader>
@@ -296,7 +307,9 @@ export function Notifications({ initialNotifications }: { initialNotifications: 
             {selectedNotification ? (
               <div className="flex flex-col gap-4">
                 <Item variant="muted">
-                  <ItemMedia variant="icon"><NotificationIcon type={selectedNotification.type} /></ItemMedia>
+                  <ItemMedia variant="icon">
+                    <NotificationIcon type={selectedNotification.type} />
+                  </ItemMedia>
                   <ItemContent>
                     <ItemTitle>{selectedNotification.title}</ItemTitle>
                     <ItemDescription className="line-clamp-none">{selectedNotification.message}</ItemDescription>
@@ -305,7 +318,10 @@ export function Notifications({ initialNotifications }: { initialNotifications: 
                 <Separator />
                 <dl className="grid gap-4 sm:grid-cols-2 xl:grid-cols-1">
                   <Detail label="Status" value={selectedNotification.read_at ? "Read" : "Unread"} />
-                  <Detail label="Type" value={selectedNotification.type === "payout" ? "Payout request" : "Booking update"} />
+                  <Detail
+                    label="Type"
+                    value={selectedNotification.type === "payout" ? "Payout request" : "Booking update"}
+                  />
                   <Detail label="Received" value={format(new Date(selectedNotification.created_at), "PPpp")} />
                   <Detail label="Metadata" value={selectedNotification.meta} />
                   <Detail label="Source table" value={selectedNotification.source_table} />
@@ -317,11 +333,13 @@ export function Notifications({ initialNotifications }: { initialNotifications: 
                     disabled={pendingId === selectedNotification.id}
                     onClick={() => setReadState(selectedNotification, Boolean(!selectedNotification.read_at))}
                   >
-                    {pendingId === selectedNotification.id
-                      ? <Spinner data-icon="inline-start" />
-                      : selectedNotification.read_at
-                        ? <MailWarning data-icon="inline-start" />
-                        : <MailOpen data-icon="inline-start" />}
+                    {pendingId === selectedNotification.id ? (
+                      <Spinner data-icon="inline-start" />
+                    ) : selectedNotification.read_at ? (
+                      <MailWarning data-icon="inline-start" />
+                    ) : (
+                      <MailOpen data-icon="inline-start" />
+                    )}
                     {selectedNotification.read_at ? "Mark as unread" : "Mark as read"}
                   </Button>
                   {selectedNotification.link ? (
@@ -335,7 +353,9 @@ export function Notifications({ initialNotifications }: { initialNotifications: 
             ) : (
               <Empty className="min-h-72">
                 <EmptyHeader>
-                  <EmptyMedia variant="icon"><Bell /></EmptyMedia>
+                  <EmptyMedia variant="icon">
+                    <Bell />
+                  </EmptyMedia>
                   <EmptyTitle>Select a notification</EmptyTitle>
                   <EmptyDescription>The complete notification context will appear here.</EmptyDescription>
                 </EmptyHeader>

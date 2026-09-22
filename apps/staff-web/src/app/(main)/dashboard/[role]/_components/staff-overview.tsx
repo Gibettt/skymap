@@ -26,12 +26,17 @@ export function StaffOverview({ role, permissions, data }: Props) {
 
   return (
     <div className="@container/main flex flex-col gap-4 md:gap-6">
-      <MetricCards metrics={templateMetrics} variant="staff" canViewFinance={permissions.includes("staff.finance")} />
+      <MetricCards
+        metrics={templateMetrics}
+        variant="staff"
+        canViewFinance={permissions.includes("staff.finance")}
+        indicatorTone="purple"
+      />
       <PerformanceOverview data={data.activity} reportHref={`/dashboard/${role}/bookings`} />
       <SubscriberOverview
         data={data.recentBookings}
         total={data.metrics.totalBookings}
-        exportFilename={`ephemeris-${role}-bookings.csv`}
+        exportFilename={`ephemeris-${role}-recent-bookings-${new Date().toISOString().slice(0, 10)}.xlsx`}
         newBookingHref={permissions.includes("staff.bookings") ? `/dashboard/${role}/bookings?new=1` : undefined}
       />
     </div>

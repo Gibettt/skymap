@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 
-import { Building2, KeyRound, MapPin, Save, UserRound } from "lucide-react";
+import { Building2, Globe2, KeyRound, MapPin, Save, UserRound } from "lucide-react";
 import { toast } from "sonner";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -13,6 +13,11 @@ import { Field, FieldDescription, FieldGroup, FieldLabel } from "@/components/ui
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
+
+import {
+  ResortProfileImageField,
+  type ResortProfileImageValue,
+} from "./resort-profile-image-field";
 
 type Account = {
   name: string;
@@ -33,6 +38,32 @@ type Location = {
   observationSpots: string;
 };
 
+type PublicProfile = {
+  id: string;
+  name: string;
+  code: string;
+  slug: string | null;
+  location: string;
+  publicDescription: string;
+  contactEmail: string;
+  whatsappNumber: string;
+  hasImage: boolean;
+  imageFileName: string | null;
+  imageUrl: string | null;
+};
+
+type PublicProfileForm = Pick<
+  PublicProfile,
+  "location" | "publicDescription" | "contactEmail" | "whatsappNumber"
+>;
+
+const emptyPublicProfileForm: PublicProfileForm = {
+  location: "",
+  publicDescription: "",
+  contactEmail: "",
+  whatsappNumber: "",
+};
+
 function titleCase(value: string) {
   return value
     .split("_")
@@ -44,16 +75,24 @@ export function SettingsPanel({
   account,
   readOnly,
   canManageSkySettings,
+  canManagePublicProfile,
 }: {
   account: Account;
   readOnly: boolean;
   canManageSkySettings: boolean;
+  canManagePublicProfile: boolean;
 }) {
   const [location, setLocation] = useState<Location | null>(null);
   const [spots, setSpots] = useState("");
   const [loading, setLoading] = useState(canManageSkySettings);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [publicProfile, setPublicProfile] = useState<PublicProfile | null>(null);
+  const [publicProfileForm, setPublicProfileForm] = useState<PublicProfileForm>(emptyPublicProfileForm);
+  const [publicProfileImage, setPublicProfileImage] = useState<ResortProfileImageValue>(undefined);
+  const [publicProfileLoading, setPublicProfileLoading] = useState(canManagePublicProfile);
+  const [publicProfileSaving, setPublicProfileSaving] = useState(false);
+  const [publicProfileError, setPublicProfileError] = useState<string | null>(null);
 
   const loadLocation = useCallback(async () => {
     if (!canManageSkySettings) return;
@@ -72,9 +111,34 @@ export function SettingsPanel({
     }
   }, [canManageSkySettings]);
 
+  const loadPublicProfile = useCallback(async () => {
+    if (!canManagePublicProfile) return;
+    setPublicProfileLoading(true);
+    setPublicProfileError(null);
+    try {
+      const response = await fetch("/api/public-resort-profile", { cache: "no-store" });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload.error ?? "Unable to load public resort profile");
+      const nextProfile = payload.profile as PublicProfile;
+      setPublicProfile(nextProfile);
+      setPublicProfileForm({
+        location: nextProfile.location,
+        publicDescription: nextProfile.publicDescription,
+        contactEmail: nextProfile.contactEmail,
+        whatsappNumber: nextProfile.whatsappNumber,
+      });
+      setPublicProfileImage(undefined);
+    } catch (loadError) {
+      setPublicProfileError(loadError instanceof Error ? loadError.message : "Unable to load public resort profile");
+    } finally {
+      setPublicProfileLoading(false);
+    }
+  }, [canManagePublicProfile]);
+
   useEffect(() => {
     void loadLocation();
-  }, [loadLocation]);
+    void loadPublicProfile();
+  }, [loadLocation, loadPublicProfile]);
 
   const save = async () => {
     setSaving(true);
@@ -95,6 +159,66 @@ export function SettingsPanel({
       setSaving(false);
     }
   };
+
+  const updatePublicProfileField = (field: keyof PublicProfileForm, value: string) => {
+    setPublicProfileForm((current) => ({ ...current, [field]: value }));
+  };
+
+  const savePublicProfile = async () => {
+    setPublicProfileSaving(true);
+    try {
+      const response = await fetch("/api/public-resort-profile", {
+        method: "PUT",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(publicProfileForm),
+      });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload.error ?? "Unable to save public resort profile");
+
+      let nextProfile = payload.profile as PublicProfile;
+      if (publicProfileImage instanceof File) {
+        const formData = new FormData();
+        formData.set("image", publicProfileImage);
+        const imageResponse = await fetch("/api/public-resort-profile/image", { method: "PUT", body: formData });
+        const imagePayload = await imageResponse.json();
+        if (!imageResponse.ok) throw new Error(imagePayload.error ?? "Unable to upload the resort image");
+        nextProfile = {
+          ...nextProfile,
+          hasImage: true,
+          imageFileName: imagePayload.imageFileName,
+          imageUrl: imagePayload.imageUrl,
+        };
+      } else if (publicProfileImage === null && publicProfile?.hasImage) {
+        const imageResponse = await fetch("/api/public-resort-profile/image", { method: "DELETE" });
+        const imagePayload = await imageResponse.json();
+        if (!imageResponse.ok) throw new Error(imagePayload.error ?? "Unable to remove the resort image");
+        nextProfile = { ...nextProfile, hasImage: false, imageFileName: null, imageUrl: null };
+      }
+
+      setPublicProfile(nextProfile);
+      setPublicProfileForm({
+        location: nextProfile.location,
+        publicDescription: nextProfile.publicDescription,
+        contactEmail: nextProfile.contactEmail,
+        whatsappNumber: nextProfile.whatsappNumber,
+      });
+      setPublicProfileImage(undefined);
+      toast.success("Public resort profile saved");
+    } catch (saveError) {
+      toast.error(saveError instanceof Error ? saveError.message : "Unable to save public resort profile");
+    } finally {
+      setPublicProfileSaving(false);
+    }
+  };
+
+  const publicProfileChanged = Boolean(
+    publicProfile &&
+      (publicProfileForm.location !== publicProfile.location ||
+        publicProfileForm.publicDescription !== publicProfile.publicDescription ||
+        publicProfileForm.contactEmail !== publicProfile.contactEmail ||
+        publicProfileForm.whatsappNumber !== publicProfile.whatsappNumber ||
+        publicProfileImage !== undefined),
+  );
 
   let observationContent: React.ReactNode;
   if (loading) {
@@ -149,6 +273,109 @@ export function SettingsPanel({
         ) : null}
       </FieldGroup>
     );
+  }
+
+  let publicProfileContent: React.ReactNode;
+  if (publicProfileLoading) {
+    publicProfileContent = (
+      <div className="space-y-3">
+        <Skeleton className="h-10 w-full" />
+        <Skeleton className="h-28 w-full" />
+        <Skeleton className="h-24 w-full" />
+      </div>
+    );
+  } else if (publicProfileError) {
+    publicProfileContent = (
+      <Alert variant="destructive">
+        <AlertTitle>Public profile could not be loaded</AlertTitle>
+        <AlertDescription>{publicProfileError}</AlertDescription>
+      </Alert>
+    );
+  } else if (publicProfile) {
+    publicProfileContent = (
+      <FieldGroup>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field>
+            <FieldLabel htmlFor="public-resort-name">Resort</FieldLabel>
+            <Input id="public-resort-name" value={publicProfile.name} disabled />
+          </Field>
+          <Field>
+            <FieldLabel htmlFor="public-resort-slug">Public URL</FieldLabel>
+            <Input
+              id="public-resort-slug"
+              value={publicProfile.slug ? `/resorts/${publicProfile.slug}` : "Not published"}
+              disabled
+            />
+          </Field>
+        </div>
+        <Field>
+          <FieldLabel htmlFor="public-resort-location">Public location</FieldLabel>
+          <Input
+            id="public-resort-location"
+            value={publicProfileForm.location}
+            disabled={readOnly}
+            maxLength={200}
+            onChange={(event) => updatePublicProfileField("location", event.target.value)}
+            placeholder="Thilamaafushi, Maldives"
+          />
+        </Field>
+        <Field>
+          <FieldLabel htmlFor="public-resort-description">Public description</FieldLabel>
+          <Textarea
+            id="public-resort-description"
+            rows={4}
+            value={publicProfileForm.publicDescription}
+            disabled={readOnly}
+            maxLength={600}
+            onChange={(event) => updatePublicProfileField("publicDescription", event.target.value)}
+            placeholder="Describe the island observatory and guest experience."
+          />
+          <FieldDescription>{publicProfileForm.publicDescription.length}/600 characters. Shown on the landing resort card and resort page.</FieldDescription>
+        </Field>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field>
+            <FieldLabel htmlFor="public-resort-email">Contact email</FieldLabel>
+            <Input
+              id="public-resort-email"
+              type="email"
+              value={publicProfileForm.contactEmail}
+              disabled={readOnly}
+              maxLength={254}
+              onChange={(event) => updatePublicProfileField("contactEmail", event.target.value)}
+              placeholder="concierge@example.com"
+            />
+          </Field>
+          <Field>
+            <FieldLabel htmlFor="public-resort-whatsapp">WhatsApp number</FieldLabel>
+            <Input
+              id="public-resort-whatsapp"
+              value={publicProfileForm.whatsappNumber}
+              disabled={readOnly}
+              maxLength={40}
+              onChange={(event) => updatePublicProfileField("whatsappNumber", event.target.value)}
+              placeholder="9600000100"
+            />
+            <FieldDescription>Use the international number without a leading plus sign.</FieldDescription>
+          </Field>
+        </div>
+        <ResortProfileImageField
+          currentImageUrl={publicProfile.imageUrl}
+          currentFileName={publicProfile.imageFileName}
+          value={publicProfileImage}
+          disabled={readOnly}
+          onChange={setPublicProfileImage}
+        />
+        {!readOnly ? (
+          <div>
+            <Button disabled={publicProfileSaving || !publicProfileChanged} onClick={() => void savePublicProfile()}>
+              <Save /> {publicProfileSaving ? "Saving…" : "Save public profile"}
+            </Button>
+          </div>
+        ) : null}
+      </FieldGroup>
+    );
+  } else {
+    publicProfileContent = null;
   }
 
   return (
@@ -232,6 +459,20 @@ export function SettingsPanel({
           </CardContent>
         </Card>
       </div>
+
+      {canManagePublicProfile ? (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Globe2 className="size-4" /> Public resort profile
+            </CardTitle>
+            <CardDescription>
+              Control the location, introduction, contact details, and cover image shown to guests on the public website.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>{publicProfileContent}</CardContent>
+        </Card>
+      ) : null}
 
       {canManageSkySettings ? (
         <Card>

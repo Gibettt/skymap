@@ -2,16 +2,7 @@
 
 import * as React from "react";
 
-import {
-  Banknote,
-  CalendarDays,
-  CheckCircle2,
-  Download,
-  FilePlus2,
-  Hash,
-  Printer,
-  ReceiptText,
-} from "lucide-react";
+import { Banknote, CalendarDays, CheckCircle2, Download, FilePlus2, Hash, Printer, ReceiptText } from "lucide-react";
 import { createPortal } from "react-dom";
 import { toast } from "sonner";
 
@@ -19,14 +10,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ButtonGroup } from "@/components/ui/button-group";
-import {
-  Card,
-  CardAction,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Dialog,
   DialogClose,
@@ -50,6 +34,29 @@ import { INVOICE_PAPER_HEIGHT, INVOICE_PAPER_WIDTH, InvoiceDocument } from "./in
 import type { InvoiceRow, PaymentWorkflowRow } from "./types";
 
 const MAX_PAPER_SCALE = 0.58;
+type TaxType = "none" | "tgst" | "vat" | "sales_tax" | "custom";
+
+function roundMoney(value: number) {
+  return Math.round(value * 100) / 100;
+}
+
+function taxTypeFromLabel(label?: string): TaxType {
+  if (label === "No tax") return "none";
+  if (label === "Tourism GST (TGST)") return "tgst";
+  if (label === "VAT") return "vat";
+  if (label === "Sales tax") return "sales_tax";
+  return "custom";
+}
+
+function taxLabelForType(type: TaxType, customLabel: string) {
+  const labels: Record<Exclude<TaxType, "custom">, string> = {
+    none: "No tax",
+    tgst: "Tourism GST (TGST)",
+    vat: "VAT",
+    sales_tax: "Sales tax",
+  };
+  return type === "custom" ? customLabel.trim() : labels[type];
+}
 
 function formatDate(value: string | null) {
   if (!value) return "—";
@@ -114,7 +121,9 @@ function InvoicePreview({ invoice, onPrint }: { invoice: InvoiceRow | null; onPr
     <Card>
       <CardHeader>
         <CardTitle>Preview</CardTitle>
-        <CardDescription>{invoice?.invoice_number ?? "Select a completed payment to preview its invoice."}</CardDescription>
+        <CardDescription>
+          {invoice?.invoice_number ?? "Select a completed payment to preview its invoice."}
+        </CardDescription>
         <CardAction>
           <ButtonGroup>
             <Button type="button" size="sm" variant="outline" disabled={!invoice} onClick={() => onPrint()}>
@@ -219,22 +228,124 @@ function MoneyField({ id, label, value }: { id: string; label: string; value: nu
   );
 }
 
+function TaxField({
+  amount,
+  customLabel,
+  disabled,
+  onCustomLabelChange,
+  onRateChange,
+  onTypeChange,
+  rate,
+  type,
+}: {
+  amount: number;
+  customLabel: string;
+  disabled: boolean;
+  onCustomLabelChange: (value: string) => void;
+  onRateChange: (value: string) => void;
+  onTypeChange: (value: TaxType) => void;
+  rate: string;
+  type: TaxType;
+}) {
+  return (
+    <Field className="gap-2 rounded-lg border p-3 lg:col-span-3">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div>
+          <div className="flex items-center gap-2">
+            <FieldLabel>Tax</FieldLabel>
+            {!disabled ? (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="h-6 px-2"
+                onClick={() => onTypeChange("custom")}
+              >
+                + Add custom
+              </Button>
+            ) : null}
+          </div>
+          <FieldDescription>Select the applicable tax before confirming payment.</FieldDescription>
+        </div>
+        <Badge variant="outline">{formatUsd(amount)}</Badge>
+      </div>
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <Select value={type} onValueChange={(value) => onTypeChange(value as TaxType)} disabled={disabled}>
+          <SelectTrigger id="payment-tax-type" className="w-full">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectGroup>
+              <SelectItem value="none">No tax</SelectItem>
+              <SelectItem value="tgst">Tourism GST (TGST)</SelectItem>
+              <SelectItem value="vat">VAT</SelectItem>
+              <SelectItem value="sales_tax">Sales tax</SelectItem>
+              <SelectItem value="custom">Custom tax</SelectItem>
+            </SelectGroup>
+          </SelectContent>
+        </Select>
+        {type === "custom" ? (
+          <Input
+            aria-label="Custom tax name"
+            value={customLabel}
+            onChange={(event) => onCustomLabelChange(event.target.value)}
+            disabled={disabled}
+            maxLength={80}
+            placeholder="Tax name"
+          />
+        ) : null}
+        <InputGroup>
+          <InputGroupInput
+            id="payment-tax-rate"
+            aria-label="Tax rate percentage"
+            type="number"
+            inputMode="decimal"
+            min="0"
+            max="100"
+            step="0.01"
+            value={rate}
+            onChange={(event) => onRateChange(event.target.value)}
+            disabled={disabled || type === "none"}
+          />
+          <InputGroupAddon align="inline-end">%</InputGroupAddon>
+        </InputGroup>
+      </div>
+    </Field>
+  );
+}
+
 function PaymentWorkflow({
   busy,
   onConfirm,
   onGenerate,
   onSelect,
+  onTaxCustomLabelChange,
+  onTaxRateChange,
+  onTaxTypeChange,
   readOnly,
   row,
   rows,
+  taxAmount,
+  taxCustomLabel,
+  taxRate,
+  taxType,
+  totalAmount,
 }: {
   busy: boolean;
   onConfirm: (row: PaymentWorkflowRow) => void;
   onGenerate: (row: PaymentWorkflowRow) => void;
   onSelect: (id: string) => void;
+  onTaxCustomLabelChange: (value: string) => void;
+  onTaxRateChange: (value: string) => void;
+  onTaxTypeChange: (value: TaxType) => void;
   readOnly: boolean;
   row: PaymentWorkflowRow | null;
   rows: PaymentWorkflowRow[];
+  taxAmount: number;
+  taxCustomLabel: string;
+  taxRate: string;
+  taxType: TaxType;
+  totalAmount: number;
 }) {
   if (!row) {
     return (
@@ -308,14 +419,24 @@ function PaymentWorkflow({
         <div className="grid gap-4 lg:grid-cols-3">
           <MoneyField id="payment-subtotal" label="Subtotal" value={row.base_total_usd ?? 0} />
           <MoneyField id="payment-service-charge" label="Service charge" value={row.service_charge_usd ?? 0} />
-          <MoneyField id="payment-gst" label="GST" value={row.tax_usd ?? 0} />
+          <MoneyField id="payment-tax" label="Tax amount" value={taxAmount} />
+          <TaxField
+            amount={taxAmount}
+            customLabel={taxCustomLabel}
+            disabled={readOnly || row.workflow_status !== "pending"}
+            onCustomLabelChange={onTaxCustomLabelChange}
+            onRateChange={onTaxRateChange}
+            onTypeChange={onTaxTypeChange}
+            rate={taxRate}
+            type={taxType}
+          />
         </div>
         <div className="flex items-center justify-between gap-3 rounded-lg border p-3">
           <div>
             <p className="font-medium">Customer total</p>
             <p className="text-muted-foreground text-xs">Payment and invoice are saved in one transaction.</p>
           </div>
-          <p className="font-semibold tabular-nums">{formatUsd(row.amount_usd)}</p>
+          <p className="font-semibold tabular-nums">{formatUsd(totalAmount)}</p>
         </div>
         <div className="flex items-center justify-between gap-3 rounded-lg border p-3">
           <div className="min-w-0">
@@ -357,27 +478,60 @@ function PaymentWorkflow({
 }
 
 export function PaymentInvoicesDashboard({
+  initialSelectedId,
   invoices,
   readOnly,
   workflows,
 }: {
+  initialSelectedId?: string;
   invoices: InvoiceRow[];
   readOnly: boolean;
   workflows: PaymentWorkflowRow[];
 }) {
   const [issuedInvoices, setIssuedInvoices] = React.useState(invoices);
   const [workflowRows, setWorkflowRows] = React.useState(workflows);
-  const [selectedId, setSelectedId] = React.useState(workflows[0]?.id ?? "");
+  const [selectedId, setSelectedId] = React.useState(
+    workflows.some((workflow) => workflow.id === initialSelectedId)
+      ? (initialSelectedId ?? "")
+      : (workflows[0]?.id ?? ""),
+  );
   const [pending, setPending] = React.useState(false);
   const [dialogRow, setDialogRow] = React.useState<PaymentWorkflowRow | null>(null);
   const [paymentMethod, setPaymentMethod] = React.useState("Bank transfer");
   const [paymentReference, setPaymentReference] = React.useState("");
   const [paymentNotes, setPaymentNotes] = React.useState("");
+  const [taxType, setTaxType] = React.useState<TaxType>(taxTypeFromLabel(workflows[0]?.tax_label));
+  const [taxCustomLabel, setTaxCustomLabel] = React.useState(
+    taxTypeFromLabel(workflows[0]?.tax_label) === "custom" ? (workflows[0]?.tax_label ?? "") : "",
+  );
+  const [taxRate, setTaxRate] = React.useState(String(workflows[0]?.tax_rate_percent ?? 17));
 
   const selectedWorkflow = workflowRows.find((row) => row.id === selectedId) ?? workflowRows[0] ?? null;
   const selectedInvoice = selectedWorkflow?.invoice_id
     ? (issuedInvoices.find((invoice) => invoice.id === selectedWorkflow.invoice_id) ?? null)
     : null;
+  const parsedTaxRate = taxType === "none" ? 0 : Number(taxRate);
+  const effectiveTaxRate = Number.isFinite(parsedTaxRate) ? Math.min(100, Math.max(0, parsedTaxRate)) : 0;
+  const taxAmount = roundMoney((selectedWorkflow?.base_total_usd ?? 0) * (effectiveTaxRate / 100));
+  const totalAmount = roundMoney(
+    (selectedWorkflow?.base_total_usd ?? 0) + (selectedWorkflow?.service_charge_usd ?? 0) + taxAmount,
+  );
+
+  React.useEffect(() => {
+    if (!selectedWorkflow) return;
+    const nextType = taxTypeFromLabel(selectedWorkflow.tax_label);
+    setTaxType(nextType);
+    setTaxCustomLabel(nextType === "custom" ? (selectedWorkflow.tax_label ?? "") : "");
+    setTaxRate(String(nextType === "none" ? 0 : (selectedWorkflow.tax_rate_percent ?? 17)));
+  }, [selectedWorkflow]);
+
+  React.useEffect(() => {
+    if (!selectedId) return;
+    const url = new URL(window.location.href);
+    if (url.searchParams.get("payment") === selectedId) return;
+    url.searchParams.set("payment", selectedId);
+    window.history.replaceState(window.history.state, "", url);
+  }, [selectedId]);
 
   function printInvoice(saveAsPdf = false) {
     if (!selectedInvoice) return;
@@ -412,11 +566,26 @@ export function PaymentInvoicesDashboard({
     setPaymentNotes(row.payment_notes ?? "");
   }
 
+  function changeTaxType(value: TaxType) {
+    setTaxType(value);
+    if (value === "none") setTaxRate("0");
+    if (value === "tgst") setTaxRate("17");
+    if (value !== "custom") setTaxCustomLabel("");
+  }
+
   async function confirmPayment(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!dialogRow || pending || readOnly) return;
     if (paymentMethod === "Bank transfer" && !paymentReference.trim()) {
       toast.error("A bank transfer reference is required.");
+      return;
+    }
+    if (taxType === "custom" && !taxCustomLabel.trim()) {
+      toast.error("Enter a name for the custom tax.");
+      return;
+    }
+    if (!Number.isFinite(Number(taxRate)) || Number(taxRate) < 0 || Number(taxRate) > 100) {
+      toast.error("Tax rate must be between 0 and 100 percent.");
       return;
     }
 
@@ -426,7 +595,14 @@ export function PaymentInvoicesDashboard({
       const response = await fetch(`/api/payments/${row.id}/confirm`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ paymentMethod, reference: paymentReference, notes: paymentNotes }),
+        body: JSON.stringify({
+          paymentMethod,
+          reference: paymentReference,
+          notes: paymentNotes,
+          taxType,
+          taxLabel: taxType === "custom" ? taxCustomLabel.trim() : null,
+          taxRatePercent: effectiveTaxRate,
+        }),
       });
       const result = (await response.json().catch(() => ({}))) as {
         error?: string;
@@ -445,6 +621,10 @@ export function PaymentInvoicesDashboard({
                 payment_method: paymentMethod,
                 payment_reference: paymentReference.trim() || null,
                 payment_notes: paymentNotes.trim() || null,
+                tax_label: taxLabelForType(taxType, taxCustomLabel),
+                tax_rate_percent: effectiveTaxRate,
+                tax_usd: taxAmount,
+                amount_usd: totalAmount,
                 confirmed_at: new Date().toISOString(),
                 invoice_id: result.invoice?.id ?? null,
                 invoice_number: result.invoice?.invoice_number ?? null,
@@ -525,6 +705,14 @@ export function PaymentInvoicesDashboard({
                 onSelect={setSelectedId}
                 onConfirm={openConfirmation}
                 onGenerate={generateInvoice}
+                onTaxCustomLabelChange={setTaxCustomLabel}
+                onTaxRateChange={setTaxRate}
+                onTaxTypeChange={changeTaxType}
+                taxAmount={taxAmount}
+                taxCustomLabel={taxCustomLabel}
+                taxRate={taxRate}
+                taxType={taxType}
+                totalAmount={totalAmount}
               />
             </CardContent>
           </Card>
@@ -573,7 +761,9 @@ export function PaymentInvoicesDashboard({
                   required={paymentMethod === "Bank transfer"}
                   aria-invalid={paymentMethod === "Bank transfer" && !paymentReference.trim()}
                   maxLength={120}
-                  placeholder={paymentMethod === "Bank transfer" ? "Bank transaction reference" : "Cash receipt reference"}
+                  placeholder={
+                    paymentMethod === "Bank transfer" ? "Bank transaction reference" : "Cash receipt reference"
+                  }
                 />
                 <FieldDescription>Stored with the payment for reconciliation and audit history.</FieldDescription>
               </Field>
@@ -593,7 +783,7 @@ export function PaymentInvoicesDashboard({
                     <p className="truncate font-medium">{dialogRow.recipient_name}</p>
                     <p className="truncate text-muted-foreground text-xs">{dialogRow.reference}</p>
                   </div>
-                  <Badge variant="outline">{formatUsd(dialogRow.amount_usd)}</Badge>
+                  <Badge variant="outline">{formatUsd(totalAmount)}</Badge>
                 </div>
               ) : null}
             </FieldGroup>
@@ -603,7 +793,10 @@ export function PaymentInvoicesDashboard({
                   Cancel
                 </Button>
               </DialogClose>
-              <Button type="submit" disabled={pending || (paymentMethod === "Bank transfer" && !paymentReference.trim())}>
+              <Button
+                type="submit"
+                disabled={pending || (paymentMethod === "Bank transfer" && !paymentReference.trim())}
+              >
                 {pending ? <Spinner data-icon="inline-start" /> : <CheckCircle2 data-icon="inline-start" />}
                 {pending ? "Confirming..." : "Confirm & generate"}
               </Button>

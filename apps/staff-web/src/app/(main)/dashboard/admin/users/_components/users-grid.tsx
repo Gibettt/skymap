@@ -21,7 +21,6 @@ import { getInitials } from "@/lib/utils";
 import type { UserRow } from "../../_lib/admin-data";
 import { titleCase } from "../../_lib/format";
 import { UserActions, type UserResortOption } from "./user-actions";
-import { UsersPagination } from "./users-pagination";
 
 const presenceDot: Record<string, string> = {
   online: "bg-emerald-500",
@@ -45,7 +44,7 @@ export function UsersGrid({
   const rows = table.getRowModel().rows;
 
   return (
-    <div className="flex flex-1 flex-col gap-4">
+    <div className="flex flex-1 flex-col">
       {rows.length ? (
         <div className="grid gap-4 px-4 sm:grid-cols-2 xl:grid-cols-3">
           {rows.map((row) => {
@@ -73,9 +72,7 @@ export function UsersGrid({
                 <CardContent className="flex flex-1 flex-col gap-4">
                   <div className="flex flex-wrap items-center gap-2">
                     <Badge variant="outline">{titleCase(user.role)}</Badge>
-                    <Badge variant={user.status === "active" ? "default" : "secondary"}>
-                      {titleCase(user.status)}
-                    </Badge>
+                    <Badge variant={user.status === "active" ? "default" : "secondary"}>{titleCase(user.status)}</Badge>
                     {user.presence ? <Badge variant="outline">{titleCase(user.presence)}</Badge> : null}
                   </div>
 
@@ -119,8 +116,6 @@ export function UsersGrid({
           </EmptyHeader>
         </Empty>
       )}
-
-      <UsersPagination table={table} />
     </div>
   );
 }

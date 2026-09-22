@@ -60,6 +60,7 @@ export function AdminLoginForm() {
                 placeholder="admin@ephemeris.id"
                 autoComplete="email"
                 aria-invalid={fieldState.invalid}
+                className="h-11 text-base sm:text-sm"
               />
               {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
             </Field>
@@ -78,13 +79,14 @@ export function AdminLoginForm() {
                 placeholder="Enter your password"
                 autoComplete="current-password"
                 aria-invalid={fieldState.invalid}
+                className="h-11 text-base sm:text-sm"
               />
               {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
             </Field>
           )}
         />
       </FieldGroup>
-      <Button className="w-full" type="submit" disabled={form.formState.isSubmitting}>
+      <Button className="h-11 w-full text-sm" type="submit" disabled={form.formState.isSubmitting}>
         {form.formState.isSubmitting && <Spinner data-icon="inline-start" />}
         {form.formState.isSubmitting ? "Signing in..." : "Login"}
       </Button>

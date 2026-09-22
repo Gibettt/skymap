@@ -12,6 +12,7 @@ const UUID_TABLES = new Set([
   'payout_requests',
   'resorts',
   'sky_events',
+  'sky_event_types',
   'users',
 ]);
 
@@ -112,6 +113,14 @@ function valueFromToken(token, params) {
   if (/^null$/i.test(token || '')) return null;
   const stringLiteral = token?.match(/^'(.*)'$/s);
   return stringLiteral ? stringLiteral[1].replace(/''/g, "'") : undefined;
+}
+
+function mysqlParameter(value) {
+  if (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,3})?Z$/.test(value)) {
+    const date = new Date(value);
+    if (!Number.isNaN(date.getTime())) return date;
+  }
+  return value;
 }
 
 function addUuidToInsert(sql, params, shape) {
@@ -228,7 +237,7 @@ function rewriteSql(sql, params) {
 
   const orderedParams = [];
   rewritten = rewritten.replace(/\$(\d+)/g, (_match, index) => {
-    orderedParams.push(params[Number(index) - 1]);
+    orderedParams.push(mysqlParameter(params[Number(index) - 1]));
     return '?';
   });
 

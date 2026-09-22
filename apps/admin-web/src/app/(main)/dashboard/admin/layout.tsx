@@ -10,5 +10,9 @@ export default async function AdminLayout({ children }: Readonly<{ children: Rea
     redirect("/login");
   }
 
-  return children;
+  return (
+    <div data-admin-portal className="min-w-0">
+      {children}
+    </div>
+  );
 }

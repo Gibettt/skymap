@@ -2,7 +2,7 @@
 
 import * as React from "react";
 
-import { CalendarClock, CalendarDays, RefreshCw, ShieldAlert, Users } from "lucide-react";
+import { CalendarClock, CalendarDays, ShieldAlert, Users } from "lucide-react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -11,7 +11,6 @@ import { Calendar } from "@/components/ui/calendar";
 import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Spinner } from "@/components/ui/spinner";
 
 import { loadAllStaffBookings, type StaffBooking, type StaffRole, shortTime, titleCase } from "../../_lib/staff-api";
 
@@ -61,12 +60,12 @@ function CalendarLoading() {
         <Skeleton className="h-8 w-52" />
         <Skeleton className="h-4 w-80 max-w-full" />
       </div>
-      <div className="grid gap-4 sm:grid-cols-3">
+      <div className="grid grid-cols-3 gap-2 sm:gap-4">
         {CALENDAR_METRIC_SKELETONS.map((metric) => (
-          <Card key={metric} size="sm">
-            <CardHeader>
-              <Skeleton className="h-4 w-24" />
-              <Skeleton className="h-8 w-16" />
+          <Card key={metric} size="sm" className="min-w-0">
+            <CardHeader className="px-2.5 sm:px-3">
+              <Skeleton className="h-3.5 w-full max-w-16 sm:h-4 sm:max-w-24" />
+              <Skeleton className="h-6 w-10 sm:h-8 sm:w-16" />
             </CardHeader>
           </Card>
         ))}
@@ -208,10 +207,6 @@ export function StaffCalendar({ role, readOnly }: { role: StaffRole; readOnly: b
             <CalendarDays data-icon="inline-start" />
             Today
           </Button>
-          <Button variant="outline" onClick={() => void loadBookings()} disabled={loading}>
-            {loading ? <Spinner data-icon="inline-start" /> : <RefreshCw data-icon="inline-start" />}
-            Refresh
-          </Button>
         </div>
       </div>
 
@@ -223,36 +218,46 @@ export function StaffCalendar({ role, readOnly }: { role: StaffRole; readOnly: b
         </Alert>
       ) : null}
 
-      <div className="grid gap-4 sm:grid-cols-3">
-        <Card size="sm">
-          <CardHeader>
-            <CardDescription>{monthLabel(visibleMonth)}</CardDescription>
-            <CardTitle className="text-2xl tabular-nums">{monthBookings.length}</CardTitle>
-            <CardAction className="rounded-lg bg-muted p-2 text-muted-foreground">
+      <div className="grid grid-cols-3 gap-2 sm:gap-4">
+        <Card size="sm" className="min-w-0">
+          <CardHeader className="gap-1 px-2.5 sm:px-3">
+            <CardDescription className="text-[11px] leading-tight sm:text-sm">
+              <span className="sm:hidden">Month</span>
+              <span className="hidden sm:inline">{monthLabel(visibleMonth)}</span>
+            </CardDescription>
+            <CardTitle className="text-xl tabular-nums sm:text-2xl">{monthBookings.length}</CardTitle>
+            <CardAction className="hidden rounded-lg bg-muted p-2 text-muted-foreground sm:block">
               <CalendarDays className="size-4" />
             </CardAction>
           </CardHeader>
-          <CardContent className="text-muted-foreground text-xs">Bookings in the visible month</CardContent>
+          <CardContent className="hidden text-muted-foreground text-xs sm:block">
+            Bookings in the visible month
+          </CardContent>
         </Card>
-        <Card size="sm">
-          <CardHeader>
-            <CardDescription>Selected day</CardDescription>
-            <CardTitle className="text-2xl tabular-nums">{selectedBookings.length}</CardTitle>
-            <CardAction className="rounded-lg bg-muted p-2 text-muted-foreground">
+        <Card size="sm" className="min-w-0">
+          <CardHeader className="gap-1 px-2.5 sm:px-3">
+            <CardDescription className="text-[11px] leading-tight sm:text-sm">
+              <span className="sm:hidden">Day</span>
+              <span className="hidden sm:inline">Selected day</span>
+            </CardDescription>
+            <CardTitle className="text-xl tabular-nums sm:text-2xl">{selectedBookings.length}</CardTitle>
+            <CardAction className="hidden rounded-lg bg-muted p-2 text-muted-foreground sm:block">
               <CalendarClock className="size-4" />
             </CardAction>
           </CardHeader>
-          <CardContent className="text-muted-foreground text-xs">{longDate(selectedDate)}</CardContent>
+          <CardContent className="hidden text-muted-foreground text-xs sm:block">{longDate(selectedDate)}</CardContent>
         </Card>
-        <Card size="sm">
-          <CardHeader>
-            <CardDescription>Upcoming</CardDescription>
-            <CardTitle className="text-2xl tabular-nums">{upcomingBookings.length}</CardTitle>
-            <CardAction className="rounded-lg bg-muted p-2 text-muted-foreground">
+        <Card size="sm" className="min-w-0">
+          <CardHeader className="gap-1 px-2.5 sm:px-3">
+            <CardDescription className="text-[11px] leading-tight sm:text-sm">Upcoming</CardDescription>
+            <CardTitle className="text-xl tabular-nums sm:text-2xl">{upcomingBookings.length}</CardTitle>
+            <CardAction className="hidden rounded-lg bg-muted p-2 text-muted-foreground sm:block">
               <Users className="size-4" />
             </CardAction>
           </CardHeader>
-          <CardContent className="text-muted-foreground text-xs">Open and completed future bookings</CardContent>
+          <CardContent className="hidden text-muted-foreground text-xs sm:block">
+            Open and completed future bookings
+          </CardContent>
         </Card>
       </div>
 

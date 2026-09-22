@@ -25,6 +25,9 @@ export async function POST(request, { params }) {
         paymentMethod: parsed.data.paymentMethod,
         reference: parsed.data.reference,
         notes: parsed.data.notes,
+        taxType: parsed.data.taxType,
+        taxLabel: parsed.data.taxLabel,
+        taxRatePercent: parsed.data.taxRatePercent,
         resortId: user.resort_id,
       });
       if (payment.error) throw new ApiError(payment.status ?? 409, payment.error);
@@ -41,6 +44,10 @@ export async function POST(request, { params }) {
             payment_method: payment.booking.payment_method,
             payment_confirmed_at: payment.booking.payment_confirmed_at,
             payment_reference: payment.booking.payment_reference,
+            tax_label: payment.booking.tax_label,
+            tax_rate_percent: payment.booking.tax_rate_percent,
+            tax_usd: payment.booking.gst_17_usd,
+            invoice_total_usd: payment.booking.invoice_total_usd,
           },
           request,
         });

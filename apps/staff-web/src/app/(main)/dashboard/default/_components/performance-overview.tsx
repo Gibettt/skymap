@@ -44,16 +44,16 @@ const chartConfig = {
 
 export function PerformanceOverview({ data, reportHref }: { data: BookingActivityPoint[]; reportHref?: string }) {
   return (
-    <Card className="@container/card">
-      <CardHeader>
+    <Card className="@container/card [--card-spacing:--spacing(3)] sm:[--card-spacing:--spacing(4)]">
+      <CardHeader className="has-data-[slot=card-action]:grid-cols-1 @[540px]/card:has-data-[slot=card-action]:grid-cols-[1fr_auto]">
         <CardTitle className="leading-none">Booking Activity</CardTitle>
         <CardDescription>
           <span className="@[540px]/card:block hidden">Booking activity for the last 3 months</span>
           <span className="@[540px]/card:hidden">Last 3 months</span>
         </CardDescription>
-        <CardAction className="flex items-center gap-2">
+        <CardAction className="col-start-1 row-start-auto mt-2 grid w-full grid-cols-2 gap-2 justify-self-stretch @[540px]/card:col-start-2 @[540px]/card:row-span-2 @[540px]/card:row-start-1 @[540px]/card:mt-0 @[540px]/card:flex @[540px]/card:w-auto @[540px]/card:justify-self-end">
           <Select defaultValue="quarter">
-            <SelectTrigger size="sm" className="w-28">
+            <SelectTrigger size="sm" className="w-full @[540px]/card:w-28">
               <SelectValue placeholder="3 months" />
             </SelectTrigger>
             <SelectContent>
@@ -65,7 +65,7 @@ export function PerformanceOverview({ data, reportHref }: { data: BookingActivit
           </Select>
 
           <Select defaultValue="all">
-            <SelectTrigger size="sm" className="w-32">
+            <SelectTrigger size="sm" className="w-full @[540px]/card:w-32">
               <SelectValue placeholder="All statuses" />
             </SelectTrigger>
             <SelectContent>
@@ -79,11 +79,11 @@ export function PerformanceOverview({ data, reportHref }: { data: BookingActivit
           </Select>
 
           {reportHref ? (
-            <Button variant="outline" size="sm" asChild>
+            <Button variant="outline" size="sm" className="col-span-2 w-full @[540px]/card:w-auto" asChild>
               <Link href={reportHref}>View report</Link>
             </Button>
           ) : (
-            <Button variant="outline" size="sm">
+            <Button variant="outline" size="sm" className="col-span-2 w-full @[540px]/card:w-auto">
               View report
             </Button>
           )}
@@ -91,7 +91,7 @@ export function PerformanceOverview({ data, reportHref }: { data: BookingActivit
       </CardHeader>
 
       <CardContent>
-        <ChartContainer config={chartConfig} className="aspect-auto h-80 w-full">
+        <ChartContainer config={chartConfig} className="aspect-auto h-44 w-full sm:h-64 lg:h-80">
           <ComposedChart data={data} margin={{ top: 0 }}>
             <defs>
               <linearGradient id="fillTotalBookings" x1="0" y1="0" x2="0" y2="1">
@@ -125,7 +125,10 @@ export function PerformanceOverview({ data, reportHref }: { data: BookingActivit
                 />
               }
             />
-            <ChartLegend verticalAlign="top" content={<ChartLegendContent className="mb-5 justify-end" />} />
+            <ChartLegend
+              verticalAlign="top"
+              content={<ChartLegendContent className="mb-3 flex-wrap justify-start gap-y-1 sm:mb-5 sm:justify-end" />}
+            />
 
             <Area
               dataKey="totalBookings"

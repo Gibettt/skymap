@@ -2,6 +2,7 @@
 
 import * as React from "react";
 
+import { downloadExcelReport } from "@ephemeris/export";
 import {
   type ColumnFiltersState,
   type ColumnVisibilityState,
@@ -12,14 +13,7 @@ import {
 import { Download, Grid, Rows3, Search, SlidersHorizontal } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardAction,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -31,14 +25,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group";
 import { Kbd } from "@/components/ui/kbd";
-import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { dataTableFeatures } from "@/lib/data-table-features";
 
@@ -46,8 +33,9 @@ import { CreateUserDialog } from "../../_components/create-dialogs";
 import type { UserRow } from "../../_lib/admin-data";
 import { titleCase } from "../../_lib/format";
 import type { UserResortOption } from "./user-actions";
-import { UsersGrid } from "./users-grid";
 import { getUsersColumns } from "./users-columns";
+import { UsersGrid } from "./users-grid";
+import { UsersPagination } from "./users-pagination";
 import { UsersTable } from "./users-table";
 
 type UserView = "list" | "grid";
@@ -64,10 +52,6 @@ const columnLabels: Record<string, string> = {
 
 function uniqueOptions(values: string[]) {
   return ["All", ...Array.from(new Set(values.filter(Boolean))).sort()];
-}
-
-function csvCell(value: string | number | null | undefined) {
-  return `"${String(value ?? "").replaceAll('"', '""')}"`;
 }
 
 export function AdminUsers({ users, resorts }: { users: UserRow[]; resorts: UserResortOption[] }) {
@@ -129,31 +113,43 @@ export function AdminUsers({ users, resorts }: { users: UserRow[]; resorts: User
   }
 
   function changeView(value: string) {
-    if (value === "list" || value === "grid") setView(value);
+    if (value !== "list" && value !== "grid") return;
+
+    setView(value);
+    table.setPageSize(value === "grid" ? 9 : 10);
+    table.setPageIndex(0);
   }
 
-  function exportUsers() {
-    const header = ["Name", "Email", "Phone", "Role", "Resort", "Status", "Presence", "Bookings", "Joined"];
-    const rows = table.getFilteredRowModel().rows.map(({ original }) => [
-      original.name,
-      original.email,
-      original.phone ?? "",
-      titleCase(original.role),
-      original.resort_name ?? "Unassigned",
-      titleCase(original.status),
-      original.presence ? titleCase(original.presence) : "Not tracked",
-      original.total_booking,
-      new Date(original.created_at).toISOString(),
-    ]);
-    const csv = [header, ...rows].map((row) => row.map(csvCell).join(",")).join("\n");
-    const url = URL.createObjectURL(new Blob([`\uFEFF${csv}`], { type: "text/csv;charset=utf-8" }));
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = "ephemeris-users.csv";
-    document.body.append(link);
-    link.click();
-    link.remove();
-    URL.revokeObjectURL(url);
+  async function exportUsers() {
+    const rows = table.getFilteredRowModel().rows.map(({ original }) => original);
+    await downloadExcelReport({
+      title: "SpaceCat ASTROTOURISM — Users",
+      subtitle: "Filtered account, access, and presence records",
+      filename: `ephemeris-users-${new Date().toISOString().slice(0, 10)}.xlsx`,
+      sheetName: "Users",
+      columns: [
+        { key: "name", header: "Name", width: 26 },
+        { key: "email", header: "Email", width: 30 },
+        { key: "phone", header: "Phone", width: 18 },
+        { key: "role", header: "Role", width: 16 },
+        { key: "resort", header: "Resort", width: 28 },
+        { key: "status", header: "Status", width: 14, kind: "status" },
+        { key: "presence", header: "Presence", width: 16, kind: "status" },
+        { key: "bookings", header: "Bookings", width: 12, kind: "number" },
+        { key: "joined", header: "Joined", width: 20, kind: "datetime" },
+      ],
+      rows: rows.map((user) => ({
+        name: user.name,
+        email: user.email,
+        phone: user.phone ?? "",
+        role: titleCase(user.role),
+        resort: user.resort_name ?? "Unassigned",
+        status: titleCase(user.status),
+        presence: user.presence ? titleCase(user.presence) : "Not tracked",
+        bookings: Number(user.total_booking),
+        joined: user.created_at,
+      })),
+    });
   }
 
   return (
@@ -304,6 +300,7 @@ export function AdminUsers({ users, resorts }: { users: UserRow[]; resorts: User
 
         {view === "list" ? <UsersTable table={table} /> : <UsersGrid table={table} resorts={resorts} />}
       </CardContent>
+      {table.getFilteredRowModel().rows.length ? <UsersPagination table={table} /> : null}
     </Card>
   );
 }

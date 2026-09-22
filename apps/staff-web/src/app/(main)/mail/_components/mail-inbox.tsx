@@ -1,6 +1,6 @@
 "use client";
 
-import { Ellipsis, RotateCcw, Search, SlidersHorizontal } from "lucide-react";
+import { Ellipsis, Search, SlidersHorizontal } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group";
@@ -30,9 +30,6 @@ export function MailInbox({ mails, onSelectMail }: MailInboxProps) {
         <div className="flex items-center gap-2">
           <Button variant="ghost" size="icon-sm">
             <SlidersHorizontal />
-          </Button>
-          <Button variant="ghost" size="icon-sm">
-            <RotateCcw />
           </Button>
           <Button variant="ghost" size="icon-sm">
             <Ellipsis />

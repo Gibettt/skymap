@@ -2,7 +2,7 @@
 
 import * as React from "react";
 
-import { Banknote, CircleDollarSign, Clock3, RefreshCw, ShieldAlert, Sparkles, Star, WalletCards } from "lucide-react";
+import { Banknote, CircleDollarSign, Clock3, ShieldAlert, Sparkles, Star, WalletCards } from "lucide-react";
 import { toast } from "sonner";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -136,7 +136,7 @@ function PayoutLoading() {
         <Skeleton className="h-8 w-48" />
         <Skeleton className="h-4 w-80 max-w-full" />
       </div>
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
         {PAYOUT_METRIC_SKELETONS.map((metric) => (
           <Card key={metric} size="sm">
             <CardHeader>
@@ -366,10 +366,6 @@ export function PayoutDashboard({ role, readOnly }: { role: StaffRole; readOnly:
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Button variant="outline" onClick={() => void loadPayouts()} disabled={loading}>
-            {loading ? <Spinner data-icon="inline-start" /> : <RefreshCw data-icon="inline-start" />}
-            Refresh
-          </Button>
           <Dialog open={dialogOpen} onOpenChange={handleDialogChange}>
             <DialogTrigger asChild>
               <Button disabled={readOnly || availableUsd <= 0 || loading}>
@@ -499,7 +495,7 @@ export function PayoutDashboard({ role, readOnly }: { role: StaffRole; readOnly:
         </Alert>
       ) : null}
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
         {metrics.map(({ label, value, detail, icon: Icon }) => (
           <Card key={label} size="sm">
             <CardHeader>

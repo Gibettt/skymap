@@ -80,6 +80,7 @@ export async function GET(request) {
         `SELECT se.id, se.title, se.event_type, se.starts_at, se.ends_at, se.description,
           se.source_name, se.source_url, se.visibility, se.resort_id, se.package_id,
           se.observation_spot, se.capacity, se.price_override_usd, se.image_url,
+          se.image_data IS NOT NULL AS has_image,
           se.status, se.is_published, se.created_at, se.updated_at,
           r.name AS resort_name, p.name AS package_name
         FROM sky_events se
@@ -136,7 +137,7 @@ export async function GET(request) {
           observationSpot: event.observation_spot || '',
           capacity: event.capacity == null ? null : Number(event.capacity),
           priceOverrideUsd: event.price_override_usd == null ? null : Number(event.price_override_usd),
-          imageUrl: event.image_url,
+          imageUrl: event.has_image ? `/api/sky-events/${event.id}/image` : event.image_url,
           status: event.status,
           isPublished: event.is_published,
           createdAt: iso(event.created_at),

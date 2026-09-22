@@ -100,14 +100,14 @@ export function StaffLoginForm() {
           onValueChange={(value) => {
             if (isStaffRole(value)) setSelectedRole(value);
           }}
-          className="grid w-full grid-cols-2"
+          className="grid w-full grid-cols-2 gap-2"
           aria-label="Choose staff portal"
         >
-          <ToggleGroupItem value="internal" className="w-full" aria-label="Internal staff portal">
+          <ToggleGroupItem value="internal" className="h-11 min-w-0 w-full px-2 sm:px-3" aria-label="Internal staff portal">
             <BriefcaseBusiness />
             Internal
           </ToggleGroupItem>
-          <ToggleGroupItem value="external" className="w-full" aria-label="External staff portal">
+          <ToggleGroupItem value="external" className="h-11 min-w-0 w-full px-2 sm:px-3" aria-label="External staff portal">
             <Building2 />
             External
           </ToggleGroupItem>
@@ -133,6 +133,7 @@ export function StaffLoginForm() {
                 placeholder={selectedRole === "internal" ? "internal@ephemeris.id" : "external@ephemeris.id"}
                 autoComplete="email"
                 aria-invalid={fieldState.invalid}
+                className="h-11 text-base sm:text-sm"
               />
               {fieldState.invalid ? <FieldError errors={[fieldState.error]} /> : null}
             </Field>
@@ -151,6 +152,7 @@ export function StaffLoginForm() {
                 placeholder="Enter your password"
                 autoComplete="current-password"
                 aria-invalid={fieldState.invalid}
+                className="h-11 text-base sm:text-sm"
               />
               {fieldState.invalid ? <FieldError errors={[fieldState.error]} /> : null}
             </Field>
@@ -158,7 +160,7 @@ export function StaffLoginForm() {
         />
       </FieldGroup>
 
-      <Button className="w-full" type="submit" disabled={form.formState.isSubmitting}>
+      <Button className="h-11 w-full text-sm" type="submit" disabled={form.formState.isSubmitting}>
         {form.formState.isSubmitting ? <Spinner data-icon="inline-start" /> : null}
         {form.formState.isSubmitting ? "Signing in..." : `Login as ${selectedRole} staff`}
       </Button>

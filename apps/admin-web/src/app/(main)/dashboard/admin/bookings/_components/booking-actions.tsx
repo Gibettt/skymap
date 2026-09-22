@@ -770,7 +770,7 @@ export function BookingActions({ booking, options }: BookingActionsProps) {
                   required
                 />
               </Field>
-              <FieldGroup className="grid grid-cols-2 gap-4">
+              <FieldGroup className="grid gap-4 sm:grid-cols-2">
                 <Field>
                   <FieldLabel htmlFor={fieldId("reschedule-start")}>Start time</FieldLabel>
                   <Input

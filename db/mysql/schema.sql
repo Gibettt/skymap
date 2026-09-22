@@ -27,6 +27,10 @@ CREATE TABLE IF NOT EXISTS resorts (
   latitude DECIMAL(10,7) NULL,
   longitude DECIMAL(10,7) NULL,
   observation_spots TEXT NOT NULL,
+  public_description TEXT NULL,
+  image_data LONGBLOB NULL,
+  image_mime_type VARCHAR(120) NULL,
+  image_file_name VARCHAR(255) NULL,
   INDEX idx_resorts_status (status)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
@@ -152,10 +156,28 @@ CREATE TABLE IF NOT EXISTS package_inclusions (
   CHECK (CHAR_LENGTH(TRIM(label)) BETWEEN 1 AND 120)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
+CREATE TABLE IF NOT EXISTS sky_event_types (
+  id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
+  resort_id CHAR(36) NOT NULL,
+  name VARCHAR(80) NOT NULL,
+  slug VARCHAR(80) NOT NULL,
+  is_active BOOLEAN NOT NULL DEFAULT TRUE,
+  created_by CHAR(36) NULL,
+  created_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  updated_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3),
+  CONSTRAINT fk_sky_event_types_resort FOREIGN KEY (resort_id) REFERENCES resorts(id) ON DELETE CASCADE,
+  CONSTRAINT fk_sky_event_types_creator FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL,
+  UNIQUE KEY uq_sky_event_types_resort_slug (resort_id, slug),
+  UNIQUE KEY uq_sky_event_types_resort_name (resort_id, name),
+  INDEX idx_sky_event_types_active (resort_id, is_active, name),
+  CHECK (CHAR_LENGTH(TRIM(name)) BETWEEN 1 AND 80),
+  CHECK (CHAR_LENGTH(TRIM(slug)) BETWEEN 1 AND 80)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
 CREATE TABLE IF NOT EXISTS sky_events (
   id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
   title VARCHAR(120) NOT NULL,
-  event_type ENUM('astronomy', 'meteor', 'resort') NOT NULL,
+  event_type VARCHAR(80) NOT NULL,
   starts_at DATETIME(3) NOT NULL,
   ends_at DATETIME(3) NULL,
   description TEXT NOT NULL,
@@ -173,6 +195,9 @@ CREATE TABLE IF NOT EXISTS sky_events (
   capacity INT NULL,
   price_override_usd DECIMAL(14,2) NULL,
   image_url VARCHAR(2048) NULL,
+  image_data LONGBLOB NULL,
+  image_mime_type VARCHAR(120) NULL,
+  image_file_name VARCHAR(255) NULL,
   status ENUM('draft', 'published', 'cancelled', 'sold_out') NOT NULL DEFAULT 'published',
   CONSTRAINT fk_sky_events_creator FOREIGN KEY (created_by) REFERENCES users(id),
   CONSTRAINT fk_sky_events_updater FOREIGN KEY (updated_by) REFERENCES users(id),
@@ -206,6 +231,8 @@ CREATE TABLE IF NOT EXISTS bookings (
   base_total_usd DECIMAL(14,2) NOT NULL DEFAULT 0,
   service_charge_10_usd DECIMAL(14,2) NOT NULL DEFAULT 0,
   gst_17_usd DECIMAL(14,2) NOT NULL DEFAULT 0,
+  tax_label VARCHAR(80) NOT NULL DEFAULT 'Tourism GST (TGST)',
+  tax_rate_percent DECIMAL(5,2) NOT NULL DEFAULT 17.00,
   invoice_total_usd DECIMAL(14,2) NOT NULL DEFAULT 0,
   operation_share_50_usd DECIMAL(14,2) NOT NULL DEFAULT 0,
   company_share_50_usd DECIMAL(14,2) NOT NULL DEFAULT 0,
@@ -421,6 +448,8 @@ CREATE TABLE IF NOT EXISTS invoices (
   subtotal_usd DECIMAL(12,2) NOT NULL,
   service_charge_usd DECIMAL(12,2) NOT NULL DEFAULT 0,
   tax_usd DECIMAL(12,2) NOT NULL DEFAULT 0,
+  tax_label VARCHAR(80) NOT NULL DEFAULT 'Tourism GST (TGST)',
+  tax_rate_percent DECIMAL(5,2) NOT NULL DEFAULT 17.00,
   total_usd DECIMAL(12,2) NOT NULL,
   line_items JSON NOT NULL,
   source_snapshot JSON NOT NULL,

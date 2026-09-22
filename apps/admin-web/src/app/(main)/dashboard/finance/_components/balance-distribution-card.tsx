@@ -104,12 +104,12 @@ export function BalanceDistributionCard({
   const totalBalance = balances.reduce((total, item) => total + item.amount, 0);
 
   return (
-    <Card>
+    <Card className="[--card-spacing:--spacing(3)] sm:[--card-spacing:--spacing(4)]">
       <CardHeader>
         <CardTitle className="font-normal">{title}</CardTitle>
         <CardAction>
           <Select onValueChange={(value) => setCurrency(value as Currency)} value={currency}>
-            <SelectTrigger className="w-36" size="sm">
+            <SelectTrigger className="w-32 sm:w-36" size="sm">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -125,8 +125,8 @@ export function BalanceDistributionCard({
         </CardAction>
       </CardHeader>
 
-      <CardContent className="grid items-center gap-4 sm:grid-cols-[minmax(0,0.9fr)_minmax(0,1fr)]">
-        <ChartContainer config={chartConfig} className="mx-auto aspect-square h-50">
+      <CardContent className="grid grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)] items-center gap-3 sm:gap-4">
+        <ChartContainer config={chartConfig} className="mx-auto aspect-square h-36 sm:h-50">
           <PieChart>
             <ChartTooltip
               cursor={false}
@@ -136,9 +136,9 @@ export function BalanceDistributionCard({
               cornerRadius={6}
               data={chartData}
               dataKey="amount"
-              innerRadius={65}
+              innerRadius="58%"
               nameKey="account"
-              outerRadius={90}
+              outerRadius="82%"
               paddingAngle={2}
               strokeWidth={5}
             >
@@ -168,19 +168,19 @@ export function BalanceDistributionCard({
           </PieChart>
         </ChartContainer>
 
-        <div className="flex min-w-0 flex-col gap-3">
+        <div className="flex min-w-0 flex-col gap-2 sm:gap-3">
           {chartData.map((item) => (
-            <div className="grid grid-cols-[1fr_auto] items-end gap-3" key={item.key}>
+            <div className="grid grid-cols-[minmax(0,1fr)_auto] items-end gap-2 sm:gap-3" key={item.key}>
               <div className="min-w-0">
                 <div className="flex min-w-0 items-center gap-1">
                   <span aria-hidden="true" className="h-2 w-1 rounded-full" style={{ backgroundColor: item.fill }} />
                   <p className="truncate text-muted-foreground text-xs">{item.account}</p>
                 </div>
-                <p className="font-medium tabular-nums">
+                <p className="truncate font-medium text-xs tabular-nums sm:text-sm">
                   {formatCurrency(item.amount, { currency, noDecimals: true })}
                 </p>
               </div>
-              <div className="font-medium tabular-nums">{item.percentage}%</div>
+              <div className="font-medium text-xs tabular-nums sm:text-sm">{item.percentage}%</div>
             </div>
           ))}
         </div>

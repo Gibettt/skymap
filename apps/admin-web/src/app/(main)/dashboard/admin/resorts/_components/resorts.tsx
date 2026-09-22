@@ -2,6 +2,7 @@
 
 import * as React from "react";
 
+import { downloadExcelReport } from "@ephemeris/export";
 import {
   type ColumnFiltersState,
   type ColumnVisibilityState,
@@ -12,14 +13,7 @@ import {
 import { Download, Grid, Rows3, Search, SlidersHorizontal } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardAction,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -31,14 +25,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group";
 import { Kbd } from "@/components/ui/kbd";
-import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { dataTableFeatures } from "@/lib/data-table-features";
 
@@ -46,7 +33,11 @@ import { CreateResortDialog } from "../../_components/create-dialogs";
 import type { ResortRow } from "../../_lib/admin-data";
 import { titleCase } from "../../_lib/format";
 import { resortsColumns } from "./resorts-columns";
+import { ResortsGrid } from "./resorts-grid";
+import { ResortsPagination } from "./resorts-pagination";
 import { ResortsTable } from "./resorts-table";
+
+type ResortView = "list" | "grid";
 
 const columnLabels: Record<string, string> = {
   resort: "Resort",
@@ -61,10 +52,6 @@ function uniqueOptions(values: string[]) {
   return ["All", ...Array.from(new Set(values.filter(Boolean))).sort()];
 }
 
-function csvCell(value: string | number) {
-  return `"${String(value).replaceAll('"', '""')}"`;
-}
-
 export function Resorts({ resorts }: { resorts: ResortRow[] }) {
   const searchInputRef = React.useRef<HTMLInputElement>(null);
   const [rowSelection, setRowSelection] = React.useState({});
@@ -72,6 +59,7 @@ export function Resorts({ resorts }: { resorts: ResortRow[] }) {
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
   const [columnVisibility, setColumnVisibility] = React.useState<ColumnVisibilityState>({ search: false });
   const [pagination, setPagination] = React.useState<PaginationState>({ pageIndex: 0, pageSize: 10 });
+  const [view, setView] = React.useState<ResortView>("list");
 
   const table = useTable({
     features: dataTableFeatures,
@@ -123,38 +111,44 @@ export function Resorts({ resorts }: { resorts: ResortRow[] }) {
     table.setPageIndex(0);
   }
 
-  function exportResorts() {
-    const header = [
-      "Name",
-      "Code",
-      "Location",
-      "Status",
-      "Coverage",
-      "Active internal staff",
-      "Active external staff",
-      "Total bookings",
-      "Open bookings",
-    ];
-    const rows = table.getFilteredRowModel().rows.map(({ original }) => [
-      original.name,
-      original.code,
-      original.location,
-      titleCase(original.status),
-      titleCase(original.coverage_status),
-      Number(original.active_internal_count),
-      Number(original.active_external_count),
-      Number(original.total_bookings_count),
-      Number(original.open_bookings_count),
-    ]);
-    const csv = [header, ...rows].map((row) => row.map(csvCell).join(",")).join("\n");
-    const url = URL.createObjectURL(new Blob([`\uFEFF${csv}`], { type: "text/csv;charset=utf-8" }));
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = "ephemeris-resorts.csv";
-    document.body.append(link);
-    link.click();
-    link.remove();
-    URL.revokeObjectURL(url);
+  async function exportResorts() {
+    const rows = table.getFilteredRowModel().rows.map(({ original }) => original);
+    await downloadExcelReport({
+      title: "SpaceCat ASTROTOURISM — Partner Resorts",
+      subtitle: "Filtered resort coverage and booking activity",
+      filename: `ephemeris-resorts-${new Date().toISOString().slice(0, 10)}.xlsx`,
+      sheetName: "Resorts",
+      columns: [
+        { key: "name", header: "Name", width: 28 },
+        { key: "code", header: "Code", width: 12 },
+        { key: "location", header: "Location", width: 26 },
+        { key: "status", header: "Status", width: 14, kind: "status" },
+        { key: "coverage", header: "Coverage", width: 18, kind: "status" },
+        { key: "internalStaff", header: "Active internal staff", width: 20, kind: "number" },
+        { key: "externalStaff", header: "Active external staff", width: 20, kind: "number" },
+        { key: "totalBookings", header: "Total bookings", width: 16, kind: "number" },
+        { key: "openBookings", header: "Open bookings", width: 16, kind: "number" },
+      ],
+      rows: rows.map((resort) => ({
+        name: resort.name,
+        code: resort.code,
+        location: resort.location,
+        status: titleCase(resort.status),
+        coverage: titleCase(resort.coverage_status),
+        internalStaff: Number(resort.active_internal_count),
+        externalStaff: Number(resort.active_external_count),
+        totalBookings: Number(resort.total_bookings_count),
+        openBookings: Number(resort.open_bookings_count),
+      })),
+    });
+  }
+
+  function changeView(value: string) {
+    if (value !== "list" && value !== "grid") return;
+
+    setView(value);
+    table.setPageSize(value === "grid" ? 9 : 10);
+    table.setPageIndex(0);
   }
 
   return (
@@ -236,10 +230,7 @@ export function Resorts({ resorts }: { resorts: ResortRow[] }) {
               </SelectContent>
             </Select>
 
-            <Select
-              value={coverageFilter}
-              onValueChange={(value) => setColumnSelectFilter("coverage_status", value)}
-            >
+            <Select value={coverageFilter} onValueChange={(value) => setColumnSelectFilter("coverage_status", value)}>
               <SelectTrigger size="sm">
                 <span className="text-muted-foreground">Coverage:</span>
                 <SelectValue />
@@ -278,7 +269,7 @@ export function Resorts({ resorts }: { resorts: ResortRow[] }) {
             {selectedCount} selected / {table.getFilteredRowModel().rows.length} resorts
           </div>
 
-          <Tabs defaultValue="list">
+          <Tabs value={view} onValueChange={changeView}>
             <TabsList>
               <TabsTrigger value="list" aria-label="List view">
                 <Rows3 />
@@ -290,8 +281,9 @@ export function Resorts({ resorts }: { resorts: ResortRow[] }) {
           </Tabs>
         </div>
 
-        <ResortsTable table={table} />
+        {view === "list" ? <ResortsTable table={table} /> : <ResortsGrid table={table} />}
       </CardContent>
+      {table.getFilteredRowModel().rows.length ? <ResortsPagination table={table} /> : null}
     </Card>
   );
 }

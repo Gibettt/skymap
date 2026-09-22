@@ -50,6 +50,10 @@ CREATE TABLE IF NOT EXISTS resorts (
   contact_phone text,
   contact_email varchar(254),
   whatsapp_number varchar(32),
+  public_description text,
+  image_data bytea,
+  image_mime_type varchar(120),
+  image_file_name varchar(255),
   slug varchar(120) UNIQUE,
   status user_status NOT NULL DEFAULT 'active',
   created_at timestamptz NOT NULL DEFAULT now(),
@@ -124,7 +128,8 @@ INSERT INTO access_permissions (permission_key, name, description, application, 
   ('staff.bookings', 'Staff Bookings', 'View and manage bookings allowed by the staff portal.', 'staff', 120),
   ('staff.finance', 'Staff Finance', 'View commissions, rewards, and request payouts.', 'staff', 130),
   ('staff.sky_guide', 'Sky Guide', 'View and manage authorized resort sky events and settings.', 'staff', 140),
-  ('staff.notifications', 'Staff Notifications', 'View and manage staff notifications.', 'staff', 150)
+  ('staff.notifications', 'Staff Notifications', 'View and manage staff notifications.', 'staff', 150),
+  ('staff.resort_profile', 'Public Resort Profile', 'Manage the assigned resort content displayed on the public landing page.', 'staff', 160)
 ON CONFLICT (permission_key) DO UPDATE SET
   name = EXCLUDED.name,
   description = EXCLUDED.description,
@@ -151,7 +156,7 @@ FROM access_roles role
 JOIN access_permissions permission ON
   (role.slug = 'admin' AND permission.application = 'admin')
   OR (role.slug = 'internal' AND permission.permission_key IN (
-    'staff.bookings', 'staff.finance', 'staff.sky_guide', 'staff.notifications'
+    'staff.bookings', 'staff.finance', 'staff.sky_guide', 'staff.notifications', 'staff.resort_profile'
   ))
   OR (role.slug = 'external' AND permission.permission_key IN (
     'staff.bookings', 'staff.finance', 'staff.sky_guide', 'staff.notifications'
@@ -287,6 +292,8 @@ CREATE TABLE IF NOT EXISTS bookings (
   base_total_usd numeric(10,2) NOT NULL DEFAULT 0,
   service_charge_10_usd numeric(10,2) NOT NULL DEFAULT 0,
   gst_17_usd numeric(10,2) NOT NULL DEFAULT 0,
+  tax_label varchar(80) NOT NULL DEFAULT 'Tourism GST (TGST)',
+  tax_rate_percent numeric(5,2) NOT NULL DEFAULT 17.00 CHECK (tax_rate_percent BETWEEN 0 AND 100),
   invoice_total_usd numeric(10,2) NOT NULL DEFAULT 0,
   operation_share_50_usd numeric(10,2) NOT NULL DEFAULT 0,
   company_share_50_usd numeric(10,2) NOT NULL DEFAULT 0,
@@ -438,6 +445,8 @@ CREATE TABLE IF NOT EXISTS invoices (
   subtotal_usd numeric(12,2) NOT NULL CHECK (subtotal_usd >= 0),
   service_charge_usd numeric(12,2) NOT NULL DEFAULT 0 CHECK (service_charge_usd >= 0),
   tax_usd numeric(12,2) NOT NULL DEFAULT 0 CHECK (tax_usd >= 0),
+  tax_label varchar(80) NOT NULL DEFAULT 'Tourism GST (TGST)',
+  tax_rate_percent numeric(5,2) NOT NULL DEFAULT 17.00 CHECK (tax_rate_percent BETWEEN 0 AND 100),
   total_usd numeric(12,2) NOT NULL CHECK (total_usd > 0),
   line_items jsonb NOT NULL CHECK (jsonb_typeof(line_items) = 'array'),
   source_snapshot jsonb NOT NULL CHECK (jsonb_typeof(source_snapshot) = 'object'),
@@ -588,10 +597,26 @@ CREATE TABLE IF NOT EXISTS booking_reschedule_history (
   created_at timestamptz NOT NULL DEFAULT now()
 );
 
+CREATE TABLE IF NOT EXISTS sky_event_types (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  resort_id uuid NOT NULL REFERENCES resorts(id) ON DELETE CASCADE,
+  name varchar(80) NOT NULL CHECK (char_length(trim(name)) BETWEEN 1 AND 80),
+  slug varchar(80) NOT NULL CHECK (char_length(trim(slug)) BETWEEN 1 AND 80),
+  is_active boolean NOT NULL DEFAULT true,
+  created_by uuid REFERENCES users(id) ON DELETE SET NULL,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now(),
+  UNIQUE (resort_id, slug),
+  UNIQUE (resort_id, name)
+);
+
+CREATE INDEX IF NOT EXISTS idx_sky_event_types_active
+  ON sky_event_types(resort_id, is_active, name);
+
 CREATE TABLE IF NOT EXISTS sky_events (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   title text NOT NULL CHECK (char_length(title) <= 120),
-  event_type text NOT NULL CHECK (event_type IN ('astronomy', 'meteor', 'resort')),
+  event_type varchar(80) NOT NULL,
   starts_at timestamptz NOT NULL,
   ends_at timestamptz,
   description text NOT NULL DEFAULT '',
@@ -604,6 +629,9 @@ CREATE TABLE IF NOT EXISTS sky_events (
   capacity integer CHECK (capacity IS NULL OR capacity > 0),
   price_override_usd numeric(10,2) CHECK (price_override_usd IS NULL OR price_override_usd >= 0),
   image_url varchar(500),
+  image_data bytea,
+  image_mime_type varchar(120),
+  image_file_name varchar(255),
   status text NOT NULL DEFAULT 'published' CHECK (status IN ('draft', 'published', 'cancelled', 'sold_out')),
   is_published boolean NOT NULL DEFAULT true,
   created_by uuid REFERENCES users(id),

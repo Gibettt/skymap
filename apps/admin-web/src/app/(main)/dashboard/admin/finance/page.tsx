@@ -217,31 +217,31 @@ export default async function FinancePage() {
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="space-y-1">
-        <h1 className="text-3xl tracking-tight">SpaceCat ASTROTOURISM Finances</h1>
+      <div className="flex min-w-0 flex-col gap-1">
+        <h1 className="break-words text-xl tracking-tight sm:text-2xl lg:text-3xl">SpaceCat ASTROTOURISM Finances</h1>
         <p className="text-muted-foreground text-sm">{formattedDate}</p>
       </div>
 
       <Tabs defaultValue="30-days" className="flex flex-col gap-4">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-          <TabsList variant="line">
+          <TabsList className="w-full justify-start overflow-x-auto sm:w-auto" variant="line">
             <TabsTrigger value="30-days">Dashboard</TabsTrigger>
             <TabsTrigger value="12-months">Accounts</TabsTrigger>
             <TabsTrigger value="custom">Transactions</TabsTrigger>
           </TabsList>
 
-          <div className="flex flex-wrap items-center gap-3">
-            <div className="flex items-center gap-1.5 text-muted-foreground text-xs">
+          <div className="grid grid-cols-2 items-center gap-2 sm:flex sm:flex-wrap sm:gap-3">
+            <div className="col-span-2 flex items-center gap-1.5 text-muted-foreground text-xs sm:col-span-1">
               <RotateCw className="size-4" />
               <span>{updatedLabel}</span>
             </div>
-            <Button size="sm" variant="outline" asChild>
+            <Button className="w-full sm:w-auto" size="sm" variant="outline" asChild>
               <Link href="/dashboard/admin/pengaturan">
-                <Settings2 />
+                <Settings2 data-icon="inline-start" />
                 Settings
               </Link>
             </Button>
-            <Button size="sm" variant="outline" asChild>
+            <Button className="w-full sm:w-auto" size="sm" variant="outline" asChild>
               <a href="/api/finance/export">
                 <Download data-icon="inline-start" />
                 Export

@@ -25,6 +25,8 @@ export interface InvoiceRow {
   subtotal_usd: number;
   service_charge_usd: number;
   tax_usd: number;
+  tax_label: string;
+  tax_rate_percent: number;
   total_usd: number;
   line_items: InvoiceLineItem[];
   source_snapshot: Record<string, unknown>;
@@ -57,4 +59,6 @@ export interface PaymentWorkflowRow {
   base_total_usd?: number;
   service_charge_usd?: number;
   tax_usd?: number;
+  tax_label?: string;
+  tax_rate_percent?: number;
 }

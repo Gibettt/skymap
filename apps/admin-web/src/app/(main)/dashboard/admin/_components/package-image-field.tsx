@@ -25,6 +25,9 @@ export type PackageImageValue = File | null | undefined;
 interface PackageImageFieldProps {
   currentImageUrl?: string | null;
   onChange: (value: PackageImageValue) => void;
+  description?: string;
+  savedDescription?: string;
+  previewAlt?: string;
 }
 
 function formatFileSize(bytes: number) {
@@ -41,7 +44,13 @@ function validateImageFile(file: File) {
   return null;
 }
 
-export function PackageImageField({ currentImageUrl, onChange }: PackageImageFieldProps) {
+export function PackageImageField({
+  currentImageUrl,
+  onChange,
+  description = "JPG, PNG, or WEBP up to 2MB.",
+  savedDescription = "Saved to this package",
+  previewAlt = "Package preview",
+}: PackageImageFieldProps) {
   const inputId = useId();
   const inputRef = useRef<HTMLInputElement>(null);
   const [inputKey, setInputKey] = useState(0);
@@ -111,12 +120,12 @@ export function PackageImageField({ currentImageUrl, onChange }: PackageImageFie
         <Attachment className="w-fit">
           <AttachmentMedia variant="image">
             {/* biome-ignore lint/performance/noImgElement: preview may be a local blob URL */}
-            <img src={visibleUrl} alt="Package preview" />
+            <img src={visibleUrl} alt={previewAlt} />
           </AttachmentMedia>
           <AttachmentContent>
             <AttachmentTitle>{selectedFile ? selectedFile.name : "Current image"}</AttachmentTitle>
             <AttachmentDescription>
-              {selectedFile ? formatFileSize(selectedFile.size) : "Saved to this package"}
+              {selectedFile ? formatFileSize(selectedFile.size) : savedDescription}
             </AttachmentDescription>
           </AttachmentContent>
           <AttachmentActions>
@@ -135,7 +144,7 @@ export function PackageImageField({ currentImageUrl, onChange }: PackageImageFie
         </Button>
       )}
 
-      <FieldDescription>JPG, PNG, or WEBP up to 2MB.</FieldDescription>
+      <FieldDescription>{description}</FieldDescription>
       <FieldError errors={error ? [{ message: error }] : undefined} />
     </Field>
   );

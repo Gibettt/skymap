@@ -124,7 +124,7 @@ export function Tasks({ data }: TasksProps) {
           )}
         </TableBody>
       </Table>
-      <div className="flex flex-col gap-3 border-t px-4 py-4 md:flex-row md:items-center md:justify-between">
+      <div className="flex flex-col gap-3 border-t px-5 py-5 sm:px-6 md:flex-row md:items-center md:justify-between">
         <div className="text-muted-foreground text-sm">
           {table.getFilteredSelectedRowModel().rows.length} of {table.getFilteredRowModel().rows.length} row(s)
           selected.

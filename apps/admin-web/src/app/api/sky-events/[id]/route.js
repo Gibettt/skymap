@@ -6,6 +6,7 @@ import { emit, EventTypes } from '@ephemeris/events';
 import { normalizeSkyEventInput } from '@ephemeris/sky';
 
 import { mapSkyEvent, selectSkyEvent, validateRelations } from '../_lib/sky-event';
+import { assertAvailableEventType } from '../_lib/event-type';
 
 function mergeInput(before, body) {
   return normalizeSkyEventInput({
@@ -59,6 +60,7 @@ export async function PATCH(request, { params }) {
         packageId: input.packageId,
         requireActivePackage: packageChanged,
       });
+      await assertAvailableEventType(client, resortId, input.eventType);
 
       const { rows } = await client.query(
         `UPDATE sky_events SET title = $2, event_type = $3, starts_at = $4, ends_at = $5,

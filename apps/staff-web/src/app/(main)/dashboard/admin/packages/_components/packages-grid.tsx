@@ -14,13 +14,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import {
-  Empty,
-  EmptyDescription,
-  EmptyHeader,
-  EmptyMedia,
-  EmptyTitle,
-} from "@/components/ui/empty";
+import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty";
 import type { DataTableFeatures } from "@/lib/data-table-features";
 import { getInitials } from "@/lib/utils";
 
@@ -28,7 +22,6 @@ import type { PackageRow } from "../../_lib/admin-data";
 import { formatDate, formatUsd, titleCase } from "../../_lib/format";
 import { PackageActions } from "./package-actions";
 import type { PackageResortOption } from "./packages-columns";
-import { PackagesPagination } from "./packages-pagination";
 
 interface PackagesGridProps {
   table: ReactTable<DataTableFeatures, PackageRow>;
@@ -39,7 +32,7 @@ export function PackagesGrid({ table, resorts }: PackagesGridProps) {
   const rows = table.getRowModel().rows;
 
   return (
-    <div className="flex flex-1 flex-col gap-4">
+    <div className="flex flex-1 flex-col">
       {rows.length ? (
         <div className="grid gap-4 px-4 sm:grid-cols-2 xl:grid-cols-3">
           {rows.map((row) => {
@@ -102,9 +95,7 @@ export function PackagesGrid({ table, resorts }: PackagesGridProps) {
                     </div>
                     <div className="flex min-w-0 flex-col gap-0.5">
                       <dt className="text-muted-foreground text-xs">Billing</dt>
-                      <dd className="truncate font-medium">
-                        {pkg.is_chargeable ? "Chargeable" : "Complimentary"}
-                      </dd>
+                      <dd className="truncate font-medium">{pkg.is_chargeable ? "Chargeable" : "Complimentary"}</dd>
                     </div>
                   </dl>
                 </CardContent>
@@ -127,8 +118,6 @@ export function PackagesGrid({ table, resorts }: PackagesGridProps) {
           </EmptyHeader>
         </Empty>
       )}
-
-      <PackagesPagination table={table} />
     </div>
   );
 }

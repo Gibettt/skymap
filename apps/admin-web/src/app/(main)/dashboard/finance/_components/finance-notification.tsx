@@ -16,7 +16,7 @@ export function FinanceNotification({
   actionHref?: string;
 }) {
   return (
-    <Item className="rounded-xl" variant="outline">
+    <Item className="flex-col items-stretch rounded-xl sm:flex-row sm:items-center" variant="outline">
       <ItemMedia variant="icon">
         <TrendingUp />
       </ItemMedia>
@@ -24,13 +24,13 @@ export function FinanceNotification({
         <ItemTitle>{title}</ItemTitle>
         <ItemDescription>{description}</ItemDescription>
       </ItemContent>
-      <ItemActions>
+      <ItemActions className="w-full sm:w-auto">
         {actionHref ? (
-          <Button size="sm" variant="outline" asChild>
+          <Button className="w-full sm:w-auto" size="sm" variant="outline" asChild>
             <Link href={actionHref}>{actionLabel}</Link>
           </Button>
         ) : (
-          <Button size="sm" variant="outline">
+          <Button className="w-full sm:w-auto" size="sm" variant="outline">
             {actionLabel}
           </Button>
         )}

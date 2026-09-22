@@ -3,12 +3,15 @@
 import { useRef, useState, useEffect, useCallback } from "react";
 import Image from "next/image";
 
+const AUTOPLAY_INTERVAL_MS = 3000;
+
 export default function ClubFauneSlider({ items = [] }) {
   const trackRef = useRef(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(true);
   const [activeCount, setActiveCount] = useState("2-6");
   const [progressPercent, setProgressPercent] = useState(33);
+  const [isPaused, setIsPaused] = useState(false);
 
   const totalSlides = items.length || 6;
 
@@ -55,18 +58,50 @@ export default function ClubFauneSlider({ items = [] }) {
     }
   }, [updateScrollState]);
 
-  const scrollDirection = (direction) => {
-    if (!trackRef.current) return;
-    const cardWidth =
-      typeof window !== "undefined" && window.innerWidth >= 992 ? 460 : 360;
-    trackRef.current.scrollBy({
-      left: direction * cardWidth,
+  const scrollDirection = useCallback((direction, wrapAtEnd = false) => {
+    const track = trackRef.current;
+    if (!track) return;
+
+    const firstCard = track.querySelector(".experience");
+    const gap = Number.parseFloat(window.getComputedStyle(track).columnGap) || 0;
+    const cardWidth = firstCard?.getBoundingClientRect().width || (window.innerWidth >= 992 ? 440 : 340);
+    const maxScroll = Math.max(track.scrollWidth - track.clientWidth, 0);
+    const reachedEnd = track.scrollLeft >= maxScroll - 15;
+
+    if (direction > 0 && wrapAtEnd && reachedEnd) {
+      track.scrollTo({ left: 0, behavior: "smooth" });
+      return;
+    }
+
+    track.scrollBy({
+      left: direction * (cardWidth + gap),
       behavior: "smooth",
     });
-  };
+  }, []);
+
+  useEffect(() => {
+    if (isPaused || totalSlides <= 1) return;
+
+    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+    if (reducedMotion.matches) return;
+
+    const autoplayTimer = window.setInterval(() => {
+      scrollDirection(1, true);
+    }, AUTOPLAY_INTERVAL_MS);
+
+    return () => window.clearInterval(autoplayTimer);
+  }, [isPaused, scrollDirection, totalSlides]);
 
   return (
-    <div className="experiences-wrapper">
+    <div
+      className="experiences-wrapper"
+      onMouseEnter={() => setIsPaused(true)}
+      onMouseLeave={() => setIsPaused(false)}
+      onFocusCapture={() => setIsPaused(true)}
+      onBlurCapture={(event) => {
+        if (!event.currentTarget.contains(event.relatedTarget)) setIsPaused(false);
+      }}
+    >
       {/* Bottom pagination slider indicator (rendered at bottom via column-reverse on desktop) */}
       <div className="pagination-slick-slider">
         <span className="slider-counter desktop">{activeCount}</span>

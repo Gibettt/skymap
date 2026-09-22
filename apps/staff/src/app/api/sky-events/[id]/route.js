@@ -4,6 +4,8 @@ import { uuidSchema } from '@ephemeris/db/validators/common';
 import { updateSkyEventSchema } from '@ephemeris/db/validators/sky-event';
 import { normalizeSkyEventInput } from '@ephemeris/sky';
 
+import { assertAvailableEventType } from '../_lib/event-type';
+
 export async function PATCH(request, { params }) {
   try {
     await assertSameOrigin(request);
@@ -40,6 +42,7 @@ export async function PATCH(request, { params }) {
         visibility: body.visibility ?? before.rows[0].visibility,
         isPublished: body.isPublished ?? before.rows[0].is_published,
       });
+      await assertAvailableEventType(client, user.resort_id, input.eventType);
       if (input.packageId) {
         const pkg = await client.query('SELECT id FROM packages WHERE id = $1 AND resort_id = $2 AND is_active = true', [input.packageId, user.resort_id]);
         if (!pkg.rows[0]) throw new ApiError(400, 'Package is not available for this resort');

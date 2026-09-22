@@ -2,8 +2,7 @@
 
 import * as React from "react";
 
-import { useRouter } from "next/navigation";
-
+import { downloadExcelReport } from "@ephemeris/export";
 import {
   type ColumnFiltersState,
   type ColumnVisibilityState,
@@ -11,17 +10,10 @@ import {
   type SortingState,
   useTable,
 } from "@tanstack/react-table";
-import { Download, RefreshCw, Search, SlidersHorizontal } from "lucide-react";
+import { Download, Search, SlidersHorizontal } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardAction,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -33,15 +25,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group";
 import { Kbd } from "@/components/ui/kbd";
-import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Spinner } from "@/components/ui/spinner";
+import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { dataTableFeatures } from "@/lib/data-table-features";
 
 import type { AuditLogRow } from "../../_lib/admin-data";
@@ -62,18 +46,8 @@ function uniqueOptions(values: string[]) {
   return ["All", ...Array.from(new Set(values.filter(Boolean))).sort()];
 }
 
-function csvCell(value: unknown) {
-  let text = "";
-  if (typeof value === "string") text = value;
-  else if (value !== null && value !== undefined) text = JSON.stringify(value) ?? String(value);
-  const safeText = /^[=+\-@\t\r]/.test(text) ? `'${text}` : text;
-  return `"${safeText.replaceAll('"', '""')}"`;
-}
-
 export function Logs({ logs }: { logs: AuditLogRow[] }) {
-  const router = useRouter();
   const searchInputRef = React.useRef<HTMLInputElement>(null);
-  const [refreshPending, startRefresh] = React.useTransition();
   const [sorting, setSorting] = React.useState<SortingState>([{ id: "event_time", desc: true }]);
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
   const [columnVisibility, setColumnVisibility] = React.useState<ColumnVisibilityState>({
@@ -129,44 +103,42 @@ export function Logs({ logs }: { logs: AuditLogRow[] }) {
     table.setPageIndex(0);
   }
 
-  function exportLogs() {
-    const header = [
-      "Log ID",
-      "Event time",
-      "Actor ID",
-      "Actor name",
-      "Actor email",
-      "Action",
-      "Entity type",
-      "Entity ID",
-      "IP address",
-      "User agent",
-      "Before snapshot",
-      "After snapshot",
-    ];
-    const rows = table.getFilteredRowModel().rows.map(({ original }) => [
-      original.id,
-      new Date(original.created_at).toISOString(),
-      original.actor_id,
-      original.actor_name ?? "System",
-      original.actor_email,
-      original.action,
-      original.entity_type,
-      original.entity_id,
-      original.ip_address,
-      original.user_agent,
-      original.before_data,
-      original.after_data,
-    ]);
-    const csv = [header, ...rows].map((row) => row.map(csvCell).join(",")).join("\n");
-    const url = URL.createObjectURL(new Blob([`\uFEFF${csv}`], { type: "text/csv;charset=utf-8" }));
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = "ephemeris-logs.csv";
-    document.body.append(link);
-    link.click();
-    link.remove();
-    URL.revokeObjectURL(url);
+  async function exportLogs() {
+    const rows = table.getFilteredRowModel().rows.map(({ original }) => original);
+    await downloadExcelReport({
+      title: "SpaceCat ASTROTOURISM — Audit Logs",
+      subtitle: "Filtered authentication and data-change events",
+      filename: `ephemeris-logs-${new Date().toISOString().slice(0, 10)}.xlsx`,
+      sheetName: "Audit Logs",
+      columns: [
+        { key: "id", header: "Log ID", width: 38 },
+        { key: "eventTime", header: "Event time", width: 21, kind: "datetime" },
+        { key: "actorId", header: "Actor ID", width: 38 },
+        { key: "actorName", header: "Actor name", width: 24 },
+        { key: "actorEmail", header: "Actor email", width: 30 },
+        { key: "action", header: "Action", width: 26 },
+        { key: "entityType", header: "Entity type", width: 20 },
+        { key: "entityId", header: "Entity ID", width: 38 },
+        { key: "ipAddress", header: "IP address", width: 18 },
+        { key: "userAgent", header: "User agent", width: 48 },
+        { key: "before", header: "Before snapshot", width: 48 },
+        { key: "after", header: "After snapshot", width: 48 },
+      ],
+      rows: rows.map((log) => ({
+        id: log.id,
+        eventTime: log.created_at,
+        actorId: log.actor_id,
+        actorName: log.actor_name ?? "System",
+        actorEmail: log.actor_email,
+        action: formatLogAction(log.action),
+        entityType: formatLogEntity(log.entity_type),
+        entityId: log.entity_id,
+        ipAddress: log.ip_address,
+        userAgent: log.user_agent,
+        before: log.before_data == null ? "" : JSON.stringify(log.before_data),
+        after: log.after_data == null ? "" : JSON.stringify(log.after_data),
+      })),
+    });
   }
 
   return (
@@ -221,15 +193,6 @@ export function Logs({ logs }: { logs: AuditLogRow[] }) {
             </DropdownMenuContent>
           </DropdownMenu>
 
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={refreshPending}
-            onClick={() => startRefresh(() => router.refresh())}
-          >
-            {refreshPending ? <Spinner data-icon="inline-start" /> : <RefreshCw data-icon="inline-start" />}
-            {refreshPending ? "Refreshing..." : "Refresh"}
-          </Button>
           <Button variant="outline" size="sm" onClick={exportLogs} disabled={!logs.length}>
             <Download data-icon="inline-start" />
             Export

@@ -33,11 +33,12 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 import { SkyEventDialog } from "./sky-event-dialog";
+import type { SkyEventImageValue } from "./sky-event-image-field";
 
 export type SkyEvent = {
   id: string;
   title: string;
-  eventType: "astronomy" | "meteor" | "resort";
+  eventType: string;
   startsAt: string;
   endsAt: string | null;
   description: string;
@@ -56,6 +57,7 @@ export type SkyEvent = {
 };
 
 export type SkyPackage = { id: string; name: string };
+export type SkyEventType = { id: string; name: string; slug: string; isSystem: boolean };
 
 type SkyLocation = {
   name: string;
@@ -67,7 +69,7 @@ type SkyLocation = {
 
 function titleCase(value: string) {
   return value
-    .split("_")
+    .split(/[_-]+/)
     .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
     .join(" ");
 }
@@ -81,6 +83,7 @@ function statusVariant(status: SkyEvent["status"]) {
 export function SkyEvents({ readOnly }: { readOnly: boolean }) {
   const [events, setEvents] = useState<SkyEvent[]>([]);
   const [packages, setPackages] = useState<SkyPackage[]>([]);
+  const [eventTypes, setEventTypes] = useState<SkyEventType[]>([]);
   const [location, setLocation] = useState<SkyLocation>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -90,23 +93,28 @@ export function SkyEvents({ readOnly }: { readOnly: boolean }) {
   const [deleting, setDeleting] = useState<SkyEvent | null>(null);
   const [saving, setSaving] = useState(false);
   const [syncing, setSyncing] = useState(false);
+  const [creatingType, setCreatingType] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const [eventsResponse, packagesResponse, settingsResponse] = await Promise.all([
+      const [eventsResponse, packagesResponse, settingsResponse, typesResponse] = await Promise.all([
         fetch("/api/sky-events", { cache: "no-store" }),
         fetch("/api/packages", { cache: "no-store" }),
         fetch("/api/sky-settings", { cache: "no-store" }),
+        fetch("/api/sky-event-types", { cache: "no-store" }),
       ]);
-      const [eventPayload, packagePayload, settingsPayload] = await Promise.all([
+      const [eventPayload, packagePayload, settingsPayload, typesPayload] = await Promise.all([
         eventsResponse.json(),
         packagesResponse.json(),
         settingsResponse.json(),
+        typesResponse.json(),
       ]);
       if (!eventsResponse.ok) throw new Error(eventPayload.error ?? "Unable to load sky events");
+      if (!typesResponse.ok) throw new Error(typesPayload.error ?? "Unable to load event types");
       setEvents(eventPayload.events ?? []);
+      setEventTypes(typesPayload.types ?? []);
       if (packagesResponse.ok) setPackages(packagePayload.packages ?? []);
       if (settingsResponse.ok) setLocation(settingsPayload.location ?? null);
     } catch (loadError) {
@@ -129,6 +137,13 @@ export function SkyEvents({ readOnly }: { readOnly: boolean }) {
     [location],
   );
 
+  const eventTypeNames = useMemo(
+    () => new Map(eventTypes.map((type) => [type.slug, type.name])),
+    [eventTypes],
+  );
+
+  const eventTypeLabel = (slug: string) => eventTypeNames.get(slug) ?? titleCase(slug);
+
   const openCreate = () => {
     setEditing(null);
     setFormOpen(true);
@@ -139,7 +154,7 @@ export function SkyEvents({ readOnly }: { readOnly: boolean }) {
     setFormOpen(true);
   };
 
-  const save = async (payload: Record<string, unknown>) => {
+  const save = async (payload: Record<string, unknown>, image: SkyEventImageValue) => {
     setSaving(true);
     try {
       const response = await fetch(editing ? `/api/sky-events/${editing.id}` : "/api/sky-events", {
@@ -149,6 +164,26 @@ export function SkyEvents({ readOnly }: { readOnly: boolean }) {
       });
       const result = await response.json();
       if (!response.ok) throw new Error(result.error ?? "Unable to save sky event");
+
+      const eventId = editing?.id ?? result.event?.id;
+      if (eventId && image !== undefined) {
+        try {
+          let imageResponse: Response;
+          if (image instanceof File) {
+            const formData = new FormData();
+            formData.set("image", image);
+            imageResponse = await fetch(`/api/sky-events/${eventId}/image`, { method: "PUT", body: formData });
+          } else {
+            imageResponse = await fetch(`/api/sky-events/${eventId}/image`, { method: "DELETE" });
+          }
+          if (!imageResponse.ok) {
+            const imageResult = await imageResponse.json().catch(() => ({}));
+            throw new Error(imageResult.error ?? "Unable to save event image");
+          }
+        } catch (imageError) {
+          toast.error(`Event saved, but image failed: ${imageError instanceof Error ? imageError.message : "Unknown error"}`);
+        }
+      }
       toast.success(editing ? "Sky event updated" : "Sky event created");
       setFormOpen(false);
       setEditing(null);
@@ -157,6 +192,28 @@ export function SkyEvents({ readOnly }: { readOnly: boolean }) {
       toast.error(saveError instanceof Error ? saveError.message : "Unable to save sky event");
     } finally {
       setSaving(false);
+    }
+  };
+
+  const createEventType = async (name: string) => {
+    setCreatingType(true);
+    try {
+      const response = await fetch("/api/sky-event-types", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ name }),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error ?? "Unable to create event type");
+      const created = result.type as SkyEventType;
+      setEventTypes((current) => [...current, created].sort((left, right) => left.name.localeCompare(right.name)));
+      toast.success(`Event type “${created.name}” created`);
+      return created;
+    } catch (createError) {
+      toast.error(createError instanceof Error ? createError.message : "Unable to create event type");
+      throw createError;
+    } finally {
+      setCreatingType(false);
     }
   };
 
@@ -240,7 +297,7 @@ export function SkyEvents({ readOnly }: { readOnly: boolean }) {
             <TableRow key={event.id}>
               <TableCell className="pl-4">
                 <div className="font-medium">{event.title}</div>
-                <div className="text-muted-foreground text-xs">{titleCase(event.eventType)}</div>
+                <div className="text-muted-foreground text-xs">{eventTypeLabel(event.eventType)}</div>
               </TableCell>
               <TableCell>
                 <div>{format(new Date(event.startsAt), "dd MMM yyyy")}</div>
@@ -327,8 +384,8 @@ export function SkyEvents({ readOnly }: { readOnly: boolean }) {
         ) : null}
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-3">
-        <Card size="sm">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4">
+        <Card size="sm" className="col-span-2 sm:col-span-1">
           <CardHeader>
             <CardDescription>Upcoming events</CardDescription>
             <CardTitle className="text-2xl">{events.length}</CardTitle>
@@ -361,8 +418,11 @@ export function SkyEvents({ readOnly }: { readOnly: boolean }) {
         onOpenChange={setFormOpen}
         event={editing}
         packages={packages}
+        eventTypes={eventTypes}
         observationSpots={spots}
         saving={saving}
+        creatingType={creatingType}
+        onCreateType={createEventType}
         onSave={save}
       />
 
@@ -371,14 +431,13 @@ export function SkyEvents({ readOnly }: { readOnly: boolean }) {
           <DialogHeader>
             <DialogTitle>{viewing?.title}</DialogTitle>
             <DialogDescription>
-              {viewing ? `${titleCase(viewing.eventType)} · ${format(new Date(viewing.startsAt), "PPP 'at' p")}` : ""}
+              {viewing ? `${eventTypeLabel(viewing.eventType)} · ${format(new Date(viewing.startsAt), "PPP 'at' p")}` : ""}
             </DialogDescription>
           </DialogHeader>
           {viewing ? (
             <div className="grid gap-4 text-sm">
               <div className="flex flex-wrap gap-2">
                 <Badge variant={statusVariant(viewing.status)}>{titleCase(viewing.status)}</Badge>
-                <Badge variant="outline">{titleCase(viewing.visibility)}</Badge>
               </div>
               <p className="text-muted-foreground">{viewing.description || "No description provided."}</p>
               <dl className="grid grid-cols-[8rem_1fr] gap-x-4 gap-y-2">

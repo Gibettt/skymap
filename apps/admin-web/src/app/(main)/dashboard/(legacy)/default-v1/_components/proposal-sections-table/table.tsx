@@ -210,7 +210,7 @@ export function ProposalSectionsTable({ data: initialData }: { data: ProposalSec
             </Table>
           </DragDropProvider>
         </div>
-        <div className="flex items-center justify-between px-4">
+        <div className="flex items-center justify-between px-5 py-5 sm:px-6">
           <div className="hidden flex-1 text-muted-foreground text-sm lg:flex">
             {table.getFilteredSelectedRowModel().rows.length} of {table.getFilteredRowModel().rows.length} row(s)
             selected.

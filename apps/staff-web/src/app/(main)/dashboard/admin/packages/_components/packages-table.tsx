@@ -6,11 +6,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import type { DataTableFeatures } from "@/lib/data-table-features";
 
 import type { PackageRow } from "../../_lib/admin-data";
-import { PackagesPagination } from "./packages-pagination";
 
 export function PackagesTable({ table }: { table: ReactTable<DataTableFeatures, PackageRow> }) {
   return (
-    <div className="flex flex-1 flex-col gap-4">
+    <div className="flex flex-1 flex-col">
       <div>
         <Table className="**:data-[slot='table-cell']:px-4 **:data-[slot='table-head']:px-4">
           <TableHeader className="[&_tr]:border-t">
@@ -46,8 +45,6 @@ export function PackagesTable({ table }: { table: ReactTable<DataTableFeatures, 
           </TableBody>
         </Table>
       </div>
-
-      <PackagesPagination table={table} />
     </div>
   );
 }

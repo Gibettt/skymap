@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Plus, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -16,17 +17,17 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 
-import type { SkyEvent, SkyPackage } from "./sky-events";
+import type { SkyEvent, SkyEventType, SkyPackage } from "./sky-events";
+import { SkyEventImageField, type SkyEventImageValue } from "./sky-event-image-field";
 
 type EventForm = {
   title: string;
-  eventType: "astronomy" | "meteor" | "resort";
+  eventType: string;
   startsAt: string;
   endsAt: string;
   description: string;
   sourceName: string;
   sourceUrl: string;
-  imageUrl: string;
   packageId: string;
   observationSpot: string;
   capacity: string;
@@ -53,7 +54,6 @@ function initialForm(event?: SkyEvent | null): EventForm {
     description: event?.description ?? "",
     sourceName: event?.sourceName ?? "",
     sourceUrl: event?.sourceUrl ?? "",
-    imageUrl: event?.imageUrl ?? "",
     packageId: event?.packageId ?? "none",
     observationSpot: event?.observationSpot ?? "",
     capacity: event?.capacity == null ? "" : String(event.capacity),
@@ -68,22 +68,36 @@ export function SkyEventDialog({
   onOpenChange,
   event,
   packages,
+  eventTypes,
   observationSpots,
   saving,
+  creatingType,
+  onCreateType,
   onSave,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   event: SkyEvent | null;
   packages: SkyPackage[];
+  eventTypes: SkyEventType[];
   observationSpots: string[];
   saving: boolean;
-  onSave: (payload: Record<string, unknown>) => Promise<void>;
+  creatingType: boolean;
+  onCreateType: (name: string) => Promise<SkyEventType>;
+  onSave: (payload: Record<string, unknown>, image: SkyEventImageValue) => Promise<void>;
 }) {
   const [form, setForm] = useState<EventForm>(() => initialForm(event));
+  const [image, setImage] = useState<SkyEventImageValue>(undefined);
+  const [addingType, setAddingType] = useState(false);
+  const [newTypeName, setNewTypeName] = useState("");
 
   useEffect(() => {
-    if (open) setForm(initialForm(event));
+    if (open) {
+      setForm(initialForm(event));
+      setAddingType(false);
+      setNewTypeName("");
+      setImage(undefined);
+    }
   }, [event, open]);
 
   const update = <Key extends keyof EventForm>(key: Key, value: EventForm[Key]) => {
@@ -100,7 +114,6 @@ export function SkyEventDialog({
       description: form.description,
       sourceName: form.sourceName,
       sourceUrl: form.sourceUrl,
-      imageUrl: form.imageUrl,
       packageId: form.packageId === "none" ? null : form.packageId,
       observationSpot: form.observationSpot,
       capacity: form.capacity ? Number(form.capacity) : null,
@@ -108,7 +121,19 @@ export function SkyEventDialog({
       status: form.status,
       visibility: form.visibility,
       isPublished: form.status === "published",
-    });
+    }, image);
+  };
+
+  const addEventType = async () => {
+    if (!newTypeName.trim()) return;
+    try {
+      const created = await onCreateType(newTypeName);
+      update("eventType", created.slug);
+      setNewTypeName("");
+      setAddingType(false);
+    } catch {
+      // The parent displays the API error and keeps this input open for correction.
+    }
   };
 
   let submitLabel = event ? "Save changes" : "Create event";
@@ -133,40 +158,55 @@ export function SkyEventDialog({
                 onChange={(e) => update("title", e.target.value)}
               />
             </Field>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <Field>
+            <Field>
+              <div className="flex items-center justify-between gap-2">
                 <FieldLabel htmlFor="sky-event-type">Event type</FieldLabel>
-                <Select
-                  value={form.eventType}
-                  onValueChange={(value) => update("eventType", value as EventForm["eventType"])}
-                >
+                <Button type="button" variant="ghost" size="xs" onClick={() => setAddingType((current) => !current)}>
+                  {addingType ? <X /> : <Plus />}
+                  {addingType ? "Cancel" : "Add type"}
+                </Button>
+              </div>
+              {addingType ? (
+                <div className="flex gap-2">
+                  <Input
+                    autoFocus
+                    value={newTypeName}
+                    maxLength={80}
+                    placeholder="e.g. Lunar eclipse"
+                    aria-label="New event type name"
+                    onChange={(e) => setNewTypeName(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        void addEventType();
+                      }
+                    }}
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    disabled={!newTypeName.trim() || creatingType}
+                    onClick={() => void addEventType()}
+                  >
+                    {creatingType ? "Adding…" : "Add"}
+                  </Button>
+                </div>
+              ) : (
+                <Select value={form.eventType} onValueChange={(value) => update("eventType", value)}>
                   <SelectTrigger id="sky-event-type" className="w-full">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="astronomy">Astronomy</SelectItem>
-                    <SelectItem value="meteor">Meteor</SelectItem>
-                    <SelectItem value="resort">Resort</SelectItem>
+                    {eventTypes.map((type) => (
+                      <SelectItem key={type.id} value={type.slug}>
+                        {type.name}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
-              </Field>
-              <Field>
-                <FieldLabel htmlFor="sky-visibility">Visibility</FieldLabel>
-                <Select
-                  value={form.visibility}
-                  onValueChange={(value) => update("visibility", value as EventForm["visibility"])}
-                >
-                  <SelectTrigger id="sky-visibility" className="w-full">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="both">Both hemispheres</SelectItem>
-                    <SelectItem value="north">Northern hemisphere</SelectItem>
-                    <SelectItem value="south">Southern hemisphere</SelectItem>
-                  </SelectContent>
-                </Select>
-              </Field>
-            </div>
+              )}
+              <FieldDescription>New event types are available to this resort only.</FieldDescription>
+            </Field>
             <div className="grid gap-4 sm:grid-cols-2">
               <Field>
                 <FieldLabel htmlFor="sky-start">Starts at</FieldLabel>
@@ -291,17 +331,7 @@ export function SkyEventDialog({
                 />
               </Field>
             </div>
-            <Field>
-              <FieldLabel htmlFor="sky-image-url">Image URL</FieldLabel>
-              <Input
-                id="sky-image-url"
-                type="url"
-                value={form.imageUrl}
-                maxLength={500}
-                onChange={(e) => update("imageUrl", e.target.value)}
-              />
-              <FieldDescription>Optional public HTTP or HTTPS image.</FieldDescription>
-            </Field>
+            <SkyEventImageField currentImageUrl={event?.imageUrl} value={image} onChange={setImage} />
           </FieldGroup>
         </form>
         <DialogFooter showCloseButton>

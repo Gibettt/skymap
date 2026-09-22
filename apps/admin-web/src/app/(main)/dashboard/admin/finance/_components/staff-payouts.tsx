@@ -79,12 +79,12 @@ export function StaffPayouts({ payouts }: { payouts: PayoutRow[] }) {
 
   return (
     <Card id="payouts" className="scroll-mt-4">
-      <CardHeader className="border-b">
+      <CardHeader className="border-b has-data-[slot=card-action]:grid-cols-1 sm:has-data-[slot=card-action]:grid-cols-[1fr_auto]">
         <CardTitle>Staff Payout Queue</CardTitle>
         <CardDescription>
           Validate requests here, move them to processing, and confirm payment only after the transfer succeeds.
         </CardDescription>
-        <CardAction className="flex items-center gap-2">
+        <CardAction className="col-start-1 row-start-auto mt-2 flex items-center gap-2 sm:col-start-2 sm:row-span-2 sm:row-start-1 sm:mt-0">
           <Badge variant={openCount ? "secondary" : "outline"}>{openCount} open</Badge>
           <Badge variant="outline">{payouts.length} total</Badge>
         </CardAction>

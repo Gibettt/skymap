@@ -20,12 +20,14 @@ function contactLinks(resort) {
 
 async function loadResort(slug) {
   const resortResult = await query(
-    `SELECT id, name, code, slug, location, contact_email, whatsapp_number, timezone
+    `SELECT id, name, code, slug, location, contact_email, whatsapp_number, timezone,
+            public_description, image_data IS NOT NULL AS has_image
      FROM resorts WHERE slug = $1 AND status = 'active' LIMIT 1`,
     [slug]
   );
-  const resort = resortResult.rows[0];
-  if (!resort) return null;
+  const resortRow = resortResult.rows[0];
+  if (!resortRow) return null;
+  const resort = { ...resortRow, has_image: Number(resortRow.has_image) === 1 };
 
   const packageResult = await query(
     `SELECT id, name, package_type, experience_type, location, description, schedule,
@@ -45,6 +47,7 @@ async function loadResort(slug) {
   const eventResult = await query(
     `SELECT se.id, se.title, se.event_type, se.starts_at, se.ends_at, se.description,
             se.observation_spot, se.capacity, se.price_override_usd, se.image_url, se.status,
+            se.image_data IS NOT NULL AS has_image,
             p.name AS package_name, p.adult_price_usd
      FROM sky_events se
      LEFT JOIN packages p ON p.id = se.package_id AND p.is_active = true
@@ -59,11 +62,22 @@ async function loadResort(slug) {
   return {
     resort,
     window,
-    events: eventResult.rows,
-    packages: packageResult.rows.map((pkg) => ({
-      ...pkg,
-      image_url: pkg.has_image ? `/api/packages/${pkg.id}/image` : null,
-    })),
+    events: eventResult.rows.map((event) => {
+      const hasImage = Number(event.has_image) === 1;
+      return {
+        ...event,
+        has_image: hasImage,
+        image_url: hasImage ? `/api/sky-events/${event.id}/image` : event.image_url,
+      };
+    }),
+    packages: packageResult.rows.map((pkg) => {
+      const hasImage = Number(pkg.has_image) === 1;
+      return {
+        ...pkg,
+        has_image: hasImage,
+        image_url: hasImage ? `/api/packages/${pkg.id}/image` : null,
+      };
+    }),
   };
 }
 
@@ -84,7 +98,9 @@ export default async function ResortLandingPage({ params }) {
   const { resort, packages, events, window } = data;
   const contacts = contactLinks(resort);
   const primaryContact = contacts.whatsapp || contacts.email || '#experiences';
-  const heroImage = packages.find((pkg) => pkg.image_url)?.image_url || '/stargazing-assets/experience-3.jpg';
+  const heroImage = resort.has_image
+    ? `/api/resorts/${encodeURIComponent(resort.slug)}/image`
+    : packages.find((pkg) => pkg.image_url)?.image_url || '/stargazing-assets/experience-3.jpg';
 
   return (
     <main className="stargazing-page">
@@ -115,14 +131,14 @@ export default async function ResortLandingPage({ params }) {
         <div className="stargazing-hero-copy">
           <p className="stargazing-kicker">{resort.location} | Exclusive resort experiences</p>
           <h1>Stargazing at {resort.name}</h1>
-          <p>Explore packages, exact pricing, and astronomy experiences available specifically at this resort.</p>
+          <p>{resort.public_description || 'Explore packages, exact pricing, and astronomy experiences available specifically at this resort.'}</p>
           <div className="stargazing-actions">
             <a href={primaryContact} className="stargazing-button" target={contacts.whatsapp ? '_blank' : undefined} rel={contacts.whatsapp ? 'noopener noreferrer' : undefined}>Contact resort</a>
             <a href="#experiences" className="stargazing-button secondary">View experiences</a>
           </div>
         </div>
         <div className="stargazing-hero-image">
-          <Image src={heroImage} alt={`Stargazing at ${resort.name}`} fill priority sizes="100vw" />
+          <Image src={heroImage} alt={`Stargazing at ${resort.name}`} fill priority sizes="100vw" unoptimized={Boolean(resort.has_image)} />
         </div>
         <div className="stargazing-hero-details">
           <span>{resort.name}</span><span>{resort.location}</span><span>{packages.length} available packages</span><span>Resort reservation required</span>

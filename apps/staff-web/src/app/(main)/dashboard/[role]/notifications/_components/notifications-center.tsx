@@ -175,8 +175,8 @@ export function NotificationsCenter({ role, readOnly }: { role: StaffRole; readO
               <ItemMedia variant="icon" className="pointer-events-none relative rounded-lg border bg-background p-2">
                 <Bell className="size-4" />
               </ItemMedia>
-              <ItemContent className="pointer-events-none relative">
-                <ItemTitle>
+              <ItemContent className="pointer-events-none relative min-w-0">
+                <ItemTitle className="w-full flex-wrap whitespace-normal sm:flex-nowrap">
                   {notification.title}
                   {!notification.read_at ? (
                     <>
@@ -192,7 +192,7 @@ export function NotificationsCenter({ role, readOnly }: { role: StaffRole; readO
                   {notification.meta ? <span>· {notification.meta}</span> : null}
                 </div>
               </ItemContent>
-              <ItemActions className="relative z-10">
+              <ItemActions className="relative z-10 basis-full justify-end sm:basis-auto">
                 {!notification.read_at && !readOnly ? (
                   <Button
                     variant="ghost"

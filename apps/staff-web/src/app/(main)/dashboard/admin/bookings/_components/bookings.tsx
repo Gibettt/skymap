@@ -2,6 +2,7 @@
 
 import * as React from "react";
 
+import { downloadExcelReport } from "@ephemeris/export";
 import {
   type ColumnFiltersState,
   type ColumnVisibilityState,
@@ -12,14 +13,7 @@ import {
 import { Download, Grid, Rows3, Search, SlidersHorizontal } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardAction,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -31,21 +25,18 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group";
 import { Kbd } from "@/components/ui/kbd";
-import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { dataTableFeatures } from "@/lib/data-table-features";
 
 import type { BookingOptions, BookingRow } from "../../_lib/admin-data";
 import { titleCase } from "../../_lib/format";
 import { createBookingsColumns } from "./bookings-columns";
+import { BookingsGrid } from "./bookings-grid";
+import { BookingsPagination } from "./bookings-pagination";
 import { BookingsTable } from "./bookings-table";
+
+type BookingView = "list" | "grid";
 
 const columnLabels: Record<string, string> = {
   guest: "Booking",
@@ -62,10 +53,6 @@ function uniqueOptions(values: Array<string | null>) {
   return ["All", ...Array.from(new Set(values.filter((value): value is string => Boolean(value)))).sort()];
 }
 
-function csvCell(value: string | number) {
-  return `"${String(value).replaceAll('"', '""')}"`;
-}
-
 export function Bookings({ bookings, options }: { bookings: BookingRow[]; options: BookingOptions }) {
   const searchInputRef = React.useRef<HTMLInputElement>(null);
   const [rowSelection, setRowSelection] = React.useState({});
@@ -73,6 +60,7 @@ export function Bookings({ bookings, options }: { bookings: BookingRow[]; option
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
   const [columnVisibility, setColumnVisibility] = React.useState<ColumnVisibilityState>({ search: false });
   const [pagination, setPagination] = React.useState<PaginationState>({ pageIndex: 0, pageSize: 10 });
+  const [view, setView] = React.useState<BookingView>("list");
   const columns = React.useMemo(() => createBookingsColumns(options), [options]);
 
   const table = useTable({
@@ -127,40 +115,46 @@ export function Bookings({ bookings, options }: { bookings: BookingRow[]; option
     table.setPageIndex(0);
   }
 
-  function exportBookings() {
-    const header = [
-      "Booking code",
-      "Guest",
-      "Event date",
-      "Time",
-      "Package",
-      "Staff",
-      "Resort",
-      "Status",
-      "Guests",
-      "Invoice (USD)",
-    ];
-    const rows = table.getFilteredRowModel().rows.map(({ original }) => [
-      original.booking_code,
-      original.guest_name,
-      original.event_date,
-      `${original.time_start ?? "-"} - ${original.time_end ?? "-"}`,
-      original.package_name,
-      original.staff_name,
-      original.resort_name ?? "Unassigned",
-      titleCase(original.status),
-      Number(original.adult_count) + Number(original.child_count),
-      Number(original.invoice_total_usd),
-    ]);
-    const csv = [header, ...rows].map((row) => row.map(csvCell).join(",")).join("\n");
-    const url = URL.createObjectURL(new Blob([`\uFEFF${csv}`], { type: "text/csv;charset=utf-8" }));
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = "ephemeris-bookings.csv";
-    document.body.append(link);
-    link.click();
-    link.remove();
-    URL.revokeObjectURL(url);
+  async function exportBookings() {
+    const rows = table.getFilteredRowModel().rows.map(({ original }) => original);
+    await downloadExcelReport({
+      title: "SpaceCat ASTROTOURISM — Bookings",
+      subtitle: "Filtered administration booking records",
+      filename: `ephemeris-bookings-${new Date().toISOString().slice(0, 10)}.xlsx`,
+      sheetName: "Bookings",
+      columns: [
+        { key: "bookingCode", header: "Booking code", width: 24 },
+        { key: "guest", header: "Guest", width: 24 },
+        { key: "eventDate", header: "Event date", width: 16, kind: "date" },
+        { key: "time", header: "Time", width: 18 },
+        { key: "package", header: "Package", width: 27 },
+        { key: "staff", header: "Staff", width: 23 },
+        { key: "resort", header: "Resort", width: 28 },
+        { key: "status", header: "Status", width: 18, kind: "status" },
+        { key: "guests", header: "Guests", width: 11, kind: "number" },
+        { key: "invoice", header: "Invoice (USD)", width: 18, kind: "currency" },
+      ],
+      rows: rows.map((booking) => ({
+        bookingCode: booking.booking_code,
+        guest: booking.guest_name,
+        eventDate: booking.event_date,
+        time: `${booking.time_start?.slice(0, 5) ?? "-"} - ${booking.time_end?.slice(0, 5) ?? "-"}`,
+        package: booking.package_name,
+        staff: booking.staff_name,
+        resort: booking.resort_name ?? "Unassigned",
+        status: titleCase(booking.status),
+        guests: Number(booking.adult_count) + Number(booking.child_count),
+        invoice: Number(booking.invoice_total_usd),
+      })),
+    });
+  }
+
+  function changeView(value: string) {
+    if (value !== "list" && value !== "grid") return;
+
+    setView(value);
+    table.setPageSize(value === "grid" ? 9 : 10);
+    table.setPageIndex(0);
   }
 
   return (
@@ -296,7 +290,7 @@ export function Bookings({ bookings, options }: { bookings: BookingRow[]; option
             {selectedCount} selected / {table.getFilteredRowModel().rows.length} bookings
           </div>
 
-          <Tabs defaultValue="list">
+          <Tabs value={view} onValueChange={changeView}>
             <TabsList>
               <TabsTrigger value="list" aria-label="List view">
                 <Rows3 />
@@ -308,8 +302,9 @@ export function Bookings({ bookings, options }: { bookings: BookingRow[]; option
           </Tabs>
         </div>
 
-        <BookingsTable table={table} />
+        {view === "list" ? <BookingsTable table={table} /> : <BookingsGrid table={table} options={options} />}
       </CardContent>
+      {table.getFilteredRowModel().rows.length ? <BookingsPagination table={table} /> : null}
     </Card>
   );
 }

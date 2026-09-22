@@ -25,7 +25,7 @@ export function mapSkyEvent(row) {
     observationSpot: row.observation_spot || '',
     capacity: row.capacity == null ? null : Number(row.capacity),
     priceOverrideUsd: row.price_override_usd == null ? null : Number(row.price_override_usd),
-    imageUrl: row.image_url,
+    imageUrl: row.image_data ? `/api/sky-events/${row.id}/image` : row.image_url,
     status: row.status,
     isPublished: row.is_published,
     createdAt: new Date(row.created_at).toISOString(),

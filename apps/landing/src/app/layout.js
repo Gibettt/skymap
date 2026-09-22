@@ -2,6 +2,7 @@ import localFont from 'next/font/local';
 import './club-faune-custom.css';
 import './globals.css';
 import './product.css';
+import './landing-responsive.css';
 
 const inter = localFont({
   src: './fonts/inter-latin-variable.woff2',

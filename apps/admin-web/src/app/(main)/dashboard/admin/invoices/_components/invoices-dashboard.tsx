@@ -46,8 +46,31 @@ import { INVOICE_PAPER_HEIGHT, INVOICE_PAPER_WIDTH, InvoiceDocument } from "./in
 
 type WorkflowTab = "payment" | "business";
 type InvoiceWorkflows = Record<WorkflowTab, InvoiceWorkflowRow[]>;
+type TaxType = "none" | "tgst" | "vat" | "sales_tax" | "custom";
 
 const INVOICE_PAPER_SCALE = 0.6;
+
+function roundMoney(value: number) {
+  return Math.round(value * 100) / 100;
+}
+
+function taxTypeFromLabel(label?: string): TaxType {
+  if (label === "No tax") return "none";
+  if (label === "Tourism GST (TGST)") return "tgst";
+  if (label === "VAT") return "vat";
+  if (label === "Sales tax") return "sales_tax";
+  return "custom";
+}
+
+function taxLabelForType(type: TaxType, customLabel: string) {
+  const labels: Record<Exclude<TaxType, "custom">, string> = {
+    none: "No tax",
+    tgst: "Tourism GST (TGST)",
+    vat: "VAT",
+    sales_tax: "Sales tax",
+  };
+  return type === "custom" ? customLabel.trim() : labels[type];
+}
 
 function formatDate(value: string | null) {
   if (!value) return "—";
@@ -98,10 +121,10 @@ function InvoicePreview({ invoice, onPrint }: { invoice: InvoiceRow | null; onPr
   });
 
   return (
-    <div className="flex flex-col rounded-xl border bg-card">
-      <div className="flex items-center justify-between px-4 py-4">
+    <div className="flex min-w-0 flex-col rounded-xl border bg-card">
+      <div className="flex flex-col gap-3 px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
         <h2 className="font-medium text-lg">Preview</h2>
-        <ButtonGroup>
+        <ButtonGroup className="w-full sm:w-auto">
           <Button type="button" variant="outline" disabled={!invoice} onClick={() => onPrint()}>
             <Printer data-icon="inline-start" />
             Print
@@ -250,7 +273,7 @@ function WorkflowIdentity({ row }: { row: InvoiceWorkflowRow }) {
 function RecipientDetails({ row }: { row: InvoiceWorkflowRow }) {
   return (
     <section className="flex flex-col gap-4">
-      <div className="flex items-center justify-between gap-3">
+      <div className="flex min-w-0 flex-wrap items-center justify-between gap-3">
         <h2 className="font-medium tracking-tight">{row.type === "customer" ? "Customer" : "Staff Recipient"}</h2>
         <Badge
           variant={row.workflow_status === "paid" || row.workflow_status === "completed" ? "default" : "secondary"}
@@ -286,6 +309,92 @@ function MoneyField({ id, label, value }: { id: string; label: string; value: nu
   );
 }
 
+function TaxField({
+  amount,
+  customLabel,
+  disabled,
+  onCustomLabelChange,
+  onRateChange,
+  onTypeChange,
+  rate,
+  type,
+}: {
+  amount: number;
+  customLabel: string;
+  disabled: boolean;
+  onCustomLabelChange: (value: string) => void;
+  onRateChange: (value: string) => void;
+  onTypeChange: (value: TaxType) => void;
+  rate: string;
+  type: TaxType;
+}) {
+  return (
+    <Field className="gap-2 rounded-lg border p-3 lg:col-span-3">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div>
+          <div className="flex items-center gap-2">
+            <FieldLabel>Tax</FieldLabel>
+            {!disabled ? (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="h-6 px-2"
+                onClick={() => onTypeChange("custom")}
+              >
+                + Add custom
+              </Button>
+            ) : null}
+          </div>
+          <FieldDescription>Select the applicable tax before confirming payment.</FieldDescription>
+        </div>
+        <Badge variant="outline">{formatUsd(amount)}</Badge>
+      </div>
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <Select value={type} onValueChange={(value) => onTypeChange(value as TaxType)} disabled={disabled}>
+          <SelectTrigger id="admin-payment-tax-type" className="w-full">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectGroup>
+              <SelectItem value="none">No tax</SelectItem>
+              <SelectItem value="tgst">Tourism GST (TGST)</SelectItem>
+              <SelectItem value="vat">VAT</SelectItem>
+              <SelectItem value="sales_tax">Sales tax</SelectItem>
+              <SelectItem value="custom">Custom tax</SelectItem>
+            </SelectGroup>
+          </SelectContent>
+        </Select>
+        {type === "custom" ? (
+          <Input
+            aria-label="Custom tax name"
+            value={customLabel}
+            onChange={(event) => onCustomLabelChange(event.target.value)}
+            disabled={disabled}
+            maxLength={80}
+            placeholder="Tax name"
+          />
+        ) : null}
+        <InputGroup>
+          <InputGroupInput
+            id="admin-payment-tax-rate"
+            aria-label="Tax rate percentage"
+            type="number"
+            inputMode="decimal"
+            min="0"
+            max="100"
+            step="0.01"
+            value={rate}
+            onChange={(event) => onRateChange(event.target.value)}
+            disabled={disabled || type === "none"}
+          />
+          <InputGroupAddon align="inline-end">%</InputGroupAddon>
+        </InputGroup>
+      </div>
+    </Field>
+  );
+}
+
 function WorkflowInvoiceState({ row }: { row: InvoiceWorkflowRow }) {
   return (
     <div className="flex items-center justify-between gap-3 rounded-lg border p-3">
@@ -305,15 +414,31 @@ function PaymentWorkflow({
   onConfirm,
   onGenerate,
   onSelect,
+  onTaxCustomLabelChange,
+  onTaxRateChange,
+  onTaxTypeChange,
   row,
   rows,
+  taxAmount,
+  taxCustomLabel,
+  taxRate,
+  taxType,
+  totalAmount,
 }: {
   busy: boolean;
   onConfirm: (row: InvoiceWorkflowRow) => void;
   onGenerate: (row: InvoiceWorkflowRow) => void;
   onSelect: (id: string) => void;
+  onTaxCustomLabelChange: (value: string) => void;
+  onTaxRateChange: (value: string) => void;
+  onTaxTypeChange: (value: TaxType) => void;
   row: InvoiceWorkflowRow | null;
   rows: InvoiceWorkflowRow[];
+  taxAmount: number;
+  taxCustomLabel: string;
+  taxRate: string;
+  taxType: TaxType;
+  totalAmount: number;
 }) {
   if (!row) {
     return (
@@ -334,38 +459,48 @@ function PaymentWorkflow({
       <RecipientDetails row={row} />
       <Separator />
       <section className="flex flex-col gap-4">
-        <div className="flex items-center justify-between gap-3">
+        <div className="flex min-w-0 flex-wrap items-center justify-between gap-3">
           <h2 className="font-medium tracking-tight">Payment Summary</h2>
           <Badge variant="outline">{row.payment_method ?? "Method not set"}</Badge>
         </div>
         <div className="grid gap-5 lg:grid-cols-3">
           <MoneyField id="payment-subtotal" label="Subtotal" value={row.base_total_usd ?? 0} />
           <MoneyField id="payment-service-charge" label="Service charge" value={row.service_charge_usd ?? 0} />
-          <MoneyField id="payment-gst" label="GST" value={row.tax_usd ?? 0} />
+          <MoneyField id="payment-tax" label="Tax amount" value={taxAmount} />
+          <TaxField
+            amount={taxAmount}
+            customLabel={taxCustomLabel}
+            disabled={row.workflow_status !== "pending"}
+            onCustomLabelChange={onTaxCustomLabelChange}
+            onRateChange={onTaxRateChange}
+            onTypeChange={onTaxTypeChange}
+            rate={taxRate}
+            type={taxType}
+          />
         </div>
-        <div className="flex items-center justify-between gap-3 rounded-lg border p-3">
-          <div>
+        <div className="flex min-w-0 flex-wrap items-center justify-between gap-3 rounded-lg border p-3">
+          <div className="min-w-0 flex-1">
             <p className="font-medium">Customer total</p>
             <p className="text-muted-foreground text-xs">Payment confirmation and invoice creation are atomic.</p>
           </div>
-          <p className="font-semibold tabular-nums">{formatUsd(row.amount_usd)}</p>
+          <p className="font-semibold tabular-nums">{formatUsd(totalAmount)}</p>
         </div>
         <WorkflowInvoiceState row={row} />
-        <div className="flex justify-end">
+        <div className="flex justify-stretch sm:justify-end">
           {row.workflow_status === "pending" ? (
-            <Button type="button" disabled={busy} onClick={() => onConfirm(row)}>
+            <Button className="w-full sm:w-auto" type="button" disabled={busy} onClick={() => onConfirm(row)}>
               {busy ? <Spinner data-icon="inline-start" /> : <CheckCircle2 data-icon="inline-start" />}
               Confirm payment & generate invoice
             </Button>
           ) : null}
           {row.workflow_status === "paid" && !row.invoice_id ? (
-            <Button type="button" disabled={busy} onClick={() => onGenerate(row)}>
+            <Button className="w-full sm:w-auto" type="button" disabled={busy} onClick={() => onGenerate(row)}>
               {busy ? <Spinner data-icon="inline-start" /> : <FilePlus2 data-icon="inline-start" />}
               Generate invoice
             </Button>
           ) : null}
           {row.workflow_status === "paid" && row.invoice_id ? (
-            <Button type="button" variant="outline" disabled>
+            <Button className="w-full sm:w-auto" type="button" variant="outline" disabled>
               <CheckCircle2 data-icon="inline-start" />
               Payment confirmed
             </Button>
@@ -404,7 +539,7 @@ function BusinessWorkflow({
       <RecipientDetails row={row} />
       <Separator />
       <section className="flex flex-col gap-4">
-        <div className="flex items-center justify-between gap-3">
+        <div className="flex min-w-0 flex-wrap items-center justify-between gap-3">
           <h2 className="font-medium tracking-tight">Payout Summary</h2>
           <Badge variant="outline">{row.bank_name ?? "Bank account"}</Badge>
         </div>
@@ -448,21 +583,25 @@ function WorkflowEmpty({ description, icon, title }: { description: string; icon
 }
 
 export function InvoicesDashboard({
+  initialPaymentId,
   initialSelectedId,
   initialTab = "payment",
   invoices,
   workflows,
 }: {
+  initialPaymentId?: string;
   initialSelectedId?: string;
   initialTab?: WorkflowTab;
   invoices: InvoiceRow[];
   workflows: InvoiceWorkflows;
 }) {
+  const initialPaymentRow =
+    workflows.payment.find((workflow) => workflow.id === initialPaymentId) ?? workflows.payment[0];
   const [issuedInvoices, setIssuedInvoices] = React.useState(invoices);
   const [workflowRows, setWorkflowRows] = React.useState(workflows);
   const [activeTab, setActiveTab] = React.useState<WorkflowTab>(initialTab);
   const [selectedIds, setSelectedIds] = React.useState<Record<WorkflowTab, string>>({
-    payment: workflows.payment[0]?.id ?? "",
+    payment: initialPaymentRow?.id ?? "",
     business: initialSelectedId ?? workflows.business[0]?.id ?? "",
   });
   const [pendingKey, setPendingKey] = React.useState<string | null>(null);
@@ -470,13 +609,46 @@ export function InvoicesDashboard({
   const [paymentMethod, setPaymentMethod] = React.useState("Bank transfer");
   const [paymentReference, setPaymentReference] = React.useState("");
   const [paymentNotes, setPaymentNotes] = React.useState("");
+  const [taxType, setTaxType] = React.useState<TaxType>(taxTypeFromLabel(initialPaymentRow?.tax_label));
+  const [taxCustomLabel, setTaxCustomLabel] = React.useState(
+    taxTypeFromLabel(initialPaymentRow?.tax_label) === "custom" ? (initialPaymentRow?.tax_label ?? "") : "",
+  );
+  const [taxRate, setTaxRate] = React.useState(String(initialPaymentRow?.tax_rate_percent ?? 17));
 
+  const selectedPaymentWorkflow =
+    workflowRows.payment.find((row) => row.id === selectedIds.payment) ?? workflowRows.payment[0] ?? null;
   const selectedWorkflow =
     workflowRows[activeTab].find((row) => row.id === selectedIds[activeTab]) ?? workflowRows[activeTab][0] ?? null;
   const selectedInvoice = selectedWorkflow?.invoice_id
     ? (issuedInvoices.find((invoice) => invoice.id === selectedWorkflow.invoice_id) ?? null)
     : null;
   const busy = pendingKey !== null;
+  const parsedTaxRate = taxType === "none" ? 0 : Number(taxRate);
+  const effectiveTaxRate = Number.isFinite(parsedTaxRate) ? Math.min(100, Math.max(0, parsedTaxRate)) : 0;
+  const taxAmount = roundMoney((selectedPaymentWorkflow?.base_total_usd ?? 0) * (effectiveTaxRate / 100));
+  const totalAmount = roundMoney(
+    (selectedPaymentWorkflow?.base_total_usd ?? 0) + (selectedPaymentWorkflow?.service_charge_usd ?? 0) + taxAmount,
+  );
+
+  React.useEffect(() => {
+    if (!selectedPaymentWorkflow) return;
+    const nextType = taxTypeFromLabel(selectedPaymentWorkflow.tax_label);
+    setTaxType(nextType);
+    setTaxCustomLabel(nextType === "custom" ? (selectedPaymentWorkflow.tax_label ?? "") : "");
+    setTaxRate(String(nextType === "none" ? 0 : (selectedPaymentWorkflow.tax_rate_percent ?? 17)));
+  }, [selectedPaymentWorkflow]);
+
+  React.useEffect(() => {
+    const selectedId = selectedIds[activeTab];
+    if (!selectedId) return;
+    const url = new URL(window.location.href);
+    const parameter = activeTab === "payment" ? "payment" : "payout";
+    const otherParameter = activeTab === "payment" ? "payout" : "payment";
+    if (url.searchParams.get(parameter) === selectedId && !url.searchParams.has(otherParameter)) return;
+    url.searchParams.set(parameter, selectedId);
+    url.searchParams.delete(otherParameter);
+    window.history.replaceState(window.history.state, "", url);
+  }, [activeTab, selectedIds]);
 
   function selectWorkflow(tab: WorkflowTab, id: string) {
     setSelectedIds((current) => ({ ...current, [tab]: id }));
@@ -512,11 +684,26 @@ export function InvoicesDashboard({
     setPaymentNotes(row.payment_notes ?? "");
   }
 
+  function changeTaxType(value: TaxType) {
+    setTaxType(value);
+    if (value === "none") setTaxRate("0");
+    if (value === "tgst") setTaxRate("17");
+    if (value !== "custom") setTaxCustomLabel("");
+  }
+
   async function confirmPayment(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!paymentDialogRow || busy) return;
     if (paymentMethod === "Bank transfer" && !paymentReference.trim()) {
       toast.error("A bank transfer reference is required.");
+      return;
+    }
+    if (taxType === "custom" && !taxCustomLabel.trim()) {
+      toast.error("Enter a name for the custom tax.");
+      return;
+    }
+    if (!Number.isFinite(Number(taxRate)) || Number(taxRate) < 0 || Number(taxRate) > 100) {
+      toast.error("Tax rate must be between 0 and 100 percent.");
       return;
     }
 
@@ -526,7 +713,14 @@ export function InvoicesDashboard({
       const response = await fetch(`/api/payments/${row.id}/confirm`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ paymentMethod, reference: paymentReference, notes: paymentNotes }),
+        body: JSON.stringify({
+          paymentMethod,
+          reference: paymentReference,
+          notes: paymentNotes,
+          taxType,
+          taxLabel: taxType === "custom" ? taxCustomLabel.trim() : null,
+          taxRatePercent: effectiveTaxRate,
+        }),
       });
       const result = (await response.json().catch(() => ({}))) as {
         error?: string;
@@ -547,6 +741,10 @@ export function InvoicesDashboard({
                 payment_method: paymentMethod,
                 payment_reference: paymentReference.trim() || null,
                 payment_notes: paymentNotes.trim() || null,
+                tax_label: taxLabelForType(taxType, taxCustomLabel),
+                tax_rate_percent: effectiveTaxRate,
+                tax_usd: taxAmount,
+                amount_usd: totalAmount,
                 confirmed_at: new Date().toISOString(),
                 invoice_id: result.invoice?.id ?? null,
                 invoice_number: result.invoice?.invoice_number ?? null,
@@ -603,9 +801,9 @@ export function InvoicesDashboard({
 
   return (
     <>
-      <div className="grid gap-5 xl:grid-cols-2">
-        <div className="flex flex-col gap-4 rounded-xl border bg-card p-4">
-          <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as WorkflowTab)}>
+      <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-5 xl:grid-cols-2">
+        <div className="flex min-w-0 flex-col gap-4 overflow-hidden rounded-xl border bg-card p-4">
+          <Tabs className="min-w-0" value={activeTab} onValueChange={(value) => setActiveTab(value as WorkflowTab)}>
             <TabsList className="w-full">
               <TabsTrigger value="payment">Payment</TabsTrigger>
               <TabsTrigger value="business">Business</TabsTrigger>
@@ -619,6 +817,14 @@ export function InvoicesDashboard({
                 onSelect={(id) => selectWorkflow("payment", id)}
                 onConfirm={openPaymentConfirmation}
                 onGenerate={generateDocument}
+                onTaxCustomLabelChange={setTaxCustomLabel}
+                onTaxRateChange={setTaxRate}
+                onTaxTypeChange={changeTaxType}
+                taxAmount={taxAmount}
+                taxCustomLabel={taxCustomLabel}
+                taxRate={taxRate}
+                taxType={taxType}
+                totalAmount={totalAmount}
               />
             </TabsContent>
 
@@ -697,7 +903,7 @@ export function InvoicesDashboard({
                     <p className="truncate font-medium">{paymentDialogRow.recipient_name}</p>
                     <p className="truncate text-muted-foreground text-xs">{paymentDialogRow.reference}</p>
                   </div>
-                  <Badge variant="outline">{formatUsd(paymentDialogRow.amount_usd)}</Badge>
+                  <Badge variant="outline">{formatUsd(totalAmount)}</Badge>
                 </div>
               ) : null}
             </FieldGroup>

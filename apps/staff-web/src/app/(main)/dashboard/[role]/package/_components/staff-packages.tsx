@@ -4,7 +4,7 @@ import * as React from "react";
 
 import Link from "next/link";
 
-import { Grid2X2, List, PackageOpen, Plus, RefreshCw, Search, ShieldAlert } from "lucide-react";
+import { Grid2X2, List, PackageOpen, Plus, Search, ShieldAlert } from "lucide-react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -65,7 +65,7 @@ function normalizePackage(item: StaffPackage): StaffPackage {
 function PackagesLoading() {
   return (
     <div className="flex flex-col gap-4">
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid grid-cols-3 gap-2 sm:gap-4">
         {PACKAGE_METRIC_SKELETONS.map((item) => (
           <Card key={item} size="sm">
             <CardHeader>
@@ -122,11 +122,13 @@ function PackageGrid({ packages }: { packages: StaffPackage[] }) {
               <dl className="grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
                 <div className="flex min-w-0 flex-col gap-0.5">
                   <dt className="text-muted-foreground text-xs">Schedule</dt>
-                  <dd className="truncate font-medium">{item.schedule || "Upon request"}</dd>
+                  <dd className="break-words font-medium leading-snug">{item.schedule || "Upon request"}</dd>
                 </div>
                 <div className="flex min-w-0 flex-col gap-0.5">
                   <dt className="text-muted-foreground text-xs">Billing</dt>
-                  <dd className="truncate font-medium">{item.is_chargeable ? "Chargeable" : "Complimentary"}</dd>
+                  <dd className="break-words font-medium leading-snug">
+                    {item.is_chargeable ? "Chargeable" : "Complimentary"}
+                  </dd>
                 </div>
                 <div className="flex min-w-0 flex-col gap-0.5">
                   <dt className="text-muted-foreground text-xs">Adult price</dt>
@@ -273,6 +275,7 @@ export function StaffPackages({ role }: { role: StaffRole }) {
   const privateCount = packages.filter((item) => item.experience_type === "private").length;
   const complimentaryCount = packages.filter((item) => !item.is_chargeable).length;
   const readOnly = user?.access_role_level === "read_only";
+  const canCreateBooking = role === "internal" && !readOnly;
 
   let packageContent: React.ReactNode = (
     <Empty className="mx-4 min-h-64 border">
@@ -287,38 +290,45 @@ export function StaffPackages({ role }: { role: StaffRole }) {
   );
   if (visiblePackages.length) {
     packageContent =
-      view === "list" ? <PackageTable packages={visiblePackages} /> : <PackageGrid packages={visiblePackages} />;
+      view === "list" ? (
+        <>
+          <div className="md:hidden">
+            <PackageGrid packages={visiblePackages} />
+          </div>
+          <div className="hidden md:block">
+            <PackageTable packages={visiblePackages} />
+          </div>
+        </>
+      ) : (
+        <PackageGrid packages={visiblePackages} />
+      );
   }
 
   if (loading) return <PackagesLoading />;
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex min-w-0 flex-col gap-4 sm:gap-6">
       <div className="flex flex-col justify-between gap-4 md:flex-row md:items-center">
-        <div className="flex flex-col gap-1">
+        <div className="flex min-w-0 flex-col gap-1">
           <div className="flex flex-wrap items-center gap-2">
-            <h1 className="font-semibold text-2xl tracking-tight">Packages</h1>
+            <h1 className="font-semibold text-xl tracking-tight sm:text-2xl">Packages</h1>
             <Badge variant="outline">{titleCase(role)} staff</Badge>
-            <Badge variant="secondary">Read-only catalogue</Badge>
+            {role === "external" ? <Badge variant="secondary">Read-only catalogue</Badge> : null}
           </div>
           <p className="text-muted-foreground text-sm">
             Active experiences and current prices for {user?.resort_name || "your assigned resort"}.
           </p>
         </div>
-        <div className="flex flex-wrap gap-2">
-          <Button variant="outline" onClick={() => void loadData()}>
-            <RefreshCw data-icon="inline-start" />
-            Refresh
-          </Button>
-          {!readOnly ? (
-            <Button asChild>
+        {canCreateBooking ? (
+          <div className="flex w-full flex-wrap gap-2 sm:w-auto">
+            <Button className="flex-1 sm:flex-none" asChild>
               <Link href={`/dashboard/${role}/bookings?new=1`}>
                 <Plus data-icon="inline-start" />
                 New booking
               </Link>
             </Button>
-          ) : null}
-        </div>
+          </div>
+        ) : null}
       </div>
 
       {error ? (
@@ -329,23 +339,32 @@ export function StaffPackages({ role }: { role: StaffRole }) {
         </Alert>
       ) : null}
 
-      <div className="grid gap-4 md:grid-cols-3">
-        <Card size="sm">
-          <CardHeader>
-            <CardDescription>Active packages</CardDescription>
-            <CardTitle className="text-2xl tabular-nums">{packages.length}</CardTitle>
+      <div className="grid grid-cols-3 gap-2 sm:gap-4">
+        <Card size="sm" className="min-w-0">
+          <CardHeader className="gap-1 px-2.5 sm:px-3">
+            <CardDescription className="text-[11px] leading-tight sm:text-sm">
+              <span className="sm:hidden">Active</span>
+              <span className="hidden sm:inline">Active packages</span>
+            </CardDescription>
+            <CardTitle className="text-xl tabular-nums sm:text-2xl">{packages.length}</CardTitle>
           </CardHeader>
         </Card>
-        <Card size="sm">
-          <CardHeader>
-            <CardDescription>Private experiences</CardDescription>
-            <CardTitle className="text-2xl tabular-nums">{privateCount}</CardTitle>
+        <Card size="sm" className="min-w-0">
+          <CardHeader className="gap-1 px-2.5 sm:px-3">
+            <CardDescription className="text-[11px] leading-tight sm:text-sm">
+              <span className="sm:hidden">Private</span>
+              <span className="hidden sm:inline">Private experiences</span>
+            </CardDescription>
+            <CardTitle className="text-xl tabular-nums sm:text-2xl">{privateCount}</CardTitle>
           </CardHeader>
         </Card>
-        <Card size="sm">
-          <CardHeader>
-            <CardDescription>Complimentary</CardDescription>
-            <CardTitle className="text-2xl tabular-nums">{complimentaryCount}</CardTitle>
+        <Card size="sm" className="min-w-0">
+          <CardHeader className="gap-1 px-2.5 sm:px-3">
+            <CardDescription className="text-[11px] leading-tight sm:text-sm">
+              <span className="sm:hidden">Free</span>
+              <span className="hidden sm:inline">Complimentary</span>
+            </CardDescription>
+            <CardTitle className="text-xl tabular-nums sm:text-2xl">{complimentaryCount}</CardTitle>
           </CardHeader>
         </Card>
       </div>
@@ -397,6 +416,7 @@ export function StaffPackages({ role }: { role: StaffRole }) {
               </SelectContent>
             </Select>
             <Tabs
+              className="hidden md:block"
               value={view}
               onValueChange={(value) => {
                 if (value === "list" || value === "grid") {

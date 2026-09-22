@@ -35,3 +35,10 @@ export const updateResortSchema = resortSchema.partial();
 export const updateObservationSpotsSchema = z.object({
   observationSpots: z.string().trim().max(1000),
 });
+
+export const publicResortProfileSchema = z.object({
+  location: z.string().trim().min(1).max(200),
+  publicDescription: z.string().trim().max(600),
+  contactEmail: optionalEmail.default(null),
+  whatsappNumber: z.string().trim().max(40),
+});

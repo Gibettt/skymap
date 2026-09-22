@@ -52,7 +52,15 @@ import {
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardAction,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
@@ -81,17 +89,7 @@ import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group";
 import { Kbd } from "@/components/ui/kbd";
-import {
-  Pagination,
-  PaginationContent,
-  PaginationEllipsis,
-  PaginationItem,
-  PaginationLink,
-  PaginationNext,
-  PaginationPrevious,
-} from "@/components/ui/pagination";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Separator } from "@/components/ui/separator";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Spinner } from "@/components/ui/spinner";
@@ -114,10 +112,15 @@ import {
   titleCase,
 } from "../../_lib/staff-api";
 import { NewBookingForm } from "../../form-booking/_components/new-booking-form";
+import { exportBookingsToExcel } from "./booking-export";
 
 interface MeResponse {
   user: StaffUser;
 }
+
+type InternalBookingFilter = "all" | "pending" | "internal" | "external";
+
+const INTERNAL_BOOKING_FILTERS: InternalBookingFilter[] = ["all", "pending", "internal", "external"];
 
 interface PackagesResponse {
   packages: StaffPackage[];
@@ -146,12 +149,6 @@ const COLUMN_LABELS: Record<string, string> = {
 
 function uniqueOptions(values: Array<string | null>) {
   return ["All", ...Array.from(new Set(values.filter((value): value is string => Boolean(value)))).sort()];
-}
-
-function csvCell(value: string | number) {
-  const normalized = String(value);
-  const spreadsheetSafeValue = /^[=+\-@]/.test(normalized) ? `'${normalized}` : normalized;
-  return `"${spreadsheetSafeValue.replaceAll('"', '""')}"`;
 }
 
 function normalizeBooking(booking: StaffBooking): StaffBooking {
@@ -448,9 +445,100 @@ function BookingActions({
         {canManage ? (
           <>
             <DropdownMenuSeparator />
+            <DropdownMenuGroup className="sm:hidden">
+              {booking.status === "pending" ? (
+                <DropdownMenuItem
+                  onSelect={() =>
+                    onStatus({
+                      booking,
+                      status: "active",
+                      title: "Approve booking?",
+                      description: "This booking will become active and be assigned to the internal operations team.",
+                    })
+                  }
+                >
+                  <CirclePlay />
+                  Activate booking
+                </DropdownMenuItem>
+              ) : null}
+              {booking.status === "pending" ? (
+                <DropdownMenuItem
+                  variant="destructive"
+                  onSelect={() =>
+                    onStatus({
+                      booking,
+                      status: "rejected",
+                      title: "Reject booking?",
+                      description: "The request will be closed as rejected and can no longer be operated.",
+                    })
+                  }
+                >
+                  <XCircle />
+                  Reject booking
+                </DropdownMenuItem>
+              ) : null}
+              {operational ? (
+                <DropdownMenuItem
+                  onSelect={() =>
+                    onStatus({
+                      booking,
+                      status: "completed",
+                      title: "Complete booking?",
+                      description: "Mark this experience as completed after the field operation is finished.",
+                    })
+                  }
+                >
+                  <CheckCircle2 />
+                  Mark completed
+                </DropdownMenuItem>
+              ) : null}
+              {operational ? (
+                <DropdownMenuItem onSelect={() => onReschedule(booking)}>
+                  <CalendarClock />
+                  Reschedule
+                </DropdownMenuItem>
+              ) : null}
+              {canSign ? (
+                <DropdownMenuItem onSelect={() => onSigned(booking)}>
+                  <Signature />
+                  {booking.signed_by_guest ? "Mark as unsigned" : "Mark as signed"}
+                </DropdownMenuItem>
+              ) : null}
+              {operational ? (
+                <DropdownMenuItem
+                  onSelect={() =>
+                    onStatus({
+                      booking,
+                      status: "cancelled_by_guest",
+                      title: "Cancel by guest?",
+                      description: "The booking will be closed with the guest cancellation reason.",
+                    })
+                  }
+                >
+                  <UserX />
+                  Cancel by guest
+                </DropdownMenuItem>
+              ) : null}
+              {operational ? (
+                <DropdownMenuItem
+                  onSelect={() =>
+                    onStatus({
+                      booking,
+                      status: "cancelled_weather",
+                      title: "Cancel due to weather?",
+                      description: "The booking will be closed because observing conditions are unsafe.",
+                    })
+                  }
+                >
+                  <CloudRain />
+                  Cancel due to weather
+                </DropdownMenuItem>
+              ) : null}
+              {!hasBookingActions ? <DropdownMenuItem disabled>No actions available</DropdownMenuItem> : null}
+            </DropdownMenuGroup>
             <DropdownMenuGroup>
               <DropdownMenuSub>
-                <DropdownMenuSubTrigger>
+                <DropdownMenuSubTrigger className="hidden sm:flex">
                   <Workflow />
                   Booking actions
                 </DropdownMenuSubTrigger>
@@ -758,17 +846,6 @@ function createStaffBookingsColumns(actions: BookingActionContext): ColumnDef<Da
   ];
 }
 
-function preventPaginationNavigation(event: React.MouseEvent<HTMLAnchorElement>) {
-  event.preventDefault();
-}
-
-function getPageNumbers(currentPage: number, pageCount: number) {
-  if (pageCount <= 3) return Array.from({ length: pageCount }, (_, index) => index + 1);
-  if (currentPage <= 2) return [1, 2, 3];
-  if (currentPage >= pageCount - 1) return [pageCount - 2, pageCount - 1, pageCount];
-  return [currentPage - 1, currentPage, currentPage + 1];
-}
-
 function StaffBookingsTable({ table }: { table: ReactTable<DataTableFeatures, StaffBooking> }) {
   return (
     <div className="overflow-x-auto">
@@ -908,88 +985,138 @@ function StaffBookingsGrid({
 function BookingsPagination({ table }: { table: ReactTable<DataTableFeatures, StaffBooking> }) {
   const pageCount = Math.max(table.getPageCount(), 1);
   const currentPage = Math.min(table.state.pagination.pageIndex + 1, pageCount);
-  const pageNumbers = getPageNumbers(currentPage, pageCount);
-  const rowsPerPage = `${table.state.pagination.pageSize}`;
+  const pageSize = table.state.pagination.pageSize;
+  const filteredCount = table.getFilteredRowModel().rows.length;
+  const firstVisible = filteredCount ? (currentPage - 1) * pageSize + 1 : 0;
+  const lastVisible = Math.min(currentPage * pageSize, filteredCount);
 
   return (
-    <>
-      <Separator />
-      <div className="flex flex-col gap-3 px-4 md:flex-row md:items-center md:justify-between">
-        <div className="flex flex-wrap items-center gap-4 text-muted-foreground text-sm">
-          <div className="flex items-center gap-2">
-            <span>Rows per page</span>
-            <Select value={rowsPerPage} onValueChange={(value) => table.setPageSize(Number(value))}>
-              <SelectTrigger size="sm" className="w-20" id="staff-bookings-rows-per-page">
-                <SelectValue placeholder={rowsPerPage} />
-              </SelectTrigger>
-              <SelectContent side="top">
-                <SelectGroup>
-                  {[10, 20, 30, 40, 50].map((pageSize) => (
-                    <SelectItem key={pageSize} value={`${pageSize}`}>
-                      {pageSize}
-                    </SelectItem>
-                  ))}
-                </SelectGroup>
-              </SelectContent>
-            </Select>
-          </div>
-          <span>
-            Page {currentPage} of {pageCount}
-          </span>
-        </div>
-
-        <Pagination className="mx-0 w-auto justify-start md:justify-end">
-          <PaginationContent>
-            <PaginationItem>
-              <PaginationPrevious
-                href="#"
-                text=""
-                className={!table.getCanPreviousPage() ? "pointer-events-none opacity-50" : undefined}
-                onClick={(event) => {
-                  preventPaginationNavigation(event);
-                  table.previousPage();
-                }}
-              />
-            </PaginationItem>
-            {pageNumbers[0] > 1 ? (
-              <PaginationItem>
-                <PaginationEllipsis />
-              </PaginationItem>
-            ) : null}
-            {pageNumbers.map((pageNumber) => (
-              <PaginationItem key={`page-${pageNumber}`}>
-                <PaginationLink
-                  href="#"
-                  isActive={table.state.pagination.pageIndex === pageNumber - 1}
-                  onClick={(event) => {
-                    preventPaginationNavigation(event);
-                    table.setPageIndex(pageNumber - 1);
-                  }}
-                >
-                  {pageNumber}
-                </PaginationLink>
-              </PaginationItem>
-            ))}
-            {pageNumbers[pageNumbers.length - 1] < pageCount ? (
-              <PaginationItem>
-                <PaginationEllipsis />
-              </PaginationItem>
-            ) : null}
-            <PaginationItem>
-              <PaginationNext
-                href="#"
-                text=""
-                className={!table.getCanNextPage() ? "pointer-events-none opacity-50" : undefined}
-                onClick={(event) => {
-                  preventPaginationNavigation(event);
-                  table.nextPage();
-                }}
-              />
-            </PaginationItem>
-          </PaginationContent>
-        </Pagination>
+    <CardFooter className="flex-col justify-between gap-3 sm:flex-row">
+      <p className="text-muted-foreground text-sm tabular-nums">
+        Showing {firstVisible}-{lastVisible} of {filteredCount}
+      </p>
+      <div className="flex items-center gap-2">
+        <Button variant="outline" size="sm" disabled={!table.getCanPreviousPage()} onClick={() => table.previousPage()}>
+          Previous
+        </Button>
+        <Badge variant="outline">
+          Page {currentPage} of {pageCount}
+        </Badge>
+        <Button variant="outline" size="sm" disabled={!table.getCanNextPage()} onClick={() => table.nextPage()}>
+          Next
+        </Button>
       </div>
-    </>
+    </CardFooter>
+  );
+}
+
+function InternalBookingFilterTabs({
+  value,
+  totals,
+  onValueChange,
+}: {
+  value: InternalBookingFilter;
+  totals: { total: number; pending: number; internal: number; external: number };
+  onValueChange: (value: InternalBookingFilter) => void;
+}) {
+  const triggerRefs = React.useRef<Partial<Record<InternalBookingFilter, HTMLButtonElement | null>>>({});
+  const [indicator, setIndicator] = React.useState({ left: 0, width: 0 });
+
+  const updateIndicator = React.useCallback(() => {
+    const trigger = triggerRefs.current[value];
+    if (!trigger) return;
+    setIndicator({ left: trigger.offsetLeft, width: trigger.offsetWidth });
+  }, [value]);
+
+  React.useLayoutEffect(() => {
+    updateIndicator();
+
+    const resizeObserver = new ResizeObserver(updateIndicator);
+    for (const filter of INTERNAL_BOOKING_FILTERS) {
+      const trigger = triggerRefs.current[filter];
+      if (trigger) resizeObserver.observe(trigger);
+    }
+
+    return () => resizeObserver.disconnect();
+  }, [updateIndicator]);
+
+  const triggerClassName =
+    "relative z-10 h-8 gap-1.5 rounded-[0.65rem] px-2.5 text-xs transition-[color,transform] duration-300 ease-out active:scale-[0.97] data-active:bg-transparent! data-active:shadow-none! motion-reduce:transition-none sm:px-3 sm:text-sm dark:data-active:bg-transparent!";
+
+  return (
+    <Tabs value={value} onValueChange={(nextValue) => onValueChange(nextValue as InternalBookingFilter)}>
+      <TabsList className="relative isolate h-10 w-max overflow-hidden rounded-xl border border-black/5 bg-muted/60 p-1 shadow-[inset_0_1px_1px_rgba(255,255,255,0.65)] backdrop-blur-xl dark:border-white/10 dark:bg-white/5 dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]">
+        <span
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-y-1 left-0 z-0 overflow-hidden rounded-[0.65rem] border border-white/80 bg-white/65 shadow-[0_1px_2px_rgba(0,0,0,0.12),0_4px_14px_rgba(0,0,0,0.08),inset_0_1px_0_rgba(255,255,255,0.95)] backdrop-blur-2xl transition-[width,transform,opacity] duration-500 ease-[cubic-bezier(0.34,1.56,0.64,1)] will-change-transform motion-reduce:transition-none dark:border-white/15 dark:bg-white/10 dark:shadow-[0_1px_2px_rgba(0,0,0,0.35),0_5px_18px_rgba(0,0,0,0.22),inset_0_1px_0_rgba(255,255,255,0.16)]"
+          style={{
+            width: indicator.width,
+            opacity: indicator.width ? 1 : 0,
+            transform: `translate3d(${indicator.left}px, 0, 0)`,
+          }}
+        >
+          <span className="absolute inset-x-2 top-0 h-px bg-gradient-to-r from-transparent via-white to-transparent opacity-90 dark:opacity-40" />
+        </span>
+
+        <TabsTrigger
+          ref={(node) => {
+            triggerRefs.current.all = node;
+          }}
+          value="all"
+          className={triggerClassName}
+        >
+          All Bookings
+          <Badge variant="secondary" className="px-1.5 py-0 text-[11px] font-normal">
+            {totals.total}
+          </Badge>
+        </TabsTrigger>
+        <TabsTrigger
+          ref={(node) => {
+            triggerRefs.current.pending = node;
+          }}
+          value="pending"
+          className={triggerClassName}
+        >
+          Needs Review
+          {totals.pending > 0 ? (
+            <Badge
+              variant="default"
+              className="bg-amber-500 px-1.5 py-0 text-[11px] font-medium text-white hover:bg-amber-600"
+            >
+              {totals.pending}
+            </Badge>
+          ) : (
+            <Badge variant="secondary" className="px-1.5 py-0 text-[11px] font-normal">
+              0
+            </Badge>
+          )}
+        </TabsTrigger>
+        <TabsTrigger
+          ref={(node) => {
+            triggerRefs.current.internal = node;
+          }}
+          value="internal"
+          className={triggerClassName}
+        >
+          Internal
+          <Badge variant="secondary" className="px-1.5 py-0 text-[11px] font-normal">
+            {totals.internal}
+          </Badge>
+        </TabsTrigger>
+        <TabsTrigger
+          ref={(node) => {
+            triggerRefs.current.external = node;
+          }}
+          value="external"
+          className={triggerClassName}
+        >
+          External
+          <Badge variant="secondary" className="px-1.5 py-0 text-[11px] font-normal">
+            {totals.external}
+          </Badge>
+        </TabsTrigger>
+      </TabsList>
+    </Tabs>
   );
 }
 
@@ -1014,7 +1141,8 @@ export function StaffBookings({ role, initialNewBooking = false }: { role: Staff
   const [rescheduleBooking, setRescheduleBooking] = React.useState<StaffBooking | null>(null);
   const [statusAction, setStatusAction] = React.useState<StatusAction | null>(null);
   const [pendingId, setPendingId] = React.useState<string | null>(null);
-  const [internalFilterTab, setInternalFilterTab] = React.useState<"all" | "pending" | "internal" | "external">("all");
+  const [exporting, setExporting] = React.useState(false);
+  const [internalFilterTab, setInternalFilterTab] = React.useState<InternalBookingFilter>("all");
 
   const loadData = React.useCallback(async () => {
     setLoading(true);
@@ -1330,44 +1458,21 @@ export function StaffBookings({ role, initialNewBooking = false }: { role: Staff
     table.setPageIndex(0);
   }
 
-  function exportBookings() {
-    const header = [
-      "Booking code",
-      "Guest",
-      "Event date",
-      "Time",
-      "Package",
-      "Staff",
-      "Resort",
-      "Status",
-      "Guests",
-      "Invoice (USD)",
-      "Commission (USD)",
-    ];
-    const rows = table
-      .getFilteredRowModel()
-      .rows.map(({ original }) => [
-        original.booking_code,
-        original.guest_name,
-        original.event_date,
-        `${original.time_start ?? "-"} - ${original.time_end ?? "-"}`,
-        original.package_name,
-        original.staff_name,
-        original.resort_name ?? "Unassigned",
-        titleCase(original.status),
-        Number(original.adult_count) + Number(original.child_count),
-        Number(original.invoice_total_usd ?? 0),
-        Number(original.staff_commission_5_usd ?? 0),
-      ]);
-    const csv = [header, ...rows].map((row) => row.map(csvCell).join(",")).join("\n");
-    const url = URL.createObjectURL(new Blob([`\uFEFF${csv}`], { type: "text/csv;charset=utf-8" }));
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `ephemeris-${role}-bookings.csv`;
-    document.body.append(link);
-    link.click();
-    link.remove();
-    URL.revokeObjectURL(url);
+  async function exportBookings() {
+    const filteredBookings = table.getFilteredRowModel().rows.map(({ original }) => original);
+
+    if (!filteredBookings.length || exporting) return;
+
+    try {
+      setExporting(true);
+      await exportBookingsToExcel(filteredBookings, role);
+      toast.success(`${filteredBookings.length} booking${filteredBookings.length === 1 ? "" : "s"} exported to Excel.`);
+    } catch (exportError) {
+      console.error("Unable to export bookings to Excel", exportError);
+      toast.error("Unable to create the Excel file. Please try again.");
+    } finally {
+      setExporting(false);
+    }
   }
 
   const isDestructiveStatusAction = Boolean(
@@ -1506,9 +1611,14 @@ export function StaffBookings({ role, initialNewBooking = false }: { role: Staff
               </DropdownMenuContent>
             </DropdownMenu>
 
-            <Button variant="outline" size="sm" onClick={exportBookings} disabled={!bookings.length}>
-              <Download data-icon="inline-start" />
-              Export
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={exportBookings}
+              disabled={!table.getFilteredRowModel().rows.length || exporting}
+            >
+              {exporting ? <Spinner data-icon="inline-start" /> : <Download data-icon="inline-start" />}
+              {exporting ? "Exporting..." : "Export"}
             </Button>
 
             {!readOnly ? (
@@ -1522,54 +1632,18 @@ export function StaffBookings({ role, initialNewBooking = false }: { role: Staff
 
         <CardContent className="flex flex-col gap-4 px-0">
           {role === "internal" ? (
-            <div className="border-b px-4 pb-3">
-              <Tabs
+            <div className="overflow-x-auto border-b px-4 pb-3">
+              <InternalBookingFilterTabs
                 value={internalFilterTab}
+                totals={totals}
                 onValueChange={(value) => {
-                  const nextTab = value as "all" | "pending" | "internal" | "external";
-                  setInternalFilterTab(nextTab);
-                  if (nextTab === "pending") {
+                  setInternalFilterTab(value);
+                  if (value === "pending") {
                     table.getColumn("status")?.setFilterValue(undefined);
                   }
                   table.setPageIndex(0);
                 }}
-              >
-                <TabsList className="h-9">
-                  <TabsTrigger value="all" className="gap-1.5 text-xs sm:text-sm">
-                    All Bookings
-                    <Badge variant="secondary" className="px-1.5 py-0 text-[11px] font-normal">
-                      {totals.total}
-                    </Badge>
-                  </TabsTrigger>
-                  <TabsTrigger value="pending" className="gap-1.5 text-xs sm:text-sm">
-                    Needs Review
-                    {totals.pending > 0 ? (
-                      <Badge
-                        variant="default"
-                        className="bg-amber-500 px-1.5 py-0 text-[11px] font-medium text-white hover:bg-amber-600"
-                      >
-                        {totals.pending}
-                      </Badge>
-                    ) : (
-                      <Badge variant="secondary" className="px-1.5 py-0 text-[11px] font-normal">
-                        0
-                      </Badge>
-                    )}
-                  </TabsTrigger>
-                  <TabsTrigger value="internal" className="gap-1.5 text-xs sm:text-sm">
-                    Internal
-                    <Badge variant="secondary" className="px-1.5 py-0 text-[11px] font-normal">
-                      {totals.internal}
-                    </Badge>
-                  </TabsTrigger>
-                  <TabsTrigger value="external" className="gap-1.5 text-xs sm:text-sm">
-                    External
-                    <Badge variant="secondary" className="px-1.5 py-0 text-[11px] font-normal">
-                      {totals.external}
-                    </Badge>
-                  </TabsTrigger>
-                </TabsList>
-              </Tabs>
+              />
             </div>
           ) : null}
           <div className="flex flex-wrap items-center justify-between gap-3 px-4">
@@ -1648,7 +1722,10 @@ export function StaffBookings({ role, initialNewBooking = false }: { role: Staff
             <Tabs
               value={viewMode}
               onValueChange={(value) => {
-                if (value === "list" || value === "grid") setViewMode(value);
+                if (value !== "list" && value !== "grid") return;
+                setViewMode(value);
+                table.setPageSize(value === "grid" ? 9 : 10);
+                table.setPageIndex(0);
               }}
             >
               <TabsList>
@@ -1662,15 +1739,13 @@ export function StaffBookings({ role, initialNewBooking = false }: { role: Staff
             </Tabs>
           </div>
 
-          <div className="flex flex-1 flex-col gap-4">
-            {viewMode === "list" ? (
-              <StaffBookingsTable table={table} />
-            ) : (
-              <StaffBookingsGrid table={table} actions={actionContext} />
-            )}
-            <BookingsPagination table={table} />
-          </div>
+          {viewMode === "list" ? (
+            <StaffBookingsTable table={table} />
+          ) : (
+            <StaffBookingsGrid table={table} actions={actionContext} />
+          )}
         </CardContent>
+        <BookingsPagination table={table} />
       </Card>
 
       <Sheet
@@ -1891,7 +1966,7 @@ export function StaffBookings({ role, initialNewBooking = false }: { role: Staff
                   required
                 />
               </Field>
-              <FieldGroup className="grid grid-cols-2 gap-4">
+              <FieldGroup className="grid gap-4 sm:grid-cols-2">
                 <Field>
                   <FieldLabel htmlFor="reschedule-start">Start time</FieldLabel>
                   <TimePicker

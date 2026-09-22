@@ -72,12 +72,12 @@ export function Wallet({
       <CardContent className="flex flex-col gap-4">
         <div className="flex flex-col gap-4">
           {primaryItems.map((item) => (
-            <div key={item.id} className="flex items-center justify-between">
-              <div className="flex flex-col gap-0.5">
+            <div key={item.id} className="flex min-w-0 items-center justify-between gap-3">
+              <div className="flex min-w-0 flex-col gap-0.5">
                 <div className="flex items-center gap-2">
-                  <span className="font-medium text-foreground text-sm leading-none">{item.label}</span>
+                  <span className="truncate font-medium text-foreground text-sm leading-none">{item.label}</span>
                 </div>
-                <span className="font-normal text-muted-foreground text-xs">{item.description}</span>
+                <span className="truncate font-normal text-muted-foreground text-xs">{item.description}</span>
               </div>
               <div className="flex size-9 shrink-0 items-center justify-center rounded-md border bg-background">
                 {item.icon ? <SimpleIcon icon={item.icon} /> : <Building2 className="size-5" />}
@@ -90,12 +90,12 @@ export function Wallet({
 
         <div className="flex flex-col gap-4">
           {secondaryItems.map((item) => (
-            <div key={item.id} className="flex items-center justify-between">
-              <div className="flex flex-col gap-0.5">
+            <div key={item.id} className="flex min-w-0 items-center justify-between gap-3">
+              <div className="flex min-w-0 flex-col gap-0.5">
                 <div className="flex items-center gap-2">
-                  <span className="font-medium text-foreground text-sm leading-none">{item.label}</span>
+                  <span className="truncate font-medium text-foreground text-sm leading-none">{item.label}</span>
                 </div>
-                <span className="font-normal text-muted-foreground text-xs">{item.description}</span>
+                <span className="truncate font-normal text-muted-foreground text-xs">{item.description}</span>
               </div>
               <div className="flex size-9 shrink-0 items-center justify-center rounded-md border bg-background">
                 {item.icon ? <SimpleIcon icon={item.icon} /> : <Banknote className="size-5" />}

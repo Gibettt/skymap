@@ -82,7 +82,7 @@ export function UpcomingTransactions({
               {summaryLabel}
             </p>
           </div>
-          <div className="flex w-max items-center gap-2 rounded-md border border-border bg-muted/70 px-2 py-1.5 text-sm">
+          <div className="flex w-full min-w-0 items-center gap-2 rounded-md border border-border bg-muted/70 px-2 py-1.5 text-xs sm:text-sm">
             <Zap className="size-4 fill-primary text-primary" />
             <span className="text-muted-foreground">
               {highlightLabel}{" "}

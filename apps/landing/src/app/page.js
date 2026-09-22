@@ -3,6 +3,7 @@ import Link from "next/link";
 import { query } from "@ephemeris/db";
 import ClubFauneNav from "@/components/ClubFauneNav";
 import ClubFauneSlider from "@/components/ClubFauneSlider";
+import UpcomingEventsCarousel from "@/components/UpcomingEventsCarousel";
 
 export const dynamic = "force-dynamic";
 
@@ -14,13 +15,6 @@ export const metadata = {
 
 const whatsappLink =
   "https://wa.me/6285179546466?text=Hello%2C%20I%20would%20like%20to%20inquire%20about%20a%20SpaceCat%20ASTROTOURISM%20stargazing%20experience%20in%20the%20Maldives.";
-
-const masterclasses = [
-  ["Skygazer — Celestial Fundamentals", "3 days", "USD 285++ / person"],
-  ["Stargazer — Intermediate Immersion", "5 days", "USD 460++ / couple"],
-  ["Astrophotography & Deep Sky", "4 days", "USD 350++ / couple"],
-  ["Astro-Portrait & Private Session", "90 min", "USD 285++ / couple"],
-];
 
 const magazineArticles = [
   {
@@ -70,10 +64,14 @@ async function loadPackages() {
       WHERE p.is_active = true
       ORDER BY p.name
     `);
-    return rows.map((pkg) => ({
-      ...pkg,
-      image_url: pkg.has_image ? `/api/packages/${pkg.id}/image` : null,
-    }));
+    return rows.map((pkg) => {
+      const hasImage = Number(pkg.has_image) === 1;
+      return {
+        ...pkg,
+        has_image: hasImage,
+        image_url: hasImage ? `/api/packages/${pkg.id}/image` : null,
+      };
+    });
   } catch {
     return [];
   }
@@ -82,19 +80,76 @@ async function loadPackages() {
 async function loadResorts() {
   try {
     const { rows } = await query(
-      `SELECT name, slug, location, latitude, longitude FROM resorts
+      `SELECT name, slug, location, latitude, longitude, public_description,
+              image_data IS NOT NULL AS has_image
+       FROM resorts
        WHERE status = 'active' AND slug IS NOT NULL
        ORDER BY name`
     );
-    return rows;
+    return rows.map((resort) => {
+      const hasImage = Number(resort.has_image) === 1;
+      return {
+        ...resort,
+        has_image: hasImage,
+        image_url: hasImage
+          ? `/api/resorts/${encodeURIComponent(resort.slug)}/image`
+          : "/cf-assets/maldives-villa.jpg",
+      };
+    });
+  } catch {
+    return [];
+  }
+}
+
+async function loadUpcomingEvents() {
+  try {
+    const from = new Date();
+    const until = new Date(from);
+    until.setUTCDate(until.getUTCDate() + 60);
+
+    const { rows } = await query(
+      `SELECT
+         se.id, se.title, se.event_type, se.starts_at, se.ends_at, se.description,
+         se.observation_spot, se.capacity, se.price_override_usd,
+         se.image_data IS NOT NULL AS has_image,
+         r.name AS resort_name, r.slug AS resort_slug, r.location AS resort_location,
+         r.timezone AS resort_timezone,
+         p.name AS package_name, p.adult_price_usd
+       FROM sky_events se
+       INNER JOIN resorts r ON r.id = se.resort_id AND r.status = 'active'
+       LEFT JOIN packages p ON p.id = se.package_id AND p.is_active = true
+       WHERE se.status = 'published'
+         AND se.is_published = true
+         AND se.starts_at >= $1
+         AND se.starts_at < $2
+       ORDER BY se.starts_at ASC
+       LIMIT 6`,
+      [from.toISOString(), until.toISOString()]
+    );
+
+    return rows.map((event) => {
+      const hasImage = Number(event.has_image) === 1;
+      return {
+        ...event,
+        has_image: hasImage,
+        starts_at: new Date(event.starts_at).toISOString(),
+        ends_at: event.ends_at ? new Date(event.ends_at).toISOString() : null,
+        image_url: hasImage
+          ? `/api/sky-events/${event.id}/image`
+          : "/stargazing-assets/experience-9.jpg",
+      };
+    });
   } catch {
     return [];
   }
 }
 
 export default async function LandingPage() {
-  const dbPackages = await loadPackages();
-  const resorts = await loadResorts();
+  const [dbPackages, resorts, upcomingEvents] = await Promise.all([
+    loadPackages(),
+    loadResorts(),
+    loadUpcomingEvents(),
+  ]);
 
   // Curated signature experiences with stargazing assets & luxury presentation
   const signatureExperiences = [
@@ -333,6 +388,28 @@ export default async function LandingPage() {
             <ClubFauneSlider items={featuredExperiences} />
           </div>
         </section>
+
+        {upcomingEvents.length > 0 && (
+          <section id="celestial-events" className="cf-upcoming-events" aria-labelledby="celestial-events-title">
+            <div className="cf-upcoming-events-inner">
+              <div className="cf-upcoming-events-heading">
+                <div>
+                  <p className="cf-upcoming-events-eyebrow">Live celestial calendar</p>
+                  <h2 id="celestial-events-title">
+                    <span className="biotif">THE SKY IS CALLING</span>
+                    <span className="ogg">Upcoming celestial events</span>
+                  </h2>
+                </div>
+                <p>
+                  Discover limited observing sessions curated by our resident astronomy
+                  teams across the Maldives. Select an event to explore its resort and reserve your place.
+                </p>
+              </div>
+
+              <UpcomingEventsCarousel events={upcomingEvents} />
+            </div>
+          </section>
+        )}
 
         {/* ==========================================================
             4. MOSAIQUE SECTION (mosaique)
@@ -769,10 +846,11 @@ export default async function LandingPage() {
                   >
                     <div className="cf-resort-media">
                       <Image
-                        src="/cf-assets/maldives-villa.jpg"
+                        src={resort.image_url}
                         alt={resort.name}
                         fill
                         sizes="(max-width: 768px) 100vw, 33vw"
+                        unoptimized={Boolean(resort.has_image)}
                       />
                     </div>
                     <div className="cf-resort-body">
@@ -780,10 +858,7 @@ export default async function LandingPage() {
                         {resort.location || "Maldives"} · Bortle 1 Sky
                       </span>
                       <h3>{resort.name}</h3>
-                      <p>
-                        Island observatory, daily beach observation sessions, and
-                        personalized night sky dining.
-                      </p>
+                      <p>{resort.public_description || "Island observatory, daily beach observation sessions, and personalized night sky dining."}</p>
                       <span className="arrow-custom">
                         <span>Explore the Island</span>
                         <svg width="18" height="12" viewBox="0 0 18 12" fill="none">
@@ -824,32 +899,7 @@ export default async function LandingPage() {
         </section>
 
         {/* ==========================================================
-            9. MASTERCLASS TABLE SECTION
-           ========================================================== */}
-        <section id="masterclass" className="cf-masterclass">
-          <div className="cf-masterclass-inner">
-            <div className="cf-masterclass-header">
-              <h2>Astronomy Masterclasses & Academy</h2>
-              <p>
-                Hands-on immersion programmes to observe, navigate, and photograph
-                the night sky in private, small-group settings.
-              </p>
-            </div>
-
-            <div className="cf-masterclass-table">
-              {masterclasses.map(([title, duration, price], i) => (
-                <div key={i} className="cf-masterclass-row">
-                  <span className="cf-mc-name">{title}</span>
-                  <span className="cf-mc-dur">{duration}</span>
-                  <span className="cf-mc-price">{price}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        {/* ==========================================================
-            10. PRE-FOOTER NEWSLETTER BANNER
+            PRE-FOOTER NEWSLETTER BANNER
            ========================================================== */}
         <div className="newsletter-wrapper-footer">
           <div className="container container-custom big">
@@ -953,7 +1003,6 @@ export default async function LandingPage() {
               <div className="liens-footer-gauche">
                 <a href="#valeurs">About SpaceCat &amp; Founder</a>
                 <a href="#experiences">Signature Stargazing Experiences</a>
-                <a href="#masterclass">Astrophotography &amp; Deep Sky</a>
                 <a href="#magazine">Maldives After Dark Book</a>
               </div>
             </div>

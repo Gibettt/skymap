@@ -1,4 +1,4 @@
-import { Box, Container, Filter, PlusCircle, RefreshCw, Search, Server, Settings } from "lucide-react";
+import { Box, Container, Filter, PlusCircle, Search, Server, Settings } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -22,9 +22,6 @@ export function InfrastructureHeader() {
           <div className="flex w-full items-center justify-between gap-2 sm:w-auto sm:justify-end">
             <span className="whitespace-nowrap text-muted-foreground text-sm">Last updated: 30s ago</span>
             <div className="flex items-center gap-2">
-              <Button variant="outline" size="icon-sm">
-                <RefreshCw />
-              </Button>
               <Button variant="outline" size="icon-sm">
                 <Settings data-icon="inline-start" />
               </Button>

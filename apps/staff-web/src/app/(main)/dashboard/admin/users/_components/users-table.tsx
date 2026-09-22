@@ -6,11 +6,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import type { DataTableFeatures } from "@/lib/data-table-features";
 
 import type { UserRow } from "../../_lib/admin-data";
-import { UsersPagination } from "./users-pagination";
 
 export function UsersTable({ table }: { table: ReactTable<DataTableFeatures, UserRow> }) {
   return (
-    <div className="flex flex-1 flex-col gap-4">
+    <div className="flex flex-1 flex-col">
       <div>
         <Table className="**:data-[slot='table-cell']:px-4 **:data-[slot='table-head']:px-4">
           <TableHeader className="[&_tr]:border-t">
@@ -46,8 +45,6 @@ export function UsersTable({ table }: { table: ReactTable<DataTableFeatures, Use
           </TableBody>
         </Table>
       </div>
-
-      <UsersPagination table={table} />
     </div>
   );
 }
