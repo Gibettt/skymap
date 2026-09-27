@@ -22,8 +22,8 @@
     "./validators/*": "./validators/*.js"
   },
   "dependencies": {
-    "mysql2": "3.24.2",
+    "mysql2": "3.24.4",
     "pg": "^8.23.0",
-    "zod": "^4.4.3"
+    "zod": "^4.6.5"
   }
 }
