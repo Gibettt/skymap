@@ -267,9 +267,9 @@ export function PayoutDashboard({ role, readOnly }: { role: StaffRole; readOnly:
   }, [loadPayouts]);
 
   const summary = data?.summary;
-  const availableUsd = Number(summary?.availableUsd || 0);
-  const starThreshold = Math.max(0.01, Number(summary?.starThreshold || 10));
-  const starProgress = ((Number(summary?.starUnits || 0) % starThreshold) / starThreshold) * 100;
+  const availableUsd = Number(summary?.availableUsd ?? 0);
+  const starThreshold = Math.max(0.01, Number(summary?.starThreshold ?? 10));
+  const starProgress = ((Number(summary?.starUnits ?? 0) % starThreshold) / starThreshold) * 100;
 
   function updateForm<Key extends keyof PayoutForm>(key: Key, value: PayoutForm[Key]) {
     setForm((current) => ({ ...current, [key]: value }));
@@ -331,22 +331,22 @@ export function PayoutDashboard({ role, readOnly }: { role: StaffRole; readOnly:
     },
     {
       label: "Eligible commission",
-      value: formatUsd(summary?.commissionUsd || 0),
+      value: formatUsd(summary?.commissionUsd ?? 0),
       detail: "Completed and signed bookings",
       icon: CircleDollarSign,
     },
     {
       label: role === "external" ? "Monthly reward" : "Total earned",
-      value: formatUsd(role === "external" ? summary?.starRewardUsd || 0 : summary?.earnedUsd || 0),
+      value: formatUsd(role === "external" ? summary?.starRewardUsd ?? 0 : summary?.earnedUsd ?? 0),
       detail:
         role === "external"
-          ? `${summary?.fullStars || 0} of ${MONTHLY_STAR_SLOTS} stars completed`
+          ? `${summary?.fullStars ?? 0} of ${MONTHLY_STAR_SLOTS} stars completed`
           : "Commission eligible for payout",
       icon: role === "external" ? Star : Sparkles,
     },
     {
       label: "Requested or paid",
-      value: formatUsd(summary?.requestedOrPaidUsd || 0),
+      value: formatUsd(summary?.requestedOrPaidUsd ?? 0),
       detail: "Reserved from your balance",
       icon: Clock3,
     },
@@ -521,19 +521,19 @@ export function PayoutDashboard({ role, readOnly }: { role: StaffRole; readOnly:
             <CardAction>
               <Badge variant="outline">
                 <Star className="fill-reward-star text-reward-star" />
-                {Number(summary?.starUnits || 0).toFixed(1)} units
+                {Number(summary?.starUnits ?? 0).toFixed(1)} units
               </Badge>
             </CardAction>
           </CardHeader>
           <CardContent className="flex flex-col gap-3">
-            <RewardStars completed={Number(summary?.fullStars || 0)} progress={starProgress} />
+            <RewardStars completed={Number(summary?.fullStars ?? 0)} progress={starProgress} />
             <Progress value={starProgress} aria-label="Progress toward the next reward star" />
             <div className="flex flex-wrap justify-between gap-2 text-muted-foreground text-xs">
               <span>
-                {summary?.fullStars || 0} of {MONTHLY_STAR_SLOTS} stars completed
+                {summary?.fullStars ?? 0} of {MONTHLY_STAR_SLOTS} stars completed
               </span>
               <span>
-                {Number(summary?.fullStars || 0) >= MONTHLY_STAR_SLOTS
+                {Number(summary?.fullStars ?? 0) >= MONTHLY_STAR_SLOTS
                   ? "Monthly star goal completed"
                   : `${starProgress.toFixed(0)}% toward the next star`}
               </span>
@@ -546,11 +546,11 @@ export function PayoutDashboard({ role, readOnly }: { role: StaffRole; readOnly:
         <CardHeader>
           <CardTitle>Payout history</CardTitle>
           <CardDescription>
-            {data?.requests.length || 0} request{data?.requests.length === 1 ? "" : "s"} submitted from this account.
+            {data?.requests.length ?? 0} request{data?.requests.length === 1 ? "" : "s"} submitted from this account.
           </CardDescription>
         </CardHeader>
         <CardContent className="px-0">
-          <PayoutHistory requests={data?.requests || []} />
+          <PayoutHistory requests={data?.requests ?? []} />
         </CardContent>
       </Card>
     </div>

@@ -106,7 +106,7 @@ export function ResortProfileImageField({
             <img src={visibleUrl} alt="Public resort cover preview" />
           </AttachmentMedia>
           <AttachmentContent>
-            <AttachmentTitle>{value instanceof File ? value.name : currentFileName || "Current cover image"}</AttachmentTitle>
+            <AttachmentTitle>{value instanceof File ? value.name : currentFileName ?? "Current cover image"}</AttachmentTitle>
             <AttachmentDescription>
               {value instanceof File ? formatFileSize(value.size) : "Displayed on the landing page and resort page"}
             </AttachmentDescription>

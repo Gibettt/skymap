@@ -151,7 +151,7 @@ export function StaffCalendar({ role, readOnly }: { role: StaffRole; readOnly: b
     const grouped = new Map<string, StaffBooking[]>();
     for (const booking of bookings) {
       const key = bookingDateKey(booking.event_date);
-      const dayBookings = grouped.get(key) || [];
+      const dayBookings = grouped.get(key) ?? [];
       dayBookings.push(booking);
       grouped.set(key, dayBookings);
     }
@@ -162,7 +162,7 @@ export function StaffCalendar({ role, readOnly }: { role: StaffRole; readOnly: b
   }, [bookings]);
 
   const bookedDates = React.useMemo(() => [...bookingsByDate.keys()].map(dateFromKey), [bookingsByDate]);
-  const selectedBookings = bookingsByDate.get(dateKey(selectedDate)) || [];
+  const selectedBookings = bookingsByDate.get(dateKey(selectedDate)) ?? [];
   const monthBookings = bookings.filter((booking) => {
     const bookingDate = dateFromKey(bookingDateKey(booking.event_date));
     return (
