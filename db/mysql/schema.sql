@@ -455,11 +455,19 @@ CREATE TABLE IF NOT EXISTS invoices (
   source_snapshot JSON NOT NULL,
   notes TEXT NULL,
   issued_by CHAR(36) NOT NULL,
+  signature_data_url MEDIUMTEXT NULL,
+  signature_signer_name VARCHAR(200) NULL,
+  signed_by CHAR(36) NULL,
+  signed_at DATETIME(3) NULL,
+  resort_recorded_at DATETIME(3) NULL,
+  resort_recorded_by CHAR(36) NULL,
   created_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
   updated_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3),
   CONSTRAINT fk_invoices_booking FOREIGN KEY (booking_id) REFERENCES bookings(id) ON DELETE RESTRICT,
   CONSTRAINT fk_invoices_payout FOREIGN KEY (payout_request_id) REFERENCES payout_requests(id) ON DELETE RESTRICT,
   CONSTRAINT fk_invoices_issuer FOREIGN KEY (issued_by) REFERENCES users(id) ON DELETE RESTRICT,
+  CONSTRAINT fk_invoices_signer FOREIGN KEY (signed_by) REFERENCES users(id) ON DELETE RESTRICT,
+  CONSTRAINT fk_invoices_resort_recorder FOREIGN KEY (resort_recorded_by) REFERENCES users(id) ON DELETE RESTRICT,
   CHECK (
     (invoice_type = 'customer' AND status = 'issued' AND booking_id IS NOT NULL AND payout_request_id IS NULL)
     OR
@@ -467,6 +475,16 @@ CREATE TABLE IF NOT EXISTS invoices (
   ),
   CHECK (currency = 'USD'),
   CHECK (due_date IS NULL OR due_date >= DATE(issued_at)),
+  CHECK (
+    (signature_data_url IS NULL AND signature_signer_name IS NULL AND signed_by IS NULL AND signed_at IS NULL)
+    OR
+    (signature_data_url IS NOT NULL AND signature_signer_name IS NOT NULL AND signed_by IS NOT NULL AND signed_at IS NOT NULL)
+  ),
+  CHECK (
+    (resort_recorded_at IS NULL AND resort_recorded_by IS NULL)
+    OR
+    (resort_recorded_at IS NOT NULL AND resort_recorded_by IS NOT NULL)
+  ),
   CHECK (subtotal_usd >= 0),
   CHECK (service_charge_usd >= 0),
   CHECK (tax_usd >= 0),
@@ -476,7 +494,58 @@ CREATE TABLE IF NOT EXISTS invoices (
   CHECK (JSON_TYPE(source_snapshot) = 'OBJECT'),
   INDEX idx_invoices_type_issued (invoice_type, issued_at),
   INDEX idx_invoices_recipient (recipient_name),
-  INDEX idx_invoices_issued_by (issued_by, issued_at)
+  INDEX idx_invoices_issued_by (issued_by, issued_at),
+  INDEX idx_invoices_signed_by (signed_by, signed_at),
+  INDEX idx_invoices_resort_recorded (resort_recorded_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+CREATE TABLE IF NOT EXISTS monthly_invoice_submissions (
+  id CHAR(36) PRIMARY KEY,
+  resort_id CHAR(36) NOT NULL,
+  period_start DATE NOT NULL,
+  status ENUM('submitted', 'reviewed') NOT NULL DEFAULT 'submitted',
+  submitted_by CHAR(36) NOT NULL,
+  submitted_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  reviewed_by CHAR(36) NULL,
+  reviewed_at DATETIME(3) NULL,
+  created_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  updated_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3),
+  CONSTRAINT fk_monthly_invoice_submission_resort FOREIGN KEY (resort_id) REFERENCES resorts(id) ON DELETE RESTRICT,
+  CONSTRAINT fk_monthly_invoice_submission_submitter FOREIGN KEY (submitted_by) REFERENCES users(id) ON DELETE RESTRICT,
+  CONSTRAINT fk_monthly_invoice_submission_reviewer FOREIGN KEY (reviewed_by) REFERENCES users(id) ON DELETE RESTRICT,
+  CONSTRAINT chk_monthly_invoice_submission_review CHECK (
+    (status = 'submitted' AND reviewed_by IS NULL AND reviewed_at IS NULL)
+    OR
+    (status = 'reviewed' AND reviewed_by IS NOT NULL AND reviewed_at IS NOT NULL)
+  ),
+  UNIQUE KEY uq_monthly_invoice_submission_period (resort_id, period_start),
+  INDEX idx_monthly_invoice_submissions_period (period_start, submitted_at),
+  INDEX idx_monthly_invoice_submissions_status (status, submitted_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+CREATE TABLE IF NOT EXISTS monthly_invoice_submission_items (
+  submission_id CHAR(36) NOT NULL,
+  invoice_id CHAR(36) NOT NULL,
+  CONSTRAINT fk_monthly_invoice_item_submission FOREIGN KEY (submission_id) REFERENCES monthly_invoice_submissions(id) ON DELETE CASCADE,
+  CONSTRAINT fk_monthly_invoice_item_invoice FOREIGN KEY (invoice_id) REFERENCES invoices(id) ON DELETE RESTRICT,
+  PRIMARY KEY (submission_id, invoice_id),
+  UNIQUE KEY uq_monthly_invoice_submission_invoice (invoice_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+CREATE TABLE IF NOT EXISTS monthly_invoice_staff_signatures (
+  id CHAR(36) PRIMARY KEY,
+  resort_id CHAR(36) NOT NULL,
+  period_start DATE NOT NULL,
+  signature_data_url MEDIUMTEXT NOT NULL,
+  signer_id CHAR(36) NOT NULL,
+  signer_name VARCHAR(200) NOT NULL,
+  signed_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  created_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  updated_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3),
+  CONSTRAINT fk_monthly_invoice_staff_signature_resort FOREIGN KEY (resort_id) REFERENCES resorts(id) ON DELETE RESTRICT,
+  CONSTRAINT fk_monthly_invoice_staff_signature_signer FOREIGN KEY (signer_id) REFERENCES users(id) ON DELETE RESTRICT,
+  UNIQUE KEY uq_monthly_invoice_staff_signature_period (resort_id, period_start),
+  INDEX idx_monthly_invoice_staff_signatures_period (period_start, signed_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 CREATE TABLE IF NOT EXISTS notifications (

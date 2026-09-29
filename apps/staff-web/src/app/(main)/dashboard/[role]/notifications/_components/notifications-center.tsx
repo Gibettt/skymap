@@ -240,7 +240,7 @@ export function NotificationsCenter({ role, readOnly }: { role: StaffRole; readO
   }
 
   return (
-    <div className="flex flex-col gap-4">
+    <div data-staff-feature-page="notifications" className="flex min-w-0 flex-col gap-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div className="space-y-1">
           <h1 className="font-semibold text-2xl tracking-tight">Notifications</h1>

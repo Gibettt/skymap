@@ -131,7 +131,7 @@ function RewardStars({ completed, progress }: { completed: number; progress: num
 
 function PayoutLoading() {
   return (
-    <div className="flex flex-col gap-6">
+    <div data-staff-feature-page="payouts" className="flex min-w-0 flex-col gap-6">
       <div className="flex flex-col gap-2">
         <Skeleton className="h-8 w-48" />
         <Skeleton className="h-4 w-80 max-w-full" />

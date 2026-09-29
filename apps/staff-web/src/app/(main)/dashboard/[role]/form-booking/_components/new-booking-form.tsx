@@ -435,7 +435,7 @@ export function NewBookingForm({ role, onCreated, onCancel }: NewBookingFormProp
   }
 
   return (
-    <div className="flex flex-col gap-6">
+    <div data-staff-booking-form={role} className="flex min-w-0 flex-col gap-6">
       {loading ? <BookingFormLoading /> : null}
 
       {!loading && error ? (

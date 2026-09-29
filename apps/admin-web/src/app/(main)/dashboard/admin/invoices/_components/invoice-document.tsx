@@ -21,12 +21,19 @@ function snapshotText(invoice: InvoiceRow, key: string) {
   return value == null || value === "" ? null : String(value);
 }
 
+function snapshotNumber(invoice: InvoiceRow, key: string) {
+  const value = Number(invoice.source_snapshot[key]);
+  return Number.isFinite(value) ? value : 0;
+}
+
 export function InvoiceDocument({ invoice }: { invoice: InvoiceRow }) {
   const payout = invoice.invoice_type === "staff_payout";
   const paymentDate = payout
     ? snapshotText(invoice, "paid_at")
     : (snapshotText(invoice, "payment_confirmed_at") ?? invoice.issued_at);
   const paymentReference = snapshotText(invoice, "payment_reference");
+  const resortName = snapshotText(invoice, "resort_name");
+  const roomNumber = snapshotText(invoice, "room_number");
   const sourceLabel = payout
     ? `Payout ${invoice.source_reference.slice(-8).toUpperCase()}`
     : `Booking ${invoice.source_reference}`;
@@ -73,7 +80,12 @@ export function InvoiceDocument({ invoice }: { invoice: InvoiceRow }) {
           <div>
             <p className="mb-4 font-semibold uppercase">{payout ? "Paid to" : "Bill to"}</p>
             <p>{invoice.recipient_name}</p>
-            {invoice.recipient_detail ? <p>{invoice.recipient_detail}</p> : null}
+            {payout && invoice.recipient_detail ? <p>{invoice.recipient_detail}</p> : null}
+            {!payout && resortName ? <p>{resortName}</p> : null}
+            {!payout && roomNumber ? <p>Room/Villa: {roomNumber}</p> : null}
+            {!payout && !resortName && !roomNumber && invoice.recipient_detail ? (
+              <p>{invoice.recipient_detail}</p>
+            ) : null}
             {invoice.recipient_email ? <p>{invoice.recipient_email}</p> : null}
             {invoice.recipient_phone ? <p>{invoice.recipient_phone}</p> : null}
           </div>
@@ -82,23 +94,51 @@ export function InvoiceDocument({ invoice }: { invoice: InvoiceRow }) {
 
       <div className="flex flex-col gap-5">
         <section className="text-sm">
-          <div className="grid grid-cols-[1fr_74px_116px_116px] bg-stone-200 px-3 py-3 font-semibold uppercase">
-            <span>Description</span>
-            <span className="text-right">Units</span>
-            <span className="text-right">Unit cost</span>
-            <span className="text-right">Line total</span>
-          </div>
+          {payout ? (
+            <div className="grid grid-cols-[1fr_74px_116px_116px] bg-stone-200 px-3 py-3 font-semibold uppercase">
+              <span>Description</span>
+              <span className="text-right">Units</span>
+              <span className="text-right">Unit cost</span>
+              <span className="text-right">Line total</span>
+            </div>
+          ) : (
+            <div className="grid grid-cols-[1fr_48px_48px_92px_92px_100px] bg-stone-200 px-3 py-3 font-semibold text-xs uppercase">
+              <span>Package</span>
+              <span className="text-right">Adults</span>
+              <span className="text-right">Kids</span>
+              <span className="text-right">Adult rate</span>
+              <span className="text-right">Kids 50%</span>
+              <span className="text-right">Line total</span>
+            </div>
+          )}
           {invoice.line_items.map((item) => (
             <div
               key={item.id}
-              className="grid grid-cols-[1fr_74px_116px_116px] border-[oklch(0.86_0_0)] border-b px-3 py-4"
+              className={`grid border-[oklch(0.86_0_0)] border-b px-3 py-4 ${
+                payout ? "grid-cols-[1fr_74px_116px_116px]" : "grid-cols-[1fr_48px_48px_92px_92px_100px] text-xs"
+              }`}
             >
               <div className="min-w-0">
                 <p>{item.description}</p>
                 {item.detail ? <p className="text-neutral-500 text-xs">{item.detail}</p> : null}
               </div>
-              <span className="text-right">{item.quantity}</span>
-              <span className="text-right">{formatUsd(item.unit_price_usd)}</span>
+              {payout ? (
+                <>
+                  <span className="text-right">{item.quantity}</span>
+                  <span className="text-right">{formatUsd(item.unit_price_usd)}</span>
+                </>
+              ) : (
+                <>
+                  <span className="text-right">{item.adult_count ?? snapshotNumber(invoice, "adult_count")}</span>
+                  <span className="text-right">{item.child_count ?? snapshotNumber(invoice, "child_count")}</span>
+                  <span className="text-right">
+                    {item.adult_unit_price_usd == null ? "—" : formatUsd(item.adult_unit_price_usd)}
+                  </span>
+                  <span className="text-right">
+                    {item.child_unit_price_usd == null ? "—" : formatUsd(item.child_unit_price_usd)}
+                  </span>
+                </>
+              )}
               <span className="text-right">{formatUsd(item.amount_usd)}</span>
             </div>
           ))}
@@ -140,9 +180,7 @@ export function InvoiceDocument({ invoice }: { invoice: InvoiceRow }) {
         </div>
         <div>
           <p>{payout ? "Payout completed and recorded." : "Customer payment confirmed and recorded."}</p>
-          <p>
-            Issued by {invoice.issuer_name ?? "SpaceCat ASTROTOURISM Admin"} · {titleCase(invoice.status)}
-          </p>
+          <p>Issued by {invoice.issuer_name ?? "SpaceCat ASTROTOURISM Admin"} · {titleCase(invoice.status)}</p>
         </div>
       </footer>
     </article>

@@ -291,4 +291,17 @@ html {
     print-color-adjust: exact;
     -webkit-print-color-adjust: exact;
   }
+
+  body:has([data-print-root][data-print-kind="monthly"]),
+  [data-print-root][data-print-kind="monthly"] {
+    height: auto !important;
+    min-height: 11in !important;
+    overflow: visible !important;
+  }
+
+  [data-print-root][data-print-kind="monthly"] [data-print-paper] {
+    height: auto !important;
+    min-height: 11in !important;
+    overflow: visible !important;
+  }
 }

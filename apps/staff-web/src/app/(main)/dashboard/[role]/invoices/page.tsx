@@ -1,7 +1,12 @@
 import { redirect } from "next/navigation";
 
 import { query } from "@ephemeris/db";
-import { listCustomerInvoices, listCustomerPaymentWorkflows } from "@ephemeris/db/invoices";
+import {
+  listCustomerInvoices,
+  listCustomerPaymentWorkflows,
+  listMonthlyInvoiceStaffSignatures,
+  listMonthlyInvoiceSubmissions,
+} from "@ephemeris/db/invoices";
 
 import { requireStaffContext } from "@/lib/staff-access";
 
@@ -24,9 +29,11 @@ export default async function InvoicesPage({
   }
 
   const database = { query };
-  const [invoices, workflows] = await Promise.all([
+  const [invoices, workflows, monthlySubmissions, monthlySignatures] = await Promise.all([
     listCustomerInvoices(database, { resortId: context.user.resort_id }),
     listCustomerPaymentWorkflows(database, { resortId: context.user.resort_id }),
+    listMonthlyInvoiceSubmissions(database, { resortId: context.user.resort_id }),
+    listMonthlyInvoiceStaffSignatures(database, { resortId: context.user.resort_id }),
   ]);
   const requestedPaymentId = Array.isArray(queryParams.payment) ? queryParams.payment[0] : queryParams.payment;
   const latestInvoiceBookingId = invoices.find((invoice: InvoiceRow) => invoice.booking_id)?.booking_id ?? undefined;
@@ -42,6 +49,9 @@ export default async function InvoicesPage({
     <PaymentInvoicesDashboard
       initialSelectedId={initialSelectedId}
       invoices={invoices}
+      monthlySubmissions={monthlySubmissions}
+      monthlySignatures={monthlySignatures}
+      staffName={context.user.name}
       workflows={workflows}
       readOnly={context.readOnly}
     />

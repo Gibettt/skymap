@@ -81,7 +81,7 @@ export function AppSidebar({ user = rootUser, permissions, ...props }: AppSideba
               tooltip={APP_CONFIG.name}
               className="group-data-[collapsible=icon]:size-9! group-data-[collapsible=icon]:p-0! group-data-[collapsible=icon]:justify-center"
             >
-              <Link prefetch={false} href="/dashboard/default" className="flex items-center gap-2.5">
+              <Link prefetch={false} href="/dashboard/admin" className="flex items-center gap-2.5">
                 <Image
                   src="/spacecat-astrotourism-logo.jpg"
                   alt="SpaceCat ASTROTOURISM"

@@ -26,6 +26,7 @@ export default async function InvoicesPage({
       key={selectedPayoutId ?? initialPaymentId ?? "payment"}
       initialPaymentId={initialPaymentId}
       invoices={data.invoices}
+      monthlySubmissions={data.monthlySubmissions}
       workflows={data.workflows}
       initialTab={selectedPayoutId ? "business" : "payment"}
       initialSelectedId={selectedPayoutId}

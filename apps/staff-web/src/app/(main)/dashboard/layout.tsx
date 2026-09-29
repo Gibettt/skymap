@@ -16,8 +16,8 @@ import { AccountSwitcher } from "./_components/header/account-switcher";
 import { LayoutControls } from "./_components/header/layout-controls";
 import { NotificationCenter } from "./_components/header/notification-center";
 import { SearchDialog } from "./_components/header/search-dialog";
-import { ThemeSwitcher } from "./_components/header/theme-switcher";
 import { StaffPresence } from "./_components/staff-presence";
+import { StaffRoleTheme } from "./_components/staff-role-theme";
 
 function isStaffRole(role: string): role is StaffRole {
   return role === "internal" || role === "external";
@@ -57,6 +57,7 @@ export default async function Layout({ children }: Readonly<{ children: ReactNod
 
   return (
     <SidebarProvider
+      data-staff-role={sessionUser.role}
       defaultOpen={defaultOpen}
       style={
         {
@@ -64,6 +65,7 @@ export default async function Layout({ children }: Readonly<{ children: ReactNod
         } as React.CSSProperties
       }
     >
+      <StaffRoleTheme role={sessionUser.role} />
       <StaffPresence />
       <AppSidebar
         variant={variant}
@@ -84,6 +86,7 @@ export default async function Layout({ children }: Readonly<{ children: ReactNod
         )}
       >
         <header
+          data-staff-shell-header
           className={cn(
             "flex h-12 shrink-0 items-center gap-2 border-b transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-12",
             "[html[data-navbar-style=sticky]_&]:sticky [html[data-navbar-style=sticky]_&]:top-0 [html[data-navbar-style=sticky]_&]:z-50 [html[data-navbar-style=sticky]_&]:overflow-hidden [html[data-navbar-style=sticky]_&]:rounded-t-[inherit] [html[data-navbar-style=sticky]_&]:bg-background/50 [html[data-navbar-style=sticky]_&]:backdrop-blur-md",
@@ -98,11 +101,10 @@ export default async function Layout({ children }: Readonly<{ children: ReactNod
               />
               <SearchDialog items={navigationItems} />
             </div>
-            <div className="flex shrink-0 items-center gap-1 sm:gap-2">
+            <div data-staff-header-actions className="flex shrink-0 items-center gap-1 sm:gap-2">
               <div className="hidden sm:block">
                 <LayoutControls />
               </div>
-              <ThemeSwitcher />
               {canViewNotifications ? (
                 <NotificationCenter role={sessionUser.role} readOnly={accessLevel === "read_only"} />
               ) : null}
@@ -114,7 +116,10 @@ export default async function Layout({ children }: Readonly<{ children: ReactNod
             </div>
           </div>
         </header>
-        <div className="min-h-0 min-w-0 flex-1 overflow-x-hidden p-2 has-data-[content-padding=false]:p-0 sm:p-4 md:p-6 md:has-data-[content-padding=false]:p-0">
+        <div
+          data-staff-shell-content
+          className="min-h-0 min-w-0 flex-1 overflow-x-hidden p-2 has-data-[content-padding=false]:p-0 sm:p-4 md:p-6 md:has-data-[content-padding=false]:p-0"
+        >
           {children}
         </div>
       </SidebarInset>

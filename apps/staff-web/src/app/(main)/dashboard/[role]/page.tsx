@@ -8,5 +8,13 @@ export default async function StaffOverviewPage({ params }: { params: Promise<{ 
   const context = await requireStaffContext(role);
   const data = await getStaffOverviewData(context.user, context.permissions);
 
-  return <StaffOverview role={context.role} permissions={context.permissions} data={data} />;
+  return (
+    <StaffOverview
+      role={context.role}
+      permissions={context.permissions}
+      data={data}
+      userName={context.user.name}
+      resortName={context.user.resort_name ?? null}
+    />
+  );
 }

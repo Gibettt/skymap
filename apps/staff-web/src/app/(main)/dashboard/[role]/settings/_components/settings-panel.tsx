@@ -379,7 +379,7 @@ export function SettingsPanel({
   }
 
   return (
-    <div className="flex max-w-5xl flex-col gap-4">
+    <div data-staff-feature-page="settings" className="flex max-w-5xl flex-col gap-4">
       <div className="space-y-1">
         <h1 className="font-semibold text-2xl tracking-tight">Settings</h1>
         <p className="text-muted-foreground text-sm">Review your account access and assigned resort configuration.</p>

@@ -5,6 +5,10 @@ export interface InvoiceLineItem {
   quantity: number;
   unit_price_usd: number;
   amount_usd: number;
+  adult_count?: number;
+  child_count?: number;
+  adult_unit_price_usd?: number;
+  child_unit_price_usd?: number;
 }
 
 export interface InvoiceRow {
@@ -33,6 +37,12 @@ export interface InvoiceRow {
   notes: string | null;
   issued_by: string;
   issuer_name: string | null;
+  signature_data_url: string | null;
+  signature_signer_name: string | null;
+  signed_by: string | null;
+  signed_at: string | null;
+  resort_recorded_at: string | null;
+  resort_recorded_by: string | null;
   source_reference: string;
   created_at: string;
   updated_at: string;
@@ -61,4 +71,37 @@ export interface PaymentWorkflowRow {
   tax_usd?: number;
   tax_label?: string;
   tax_rate_percent?: number;
+}
+
+export interface MonthlyInvoiceSubmission {
+  id: string;
+  resort_id: string;
+  resort_name: string;
+  period_start: string;
+  status: "submitted" | "reviewed";
+  submitted_by: string;
+  submitted_by_name: string;
+  submitted_at: string;
+  reviewed_by: string | null;
+  reviewed_by_name: string | null;
+  reviewed_at: string | null;
+  created_at: string;
+  updated_at: string;
+  staff_signature_data_url: string | null;
+  staff_signer_id: string | null;
+  staff_signer_name: string | null;
+  staff_signed_at: string | null;
+  invoices: InvoiceRow[];
+}
+
+export interface MonthlyInvoiceStaffSignature {
+  id: string;
+  resort_id: string;
+  period_start: string;
+  signature_data_url: string;
+  signer_id: string;
+  signer_name: string;
+  signed_at: string;
+  created_at: string;
+  updated_at: string;
 }

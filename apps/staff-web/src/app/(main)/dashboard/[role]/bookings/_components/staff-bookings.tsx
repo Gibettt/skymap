@@ -1481,8 +1481,24 @@ export function StaffBookings({ role, initialNewBooking = false }: { role: Staff
 
   if (loading) return <BookingLoading />;
 
+  let bookingResults = <StaffBookingsTable table={table} />;
+  if (viewMode === "grid") {
+    bookingResults = <StaffBookingsGrid table={table} actions={actionContext} />;
+  } else if (role === "external") {
+    bookingResults = (
+      <>
+        <div className="md:hidden">
+          <StaffBookingsGrid table={table} actions={actionContext} />
+        </div>
+        <div className="hidden md:block">
+          <StaffBookingsTable table={table} />
+        </div>
+      </>
+    );
+  }
+
   return (
-    <div className="flex flex-col gap-4 md:gap-6">
+    <div data-staff-feature-page="bookings" className="flex min-w-0 flex-col gap-4 md:gap-6">
       {error ? (
         <Alert variant="destructive">
           <ShieldCheck />
@@ -1719,31 +1735,29 @@ export function StaffBookings({ role, initialNewBooking = false }: { role: Staff
               {selectedCount} selected / {table.getFilteredRowModel().rows.length} bookings
             </div>
 
-            <Tabs
-              value={viewMode}
-              onValueChange={(value) => {
-                if (value !== "list" && value !== "grid") return;
-                setViewMode(value);
-                table.setPageSize(value === "grid" ? 9 : 10);
-                table.setPageIndex(0);
-              }}
-            >
-              <TabsList>
-                <TabsTrigger value="list" aria-label="List view">
-                  <Rows3 />
-                </TabsTrigger>
-                <TabsTrigger value="grid" aria-label="Grid view">
-                  <Grid />
-                </TabsTrigger>
-              </TabsList>
-            </Tabs>
+            <div className={role === "external" ? "hidden md:block" : undefined}>
+              <Tabs
+                value={viewMode}
+                onValueChange={(value) => {
+                  if (value !== "list" && value !== "grid") return;
+                  setViewMode(value);
+                  table.setPageSize(value === "grid" ? 9 : 10);
+                  table.setPageIndex(0);
+                }}
+              >
+                <TabsList>
+                  <TabsTrigger value="list" aria-label="List view">
+                    <Rows3 />
+                  </TabsTrigger>
+                  <TabsTrigger value="grid" aria-label="Grid view">
+                    <Grid />
+                  </TabsTrigger>
+                </TabsList>
+              </Tabs>
+            </div>
           </div>
 
-          {viewMode === "list" ? (
-            <StaffBookingsTable table={table} />
-          ) : (
-            <StaffBookingsGrid table={table} actions={actionContext} />
-          )}
+          {bookingResults}
         </CardContent>
         <BookingsPagination table={table} />
       </Card>
@@ -1755,7 +1769,11 @@ export function StaffBookings({ role, initialNewBooking = false }: { role: Staff
           else closeNewBooking();
         }}
       >
-        <SheetContent side="right" className="data-[side=right]:w-full data-[side=right]:sm:max-w-6xl">
+        <SheetContent
+          data-staff-booking-sheet={role}
+          side="right"
+          className="data-[side=right]:w-full data-[side=right]:sm:max-w-6xl"
+        >
           <SheetHeader className="border-b pr-12">
             <SheetTitle>New booking</SheetTitle>
             <SheetDescription>
@@ -1936,7 +1954,12 @@ export function StaffBookings({ role, initialNewBooking = false }: { role: Staff
             </FieldGroup>
             <DialogFooter>
               <DialogClose asChild>
-                <Button type="button" variant="outline" disabled={pendingId === editBooking?.id}>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="!border-cyan-300/30 !bg-[#071d3d] !text-slate-100 hover:!border-cyan-200/45 hover:!bg-[#0b2a54] hover:!text-white focus-visible:!border-fuchsia-300/70"
+                  disabled={pendingId === editBooking?.id}
+                >
                   Cancel
                 </Button>
               </DialogClose>
