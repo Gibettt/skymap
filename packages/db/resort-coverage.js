@@ -2,12 +2,14 @@ export const OPEN_BOOKING_STATUSES = Object.freeze(['pending', 'active', 'resche
 
 const STAFF_ROLES = new Set(['internal', 'external']);
 
-export function resortCoverageStatus({ resortStatus, activeInternalCount, activeExternalCount }) {
+export function resortCoverageStatus({ resortStatus, activeInternalCount, activeExternalCount, activePackageCount }) {
   if (resortStatus !== 'active') return 'inactive';
 
   const hasInternal = Number(activeInternalCount) > 0;
   const hasExternal = Number(activeExternalCount) > 0;
-  if (hasInternal && hasExternal) return 'ready';
+  const hasPackage = Number(activePackageCount) > 0;
+  if (hasInternal && hasExternal && hasPackage) return 'ready';
+  if (hasInternal && hasExternal) return 'needs_package';
   if (!hasInternal && !hasExternal) return 'needs_both';
   return hasInternal ? 'needs_external' : 'needs_internal';
 }

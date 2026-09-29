@@ -27,7 +27,6 @@ const packageFields = z.object({
   description: cleanTextSchema(240),
   schedule: z.string().trim().min(1, 'Schedule wajib diisi').max(120, 'Schedule maksimal 120 karakter'),
   resortId: uuidSchema,
-  isChargeable: z.boolean(),
   adultPriceUsd: moneySchema,
   childPriceUsd: nullableMoneySchema,
   childAgeRange: cleanTextSchema(80),
@@ -40,8 +39,9 @@ const packageFields = z.object({
 export const createPackageSchema = packageFields.extend({
   schedule: packageFields.shape.schedule.default('Upon request'),
   inclusions: packageFields.shape.inclusions.default([]),
-  isChargeable: packageFields.shape.isChargeable.default(true),
   isActive: packageFields.shape.isActive.default(true),
 });
 
 export const updatePackageSchema = packageFields.partial();
+
+export const copyPackageSchema = z.object({ resortId: uuidSchema });

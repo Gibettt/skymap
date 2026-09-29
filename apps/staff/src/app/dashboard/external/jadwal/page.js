@@ -73,6 +73,16 @@ function groupBookings(bookings) {
   }, {});
 }
 
+function groupSkyEvents(events) {
+  return events.reduce((grouped, event) => {
+    const key = String(event.startsAt || '').slice(0, 10);
+    if (!key) return grouped;
+    grouped[key] = grouped[key] || [];
+    grouped[key].push(event);
+    return grouped;
+  }, {});
+}
+
 function bookingSort(a, b) {
   return `${a.event_date} ${a.time_start}`.localeCompare(`${b.event_date} ${b.time_start}`);
 }
@@ -86,6 +96,7 @@ export default function StaffMonthlyCalendarPage() {
   const [monthDate, setMonthDate] = useState(new Date(now.getFullYear(), now.getMonth(), 1));
   const [selectedDate, setSelectedDate] = useState(dateKey(now));
   const [bookings, setBookings] = useState([]);
+  const [skyEvents, setSkyEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -95,14 +106,21 @@ export default function StaffMonthlyCalendarPage() {
     async function loadBookings() {
       setError('');
       try {
-        const response = await fetch('/api/bookings');
-        if (response.status === 401) {
+        const [response, skyEventResponse] = await Promise.all([
+          fetch('/api/bookings'),
+          fetch('/api/sky-events?from=2020-01-01&to=2035-12-31', { cache: 'no-store' }),
+        ]);
+        if (response.status === 401 || skyEventResponse.status === 401) {
           router.replace('/login');
           return;
         }
         if (!response.ok) throw new Error(language === 'en' ? 'Failed to load calendar bookings.' : 'Gagal memuat data booking kalender.');
-        const data = await response.json();
-        if (alive) setBookings((data.bookings || []).sort(bookingSort));
+        if (!skyEventResponse.ok) throw new Error(language === 'en' ? 'Failed to load Sky Events.' : 'Gagal memuat Sky Event.');
+        const [data, skyEventData] = await Promise.all([response.json(), skyEventResponse.json()]);
+        if (alive) {
+          setBookings((data.bookings || []).sort(bookingSort));
+          setSkyEvents(skyEventData.events || []);
+        }
       } catch (err) {
         if (alive) setError(err.message);
       } finally {
@@ -117,6 +135,7 @@ export default function StaffMonthlyCalendarPage() {
   }, [router, language]);
 
   const grouped = useMemo(() => groupBookings(bookings), [bookings]);
+  const groupedSkyEvents = useMemo(() => groupSkyEvents(skyEvents), [skyEvents]);
   const days = useMemo(() => buildMonthDays(monthDate), [monthDate]);
   const yearOptions = useMemo(() => {
     const year = monthDate.getFullYear();
@@ -127,6 +146,7 @@ export default function StaffMonthlyCalendarPage() {
     label: new Intl.DateTimeFormat(localeFor(language), { month: 'long' }).format(new Date(2026, month, 1)),
   })), [language]);
   const selectedBookings = grouped[selectedDate] || [];
+  const selectedSkyEvents = groupedSkyEvents[selectedDate] || [];
   const monthBookingCount = days.reduce((total, day) => {
     if (!day.inMonth) return total;
     return total + (grouped[day.key]?.length || 0);
@@ -198,7 +218,7 @@ export default function StaffMonthlyCalendarPage() {
             </div>
             <div className="calendar-month-stats">
               <strong>{monthBookingCount}</strong>
-              <span>{t('calendar_this_month')}</span>
+              <span>{t('calendar_this_month')} · {skyEvents.length} Sky Event</span>
             </div>
           </div>
 
@@ -211,8 +231,10 @@ export default function StaffMonthlyCalendarPage() {
 
             {days.map((day) => {
               const dayBookings = grouped[day.key] || [];
-              const shown = dayBookings.slice(0, 3);
-              const extra = dayBookings.length - shown.length;
+              const daySkyEvents = groupedSkyEvents[day.key] || [];
+              const shownBookings = dayBookings.slice(0, Math.max(0, 3 - daySkyEvents.length));
+              const shownSkyEvents = daySkyEvents.slice(0, 3 - shownBookings.length);
+              const extra = dayBookings.length + daySkyEvents.length - shownBookings.length - shownSkyEvents.length;
 
               return (
                 <button
@@ -224,7 +246,13 @@ export default function StaffMonthlyCalendarPage() {
                   <span className="staff-calendar-date-number">{day.day}</span>
                   <div className="staff-calendar-events">
                     {loading && day.inMonth && day.day <= 7 ? <span className="calendar-event skeleton">{language === 'en' ? 'Loading' : 'Memuat'}</span> : null}
-                    {!loading && shown.map((booking) => (
+                    {!loading && shownSkyEvents.map((event) => (
+                      <span className="calendar-event calendar-sky-event" key={`sky-${event.id}`}>
+                        <b>{formatTime(event.startsAt)}</b>
+                        <span>Sky Event: {event.title}</span>
+                      </span>
+                    ))}
+                    {!loading && shownBookings.map((booking) => (
                       <span className="calendar-event" key={booking.id}>
                         <b>{formatTime(booking.time_start)}</b>
                         <span>{booking.guest_name}</span>
@@ -246,12 +274,27 @@ export default function StaffMonthlyCalendarPage() {
 
           <div className="calendar-day-bookings">
             {loading && <div className="calendar-empty">{t('calendar_loading')}</div>}
-            {!loading && selectedBookings.length === 0 && (
+            {!loading && selectedBookings.length === 0 && selectedSkyEvents.length === 0 && (
               <div className="calendar-empty">
                 <strong>{t('calendar_empty_title')}</strong>
                 <span>{t('calendar_empty_desc')}</span>
               </div>
             )}
+            {!loading && selectedSkyEvents.map((event) => (
+              <article className="calendar-booking-card calendar-sky-event-card" key={`sky-${event.id}`}>
+                <div className="calendar-booking-top">
+                  <strong>{formatTime(event.startsAt)}{event.endsAt ? ` - ${formatTime(event.endsAt)}` : ''}</strong>
+                  <span>Sky Event</span>
+                </div>
+                <h4>{event.title}</h4>
+                <div className="calendar-booking-meta">
+                  <span>{event.packageName || (language === 'en' ? 'No package' : 'Tanpa package')}</span>
+                  {event.observationSpot && <span>{event.observationSpot}</span>}
+                  <span>{event.status}</span>
+                </div>
+                {event.description && <p>{event.description}</p>}
+              </article>
+            ))}
             {!loading && selectedBookings.map((booking) => (
               <article className="calendar-booking-card" key={booking.id}>
                 <div className="calendar-booking-top">

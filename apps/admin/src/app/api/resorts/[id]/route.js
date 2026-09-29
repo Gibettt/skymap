@@ -12,6 +12,8 @@ async function getOperationalState(client, resortId) {
     SELECT
       COUNT(*) FILTER (WHERE role = 'internal' AND status = 'active')::int AS active_internal_count,
       COUNT(*) FILTER (WHERE role = 'external' AND status = 'active')::int AS active_external_count,
+      (SELECT COUNT(*)::int FROM packages
+        WHERE resort_id = $1 AND is_active = true) AS active_package_count,
       (SELECT COUNT(*)::int FROM bookings
         WHERE resort_id = $1 AND status IN ('pending', 'active', 'rescheduled')) AS open_bookings_count
     FROM users
@@ -24,6 +26,9 @@ function assertStatusTransition(currentStatus, nextStatus, state) {
   if (currentStatus !== 'active' && nextStatus === 'active'
     && (!state.active_internal_count || !state.active_external_count)) {
     throw new ApiError(409, 'Resort membutuhkan minimal 1 staff Internal dan 1 staff External aktif sebelum diaktifkan.');
+  }
+  if (currentStatus !== 'active' && nextStatus === 'active' && !state.active_package_count) {
+    throw new ApiError(409, 'Resort membutuhkan minimal 1 package aktif sebelum diaktifkan.');
   }
   if (currentStatus === 'active' && nextStatus === 'inactive' && state.open_bookings_count > 0) {
     throw new ApiError(409, 'Resort masih memiliki booking terbuka. Selesaikan atau pindahkan booking sebelum menonaktifkan resort.');

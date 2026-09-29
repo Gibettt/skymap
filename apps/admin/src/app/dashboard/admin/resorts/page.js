@@ -4,15 +4,16 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { useResortsQuery, queryKeys } from '@/lib/apiQueries';
+import { worldTimezones } from '@/lib/resort-location';
 
 const EMPTY_RESORT = {
   name: '',
   code: '',
   location: '',
-  timezone: 'Indian/Maldives',
-  latitude: 5.2893,
-  longitude: 73.5358,
-  observationSpots: 'Sunset Beach, Helipad, Main Jetty',
+  timezone: 'UTC',
+  latitude: '',
+  longitude: '',
+  observationSpots: '',
   contactName: '',
   contactPhone: '',
   contactEmail: '',
@@ -20,30 +21,25 @@ const EMPTY_RESORT = {
   status: 'inactive',
 };
 
-const TIMEZONES = [
-  'Indian/Maldives',
-  'Asia/Jakarta',
-  'Asia/Makassar',
-  'Asia/Jayapura',
-  'Asia/Singapore',
-  'Asia/Bangkok',
-  'Asia/Dubai',
-  'UTC',
-];
+const TIMEZONES = worldTimezones();
 
 function hasStaffCoverage(resort) {
   return Number(resort.active_internal_count) > 0 && Number(resort.active_external_count) > 0;
 }
 
+function hasOperationalCoverage(resort) {
+  return hasStaffCoverage(resort) && Number(resort.active_package_count) > 0;
+}
+
 function CoverageBadge({ resort }) {
-  const ready = hasStaffCoverage(resort);
+  const ready = hasOperationalCoverage(resort);
   const label = ready
     ? (resort.status === 'active' ? 'Coverage Ready' : 'Siap Diaktifkan')
-    : 'Butuh Staff';
+    : hasStaffCoverage(resort) ? 'Butuh Package' : 'Butuh Staff';
   const color = ready ? 'var(--emerald)' : 'var(--amber)';
   return (
     <span
-      title={ready ? 'Minimal 1 Internal dan 1 External aktif tersedia' : 'Lengkapi staff Internal dan External aktif'}
+      title={ready ? 'Staff dan package aktif tersedia' : hasStaffCoverage(resort) ? 'Tambahkan minimal 1 package aktif' : 'Lengkapi staff Internal dan External aktif'}
       style={{
         display: 'inline-flex',
         marginTop: 6,
@@ -89,11 +85,11 @@ export default function ResortsPage() {
     return resorts.reduce((acc, r) => {
       acc.total += 1;
       acc.active += r.status === 'active' ? 1 : 0;
-      acc.ready += hasStaffCoverage(r) ? 1 : 0;
-      acc.needsStaff += hasStaffCoverage(r) ? 0 : 1;
+      acc.ready += hasOperationalCoverage(r) ? 1 : 0;
+      acc.needsSetup += hasOperationalCoverage(r) ? 0 : 1;
       acc.bookings += Number(r.total_bookings_count || 0);
       return acc;
-    }, { total: 0, active: 0, ready: 0, needsStaff: 0, bookings: 0 });
+    }, { total: 0, active: 0, ready: 0, needsSetup: 0, bookings: 0 });
   }, [resorts]);
 
   const filtered = useMemo(() => {
@@ -125,10 +121,10 @@ export default function ResortsPage() {
       name: resort.name || '',
       code: resort.code || '',
       location: resort.location || '',
-      timezone: resort.timezone || 'Indian/Maldives',
-      latitude: resort.latitude ?? 5.2893,
-      longitude: resort.longitude ?? 73.5358,
-      observationSpots: resort.observation_spots || 'Sunset Beach, Helipad, Main Jetty',
+      timezone: resort.timezone || 'UTC',
+      latitude: resort.latitude ?? '',
+      longitude: resort.longitude ?? '',
+      observationSpots: resort.observation_spots || '',
       contactName: resort.contact_name || '',
       contactPhone: resort.contact_phone || '',
       contactEmail: resort.contact_email || '',
@@ -229,7 +225,7 @@ export default function ResortsPage() {
         <KpiCard label="Total Resort Mitra" value={stats.total} />
         <KpiCard label="Resort Aktif" value={stats.active} accent="#059669" />
         <KpiCard label="Coverage Ready" value={stats.ready} accent="#059669" />
-        <KpiCard label="Butuh Staff" value={stats.needsStaff} accent="#d97706" />
+        <KpiCard label="Butuh Setup" value={stats.needsSetup} accent="#d97706" />
         <KpiCard label="Total Booking Resort" value={stats.bookings} accent="#0891b2" />
       </div>
 
@@ -363,6 +359,9 @@ export default function ResortsPage() {
                     <div style={{ marginTop: 2, fontSize: 11, fontWeight: 700, color: 'var(--violet)' }}>
                       {r.active_external_count || 0} External
                     </div>
+                    <div style={{ marginTop: 2, fontSize: 11, fontWeight: 700, color: 'var(--emerald)' }}>
+                      {r.active_package_count || 0} Package
+                    </div>
                     <div style={{ marginTop: 5, fontSize: 10, color: 'var(--text-dim)' }}>
                       {r.open_bookings_count || 0} terbuka · {r.total_bookings_count || 0} total
                     </div>
@@ -401,12 +400,14 @@ export default function ResortsPage() {
                           borderColor: r.status === 'active' ? 'rgba(220, 38, 38, 0.3)' : 'rgba(5, 150, 105, 0.3)',
                         }}
                         onClick={() => handleToggleStatus(r)}
-                        disabled={r.status !== 'active' && !hasStaffCoverage(r)}
+                        disabled={r.status !== 'active' && !hasOperationalCoverage(r)}
                         title={r.status === 'active'
                           ? 'Nonaktifkan Resort'
-                          : hasStaffCoverage(r)
+                          : hasOperationalCoverage(r)
                             ? 'Aktifkan Resort'
-                            : 'Tambahkan minimal 1 Internal dan 1 External aktif'}
+                            : !hasStaffCoverage(r)
+                              ? 'Tambahkan minimal 1 Internal dan 1 External aktif'
+                              : 'Tambahkan minimal 1 package aktif'}
                       >
                         {r.status === 'active' ? 'Nonaktifkan' : 'Aktifkan'}
                       </button>
@@ -728,6 +729,63 @@ function StaffManagementModal({ resort, onClose, onChanged, showToast }) {
 }
 
 function ResortModal({ formData, setFormData, isEditing, onClose, onSave, saving }) {
+  const [locationQuery, setLocationQuery] = useState(
+    () => [formData.name, formData.location].filter(Boolean).join(', ')
+  );
+  const [locationResults, setLocationResults] = useState([]);
+  const [locationError, setLocationError] = useState('');
+  const [searchingLocation, setSearchingLocation] = useState(false);
+  const [timezoneOpen, setTimezoneOpen] = useState(false);
+  const [timezoneFilter, setTimezoneFilter] = useState('');
+  const filteredTimezones = TIMEZONES.filter((timezone) =>
+    timezone.toLowerCase().includes(timezoneFilter.toLowerCase().trim())
+  );
+  const latitude = Number(formData.latitude);
+  const longitude = Number(formData.longitude);
+  const hasCoordinates = Number.isFinite(latitude) && Number.isFinite(longitude)
+    && latitude >= -90 && latitude <= 90 && longitude >= -180 && longitude <= 180
+    && formData.latitude !== '' && formData.longitude !== '';
+  const mapUrl = hasCoordinates
+    ? `https://www.openstreetmap.org/export/embed.html?bbox=${longitude - 0.02}%2C${latitude - 0.02}%2C${longitude + 0.02}%2C${latitude + 0.02}&layer=mapnik&marker=${latitude}%2C${longitude}`
+    : '';
+
+  const searchLocation = async () => {
+    const query = locationQuery.trim();
+    if (query.length < 3) {
+      setLocationError('Masukkan minimal 3 karakter lokasi.');
+      return;
+    }
+
+    setSearchingLocation(true);
+    setLocationError('');
+    try {
+      const response = await fetch(`/api/locations?q=${encodeURIComponent(query)}`, { cache: 'no-store' });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Lokasi tidak dapat dicari.');
+      setLocationResults(data.results || []);
+      if (!data.results?.length) setLocationError('Lokasi tidak ditemukan. Coba nama kota atau negara yang lebih lengkap.');
+    } catch (error) {
+      setLocationResults([]);
+      setLocationError(error.message);
+    } finally {
+      setSearchingLocation(false);
+    }
+  };
+
+  const selectLocation = (result) => {
+    setFormData((current) => ({
+      ...current,
+      location: result.location,
+      latitude: result.latitude,
+      longitude: result.longitude,
+      timezone: result.timezone,
+    }));
+    setLocationQuery(result.label);
+    setLocationResults([]);
+    setLocationError('');
+    setTimezoneOpen(false);
+  };
+
   const content = (
     <div
       className="modal-backdrop"
@@ -802,7 +860,54 @@ function ResortModal({ formData, setFormData, isEditing, onClose, onSave, saving
               </div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+            <section className="resort-location-picker" aria-labelledby="resort-location-title">
+              <div className="resort-location-heading">
+                <div>
+                  <strong id="resort-location-title">Cari lokasi resort</strong>
+                  <span>Koordinat dan zona waktu akan terisi otomatis.</span>
+                </div>
+                <span className="resort-location-step">Disarankan</span>
+              </div>
+              <div className="resort-location-search-row">
+                <input
+                  type="search"
+                  className="input"
+                  value={locationQuery}
+                  onChange={(event) => setLocationQuery(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter') {
+                      event.preventDefault();
+                      searchLocation();
+                    }
+                  }}
+                  placeholder="Contoh: Putrajaya Marriott Hotel, Malaysia"
+                  aria-label="Cari nama resort, kota, atau negara"
+                />
+                <button type="button" className="btn btn-secondary" onClick={searchLocation} disabled={searchingLocation}>
+                  {searchingLocation ? 'Mencari...' : 'Cari lokasi'}
+                </button>
+              </div>
+              {locationError && <p className="resort-location-error" role="alert">{locationError}</p>}
+              {locationResults.length > 0 && (
+                <div className="resort-location-results" role="listbox" aria-label="Hasil pencarian lokasi">
+                  {locationResults.map((result) => (
+                    <button
+                      key={`${result.latitude}-${result.longitude}`}
+                      type="button"
+                      role="option"
+                      aria-selected="false"
+                      onClick={() => selectLocation(result)}
+                    >
+                      <strong>{result.label}</strong>
+                      <span>{result.latitude}, {result.longitude} · {result.timezone}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+              <small>Data lokasi © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap contributors</a></small>
+            </section>
+
+            <div className="resort-location-grid">
               <div className="input-group">
                 <label className="input-label">Lokasi / Pulau / Atoll</label>
                 <input
@@ -815,42 +920,108 @@ function ResortModal({ formData, setFormData, isEditing, onClose, onSave, saving
               </div>
               <div className="input-group">
                 <label className="input-label">Zona Waktu (Timezone)</label>
-                <select
-                  className="input"
-                  value={formData.timezone}
-                  onChange={(e) => setFormData({ ...formData, timezone: e.target.value })}
+                <div
+                  className="resort-timezone-combobox"
+                  onBlur={(event) => {
+                    if (!event.currentTarget.contains(event.relatedTarget)) setTimezoneOpen(false);
+                  }}
                 >
-                  {TIMEZONES.map((tz) => (
-                    <option key={tz} value={tz}>{tz}</option>
-                  ))}
-                </select>
+                  <input
+                    type="text"
+                    className="input"
+                    value={formData.timezone}
+                    onFocus={() => {
+                      setTimezoneFilter('');
+                      setTimezoneOpen(true);
+                    }}
+                    onChange={(event) => {
+                      setFormData({ ...formData, timezone: event.target.value });
+                      setTimezoneFilter(event.target.value);
+                      setTimezoneOpen(true);
+                    }}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Escape') setTimezoneOpen(false);
+                      if (event.key === 'Enter' && timezoneOpen && timezoneFilter && filteredTimezones[0]) {
+                        event.preventDefault();
+                        setFormData({ ...formData, timezone: filteredTimezones[0] });
+                        setTimezoneOpen(false);
+                      }
+                    }}
+                    role="combobox"
+                    aria-autocomplete="list"
+                    aria-expanded={timezoneOpen}
+                    aria-controls="resort-timezone-options"
+                    required
+                  />
+                  {timezoneOpen && (
+                    <div id="resort-timezone-options" className="resort-timezone-menu" role="listbox">
+                      {filteredTimezones.length > 0 ? filteredTimezones.map((timezone) => (
+                        <button
+                          key={timezone}
+                          type="button"
+                          role="option"
+                          aria-selected={formData.timezone === timezone}
+                          onClick={() => {
+                            setFormData({ ...formData, timezone });
+                            setTimezoneOpen(false);
+                          }}
+                        >
+                          <span>{timezone}</span>
+                          {formData.timezone === timezone && <span aria-hidden="true">✓</span>}
+                        </button>
+                      )) : <p>Tidak ada zona waktu yang cocok.</p>}
+                    </div>
+                  )}
+                </div>
+                <span className="resort-field-hint">Pilih zona IANA dunia atau koreksi manual.</span>
               </div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+            <div className="resort-location-grid">
               <div className="input-group">
                 <label className="input-label">Latitude GPS (°)</label>
                 <input
                   type="number"
                   step="0.000001"
+                  min="-90"
+                  max="90"
                   className="input"
-                  placeholder="Contoh: 5.2893"
+                  placeholder="Terisi setelah memilih lokasi"
                   value={formData.latitude}
                   onChange={(e) => setFormData({ ...formData, latitude: e.target.value })}
+                  required
                 />
+                <span className="resort-field-hint">Rentang -90 sampai 90.</span>
               </div>
               <div className="input-group">
                 <label className="input-label">Longitude GPS (°)</label>
                 <input
                   type="number"
                   step="0.000001"
+                  min="-180"
+                  max="180"
                   className="input"
-                  placeholder="Contoh: 73.5358"
+                  placeholder="Terisi setelah memilih lokasi"
                   value={formData.longitude}
                   onChange={(e) => setFormData({ ...formData, longitude: e.target.value })}
+                  required
                 />
+                <span className="resort-field-hint">Rentang -180 sampai 180.</span>
               </div>
             </div>
+
+            {hasCoordinates && (
+              <div className="resort-map-preview">
+                <iframe title="Pratinjau lokasi resort" src={mapUrl} loading="lazy" />
+                <a
+                  href={`https://www.openstreetmap.org/?mlat=${latitude}&mlon=${longitude}#map=14/${latitude}/${longitude}`}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  Buka lokasi di peta ↗
+                </a>
+              </div>
+            )}
 
             <div className="input-group">
               <label className="input-label">Titik Pengamatan Astronomi (Observation Spots)</label>

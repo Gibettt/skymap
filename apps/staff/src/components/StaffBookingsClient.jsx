@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
 import { useLanguage } from '@/context/LanguageContext';
+import { StaffBookingView } from '@/components/FamilyBookingForm';
 import {
   useCurrentUserQuery,
   useStaffBookingsQuery,
@@ -72,10 +73,6 @@ function canToggleSigned(booking) {
   return ['active', 'rescheduled', 'completed'].includes(booking.status);
 }
 
-function hasBookingActions(booking) {
-  return booking.status === 'pending' || canOperate(booking) || canToggleSigned(booking);
-}
-
 export default function StaffBookingsClient({ role }) {
   const router = useRouter();
   const { language, t, localizeApiError } = useLanguage();
@@ -92,6 +89,8 @@ export default function StaffBookingsClient({ role }) {
   const [filterTab, setFilterTab] = useState('all');
   const [search, setSearch] = useState('');
   const [confirmModal, setConfirmModal] = useState(null);
+  const [manageModal, setManageModal] = useState(null);
+  const [manageForm, setManageForm] = useState({});
   const [actionLoading, setActionLoading] = useState(false);
 
   const loading = userLoading || bookingsLoading;
@@ -202,29 +201,68 @@ export default function StaffBookingsClient({ role }) {
         // ignore
       }
       showToast(language === 'en' ? 'Booking status updated.' : 'Status booking berhasil diperbarui.');
+      return true;
     } catch (err) {
       showToast(localizeApiError(err.message, language === 'en' ? 'Update failed.' : 'Update gagal.'));
+      return false;
     }
   };
 
-  const reschedule = async (booking) => {
-    const eventDate = window.prompt(t('reschedule_date'), String(booking.event_date).slice(0, 10));
-    if (!eventDate) return;
-    const timeStart = window.prompt(t('reschedule_start'), String(booking.time_start).slice(0, 5));
-    if (!timeStart) return;
-    const timeEnd = window.prompt(t('reschedule_end'), String(booking.time_end).slice(0, 5));
-    if (!timeEnd) return;
-    const reason = window.prompt(t('reschedule_reason'), t('reschedule_default_reason'));
-    if (reason === null) return;
-    const response = await fetch(`/api/bookings/${booking.id}/reschedule`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ eventDate, timeStart, timeEnd, reason }),
+  const openManageModal = (type, booking) => {
+    setManageModal({ type, booking });
+    setManageForm(type === 'schedule' ? {
+      eventDate: String(booking.event_date).slice(0, 10),
+      timeStart: String(booking.time_start).slice(0, 5),
+      timeEnd: String(booking.time_end).slice(0, 5),
+      reason: t('reschedule_default_reason'),
+    } : {
+      guestName: booking.guest_name || '',
+      guestPhone: booking.guest_phone || '',
+      guestEmail: booking.guest_email || '',
+      roomNumber: booking.room_number || '',
+      nationality: booking.nationality || '',
+      adultCount: Number(booking.adult_count || 0),
+      childCount: Number(booking.child_count || 0),
+      notes: booking.notes || '',
     });
-    const data = await response.json();
-    if (!response.ok) return showToast(localizeApiError(data.error, t('reschedule_failed')));
-    queryClient.invalidateQueries({ queryKey: queryKeys.bookings.all });
-    showToast(t('reschedule_success'));
+  };
+
+  const submitManageAction = async (event) => {
+    event?.preventDefault();
+    if (!manageModal || actionLoading) return;
+    const { type, booking } = manageModal;
+    setActionLoading(true);
+    try {
+      if (type === 'edit') {
+        if (!await updateBooking(booking, manageForm)) return;
+      } else {
+        const response = await fetch(
+          type === 'schedule' ? `/api/bookings/${booking.id}/reschedule` : `/api/bookings/${booking.id}`,
+          {
+            method: type === 'schedule' ? 'POST' : 'DELETE',
+            headers: { 'Content-Type': 'application/json' },
+            body: type === 'schedule' ? JSON.stringify(manageForm) : undefined,
+          }
+        );
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          showToast(localizeApiError(data.error, t('booking_action_failed', 'Aksi booking gagal.')));
+          return;
+        }
+        queryClient.invalidateQueries({ queryKey: queryKeys.bookings.all });
+        try {
+          const channel = new BroadcastChannel('ephemeris_sync_channel');
+          channel.postMessage({ type: 'BOOKING_UPDATED', bookingId: booking.id });
+          channel.close();
+        } catch {}
+        showToast(type === 'schedule' ? t('reschedule_success') : t('booking_delete_success', 'Booking berhasil dihapus.'));
+      }
+      setManageModal(null);
+    } catch (error) {
+      showToast(localizeApiError(error.message, t('booking_action_failed', 'Aksi booking gagal.')));
+    } finally {
+      setActionLoading(false);
+    }
   };
 
   const handleConfirmAction = async () => {
@@ -398,57 +436,61 @@ export default function StaffBookingsClient({ role }) {
                   <td style={{ textAlign: 'right', fontWeight: 800 }}>{formatUsd(booking.staff_commission_5_usd)}</td>
                   {role === 'internal' && (
                     <td className="booking-action-cell">
-                      {hasBookingActions(booking) ? (
-                        <details
-                          className="booking-action-menu"
-                          onBlur={(event) => {
-                            if (!event.currentTarget.contains(event.relatedTarget)) event.currentTarget.removeAttribute('open');
-                          }}
-                          onKeyDown={(event) => {
-                            if (event.key === 'Escape') {
-                              event.currentTarget.removeAttribute('open');
-                              event.currentTarget.querySelector('summary')?.focus();
-                            }
+                      {booking.status === 'pending' && (
+                        <div className="booking-review-actions" aria-label={`${t('common_action')} ${booking.booking_code}`}>
+                          <button
+                            type="button"
+                            className="booking-review-button is-accept"
+                            onClick={() => setConfirmModal({ type: 'accept', booking })}
+                          >
+                            <span aria-hidden="true">✓</span> {t('btn_accept_booking')}
+                          </button>
+                          <button
+                            type="button"
+                            className="booking-review-button is-reject"
+                            onClick={() => setConfirmModal({ type: 'reject', booking })}
+                          >
+                            <span aria-hidden="true">✕</span> {t('btn_reject_booking')}
+                          </button>
+                        </div>
+                      )}
+                      <details
+                        className="booking-action-menu"
+                        onBlur={(event) => {
+                          if (!event.currentTarget.contains(event.relatedTarget)) event.currentTarget.removeAttribute('open');
+                        }}
+                        onKeyDown={(event) => {
+                          if (event.key === 'Escape') {
+                            event.currentTarget.removeAttribute('open');
+                            event.currentTarget.querySelector('summary')?.focus();
+                          }
+                        }}
+                      >
+                        <summary
+                          aria-label={`${t('common_action')} ${booking.booking_code}`}
+                          title={t('common_action')}
+                        >
+                          <span className="booking-action-trigger-icon" aria-hidden="true"><span /><span /><span /><span /></span>
+                          <span className="booking-action-trigger-label">{language === 'en' ? 'Manage' : 'Kelola'}</span>
+                          <span className="booking-action-trigger-chevron" aria-hidden="true" />
+                        </summary>
+                        <div
+                          className="booking-action-dropdown"
+                          role="menu"
+                          onClick={(event) => {
+                            if (event.target.closest('button')) event.currentTarget.closest('details')?.removeAttribute('open');
                           }}
                         >
-                          <summary
-                            aria-label={`${t('common_action')} ${booking.booking_code}`}
-                            title={t('common_action')}
-                          >
-                            <span className="booking-action-trigger-icon" aria-hidden="true">
-                              <span />
-                              <span />
-                              <span />
-                              <span />
-                            </span>
-                            <span className="booking-action-trigger-label">
-                              {language === 'en' ? 'Manage' : 'Kelola'}
-                            </span>
-                            <span className="booking-action-trigger-chevron" aria-hidden="true" />
-                          </summary>
-                          <div
-                            className="booking-action-dropdown"
-                            role="menu"
-                            onClick={(event) => {
-                              if (event.target.closest('button')) event.currentTarget.closest('details')?.removeAttribute('open');
-                            }}
-                          >
-                            {booking.status === 'pending' && <button type="button" role="menuitem" className="booking-action-item is-primary" onClick={() => setConfirmModal({ type: 'accept', booking })}>{t('btn_accept', 'Setujui')}</button>}
-                            {booking.status === 'pending' && <button type="button" role="menuitem" className="booking-action-item is-danger" onClick={() => setConfirmModal({ type: 'reject', booking })}>{t('btn_reject', 'Tolak')}</button>}
-                            {canOperate(booking) && <button type="button" role="menuitem" className="booking-action-item" onClick={() => updateBooking(booking, { status: 'completed' })}>{t('booking_complete')}</button>}
-                            {canOperate(booking) && <button type="button" role="menuitem" className="booking-action-item" onClick={() => reschedule(booking)}>{t('booking_reschedule')}</button>}
-                            {canOperate(booking) && <button type="button" role="menuitem" className="booking-action-item is-danger" onClick={() => updateBooking(booking, { status: 'cancelled_by_guest' })}>{t('booking_cancel_guest')}</button>}
-                            {canOperate(booking) && <button type="button" role="menuitem" className="booking-action-item is-danger" onClick={() => updateBooking(booking, { status: 'cancelled_weather' })}>{t('booking_cancel_weather')}</button>}
-                            {canToggleSigned(booking) && (
-                              <button type="button" role="menuitem" className="booking-action-item" onClick={() => updateBooking(booking, { signedByGuest: !booking.signed_by_guest })}>
-                                {booking.signed_by_guest
-                                  ? (language === 'en' ? 'Mark as unsigned' : 'Tandai belum ditandatangani')
-                                  : t('common_signed')}
-                              </button>
-                            )}
-                          </div>
-                        </details>
-                      ) : <span className="booking-action-empty">-</span>}
+                          <button type="button" role="menuitem" className="booking-action-item is-primary" onClick={() => openManageModal('view', booking)}>{t('booking_view', 'Lihat detail')}</button>
+                          <button type="button" role="menuitem" className="booking-action-item" onClick={() => openManageModal('edit', booking)}>{t('booking_edit', 'Edit booking')}</button>
+                          {canOperate(booking) && <button type="button" role="menuitem" className="booking-action-item" onClick={() => updateBooking(booking, { status: 'completed' })}>{t('booking_complete')}</button>}
+                          {!['completed', 'rejected'].includes(booking.status) && !booking.status.startsWith('cancelled_') && <button type="button" role="menuitem" className="booking-action-item" onClick={() => openManageModal('schedule', booking)}>{t('booking_reschedule')}</button>}
+                          {canOperate(booking) && <button type="button" role="menuitem" className="booking-action-item is-danger" onClick={() => updateBooking(booking, { status: 'cancelled_by_guest' })}>{t('booking_cancel_guest')}</button>}
+                          {canOperate(booking) && <button type="button" role="menuitem" className="booking-action-item is-danger" onClick={() => updateBooking(booking, { status: 'cancelled_weather' })}>{t('booking_cancel_weather')}</button>}
+                          {canToggleSigned(booking) && <button type="button" role="menuitem" className="booking-action-item" onClick={() => updateBooking(booking, { signedByGuest: !booking.signed_by_guest })}>{booking.signed_by_guest ? (language === 'en' ? 'Mark as unsigned' : 'Tandai belum ditandatangani') : t('common_signed')}</button>}
+                          <button type="button" role="menuitem" className="booking-action-item is-danger" onClick={() => openManageModal('delete', booking)}>{t('booking_delete', 'Hapus booking')}</button>
+                        </div>
+                      </details>
                     </td>
                   )}
                 </tr>
@@ -475,6 +517,61 @@ export default function StaffBookingsClient({ role }) {
           </div>
         </div>
       </div>
+
+      {manageModal?.type === 'view' && (
+        <StaffBookingView
+          booking={manageModal.booking}
+          isInternal
+          onClose={() => setManageModal(null)}
+          onEdit={() => openManageModal('edit', manageModal.booking)}
+        />
+      )}
+
+      {typeof document !== 'undefined' && manageModal && manageModal.type !== 'view' && createPortal((
+        <div className="modal-backdrop staff-booking-backdrop" onClick={(event) => { if (event.target === event.currentTarget && !actionLoading) setManageModal(null); }}>
+          <div className="modal staff-manage-booking-modal" role="dialog" aria-modal="true" aria-labelledby="staff-manage-booking-title">
+            <div className="modal-header">
+              <span className="modal-title" id="staff-manage-booking-title">
+                {manageModal.type === 'edit' && t('booking_edit', 'Edit booking')}
+                {manageModal.type === 'schedule' && t('booking_reschedule', 'Jadwalkan ulang')}
+                {manageModal.type === 'delete' && t('booking_delete', 'Hapus booking')}
+              </span>
+              <button type="button" className="modal-close" aria-label={t('btn_close', 'Tutup')} disabled={actionLoading} onClick={() => setManageModal(null)}>&times;</button>
+            </div>
+            <form onSubmit={submitManageAction}>
+              <div className="modal-body">
+                {manageModal.type === 'delete' ? (
+                  <p>{language === 'en' ? `Delete ${manageModal.booking.booking_code}? This cannot be undone.` : `Hapus booking ${manageModal.booking.booking_code}? Tindakan ini tidak dapat dibatalkan.`}</p>
+                ) : manageModal.type === 'schedule' ? (
+                  <div className="booking-edit-grid">
+                    <label className="input-group"><span className="input-label">{t('reschedule_date', 'Tanggal')}</span><input className="input" type="date" required value={manageForm.eventDate || ''} onChange={(event) => setManageForm((form) => ({ ...form, eventDate: event.target.value }))} /></label>
+                    <label className="input-group"><span className="input-label">{t('reschedule_start', 'Mulai')}</span><input className="input" type="time" required value={manageForm.timeStart || ''} onChange={(event) => setManageForm((form) => ({ ...form, timeStart: event.target.value }))} /></label>
+                    <label className="input-group"><span className="input-label">{t('reschedule_end', 'Selesai')}</span><input className="input" type="time" required value={manageForm.timeEnd || ''} onChange={(event) => setManageForm((form) => ({ ...form, timeEnd: event.target.value }))} /></label>
+                    <label className="input-group booking-edit-notes"><span className="input-label">{t('reschedule_reason', 'Alasan')}</span><textarea className="input" required value={manageForm.reason || ''} onChange={(event) => setManageForm((form) => ({ ...form, reason: event.target.value }))} /></label>
+                  </div>
+                ) : (
+                  <div className="booking-edit-grid">
+                    <label className="input-group"><span className="input-label">{t('common_guest', 'Nama tamu')}</span><input className="input" required value={manageForm.guestName || ''} onChange={(event) => setManageForm((form) => ({ ...form, guestName: event.target.value }))} /></label>
+                    <label className="input-group"><span className="input-label">WhatsApp</span><input className="input" required value={manageForm.guestPhone || ''} onChange={(event) => setManageForm((form) => ({ ...form, guestPhone: event.target.value }))} /></label>
+                    <label className="input-group"><span className="input-label">Email</span><input className="input" type="email" value={manageForm.guestEmail || ''} onChange={(event) => setManageForm((form) => ({ ...form, guestEmail: event.target.value }))} /></label>
+                    <label className="input-group"><span className="input-label">{t('common_room', 'Kamar')}</span><input className="input" required value={manageForm.roomNumber || ''} onChange={(event) => setManageForm((form) => ({ ...form, roomNumber: event.target.value }))} /></label>
+                    <label className="input-group booking-edit-nationality"><span className="input-label">{language === 'en' ? 'Nationality' : 'Kebangsaan'}</span><input className="input" required value={manageForm.nationality || ''} onChange={(event) => setManageForm((form) => ({ ...form, nationality: event.target.value }))} /></label>
+                    <label className="input-group"><span className="input-label">{language === 'en' ? 'Adults' : 'Dewasa'}</span><input className="input" type="number" min="0" required value={manageForm.adultCount ?? 0} onChange={(event) => setManageForm((form) => ({ ...form, adultCount: Number(event.target.value) }))} /></label>
+                    <label className="input-group"><span className="input-label">{language === 'en' ? 'Children' : 'Anak'}</span><input className="input" type="number" min="0" required value={manageForm.childCount ?? 0} onChange={(event) => setManageForm((form) => ({ ...form, childCount: Number(event.target.value) }))} /></label>
+                    <label className="input-group booking-edit-notes"><span className="input-label">{language === 'en' ? 'Notes' : 'Catatan'}</span><textarea className="input" value={manageForm.notes || ''} onChange={(event) => setManageForm((form) => ({ ...form, notes: event.target.value }))} /></label>
+                  </div>
+                )}
+              </div>
+              <div className="modal-footer">
+                <button type="button" className="btn btn-secondary btn-sm" disabled={actionLoading} onClick={() => setManageModal(null)}>{t('btn_cancel', 'Batal')}</button>
+                <button type="submit" className={`btn btn-sm ${manageModal.type === 'delete' ? 'btn-danger' : 'btn-primary'}`} disabled={actionLoading}>
+                  {actionLoading ? t('common_loading', 'Memproses...') : manageModal.type === 'delete' ? t('booking_delete', 'Hapus booking') : t('btn_save', 'Simpan')}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      ), document.body)}
 
       {/* Custom Confirmation Modal Dialog */}
       {typeof document !== 'undefined' && confirmModal && createPortal((

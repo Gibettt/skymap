@@ -6,7 +6,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { CalendarClock, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Eye, Pencil, Trash2, X } from 'lucide-react';
 import { OBJECT_TYPES, PACKAGE_CATALOG, STATIONS } from '@/data/bookings';
 import { calculateBookingFinance, formatUsd } from '@/data/keuangan';
-import { useBookingsQuery, useUpdateBookingMutation, queryKeys, fetchApi } from '@/lib/apiQueries';
+import { useBookingsQuery, useResortsQuery, useUpdateBookingMutation, queryKeys, fetchApi } from '@/lib/apiQueries';
 
 const STATUS_FILTERS = ['Semua', 'Pending', 'Aktif', 'Selesai', 'Dijadwalkan Ulang', 'Dibatalkan Tamu', 'Dibatalkan Cuaca'];
 
@@ -1018,7 +1018,9 @@ const PER_PAGE = 10;
 
 export default function BookingsPage() {
   const queryClient = useQueryClient();
-  const { data: rawBookings = [], isLoading: loading, error: queryError } = useBookingsQuery();
+  const [selectedResort, setSelectedResort] = useState('');
+  const { data: resorts = [] } = useResortsQuery();
+  const { data: rawBookings = [], isLoading: loading, error: queryError } = useBookingsQuery({ resortId: selectedResort });
   const updateMutation = useUpdateBookingMutation();
 
   const [search, setSearch] = useState('');
@@ -1035,6 +1037,13 @@ export default function BookingsPage() {
   const [reviewingId, setReviewingId] = useState(null);
 
   const bookings = useMemo(() => (rawBookings || []).map(mapApiBooking), [rawBookings]);
+  const sourceSummary = useMemo(() => {
+    const scoped = selectedResort ? resorts.filter((resort) => resort.id === selectedResort) : resorts;
+    return scoped.reduce((total, resort) => ({
+      internal: total.internal + Number(resort.internal_bookings_count || 0),
+      external: total.external + Number(resort.external_bookings_count || 0),
+    }), { internal: 0, external: 0 });
+  }, [resorts, selectedResort]);
   const error = queryError?.message || '';
 
   const showToast = useCallback((msg, type = 'success') => {
@@ -1049,6 +1058,7 @@ export default function BookingsPage() {
         channel = new BroadcastChannel('ephemeris_sync_channel');
         channel.onmessage = () => {
           queryClient.invalidateQueries({ queryKey: queryKeys.bookings.all });
+          queryClient.invalidateQueries({ queryKey: queryKeys.resorts.all });
         };
       }
     } catch {
@@ -1105,10 +1115,23 @@ export default function BookingsPage() {
     setEditingBooking(null);
   };
 
-  const handleDelete = (id) => {
+  const handleDelete = async (id) => {
     const b = bookings.find((item) => item.id === id);
-    queryClient.invalidateQueries({ queryKey: queryKeys.bookings.all });
-    showToast(`Booking ${b?.bookingCode || id} dihapus.`, 'error');
+    if (!window.confirm(`Hapus booking ${b?.bookingCode || id}? Tindakan ini tidak dapat dibatalkan.`)) return;
+    try {
+      await fetchApi(`/api/bookings/${id}`, { method: 'DELETE' });
+      queryClient.invalidateQueries({ queryKey: queryKeys.bookings.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.resorts.all });
+      try {
+        const channel = new BroadcastChannel('ephemeris_sync_channel');
+        channel.postMessage({ type: 'BOOKING_DELETED', bookingId: id });
+        channel.close();
+      } catch {}
+      setViewingBooking(null);
+      showToast(`Booking ${b?.bookingCode || id} dihapus.`);
+    } catch (error) {
+      showToast(error.message || 'Booking gagal dihapus.', 'error');
+    }
   };
 
   const handleReview = async (booking, nextStatus) => {
@@ -1161,6 +1184,18 @@ export default function BookingsPage() {
         <div className="search-bar" style={{ maxWidth: 360, flex: '1 1 260px' }}>
           <input placeholder="Cari kode booking, nama paket, tamu, kamar, staf..." value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }} />
         </div>
+        <select
+          className="input"
+          aria-label="Filter resort"
+          value={selectedResort}
+          onChange={(event) => { setSelectedResort(event.target.value); setPage(1); }}
+          style={{ width: 220 }}
+        >
+          <option value="">Semua resort</option>
+          {resorts.map((resort) => <option key={resort.id} value={resort.id}>{resort.name}</option>)}
+        </select>
+        <span className="tag tag-info">Booking Internal: {sourceSummary.internal}</span>
+        <span className="tag tag-info">Booking External: {sourceSummary.external}</span>
         <div className="filter-bar">
           {OBJECT_TYPES.map((type) => (
             <button key={type} className={`chip ${typeFilter === type ? 'active' : ''}`} onClick={() => { setTypeFilter(type); setPage(1); }}>{type}</button>

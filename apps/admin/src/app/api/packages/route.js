@@ -1,6 +1,7 @@
 import { ApiError, assertSameOrigin, jsonError, parseJsonBody, requireUser, writeAudit } from '@ephemeris/auth';
 import { query, transaction } from '@ephemeris/db';
 import { paginationFromRequest, paginationMeta } from '@ephemeris/db/helpers';
+import { packageIsChargeable } from '@ephemeris/db/package-content';
 import { createPackageSchema } from '@ephemeris/db/validators/package';
 
 const MAX_PACKAGE_IMAGE_SIZE = 2 * 1024 * 1024;
@@ -66,7 +67,6 @@ async function parseCreatePackageRequest(request) {
 
   const form = await request.formData();
   const rawIsActive = form.get('isActive');
-  const rawIsChargeable = form.get('isChargeable');
   return {
     fields: {
       name: form.get('name'),
@@ -80,7 +80,6 @@ async function parseCreatePackageRequest(request) {
       childAgeRange: form.get('childAgeRange'),
       inclusions: parseInclusionsField(form.get('inclusions')),
       resortId: form.get('resortId') || null,
-      isChargeable: rawIsChargeable === null ? true : rawIsChargeable === 'true',
       isActive: rawIsActive === null ? true : rawIsActive === 'true',
     },
     image: await validatePackageImage(form.get('image')),
@@ -135,7 +134,7 @@ export async function POST(request) {
           data.adultPriceUsd,
           data.childPriceUsd,
           data.childAgeRange,
-          data.isChargeable,
+          packageIsChargeable(data.adultPriceUsd, data.childPriceUsd),
           data.isActive,
         ]
       );

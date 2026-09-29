@@ -1,5 +1,6 @@
 import { assertSameOrigin, jsonError, parseJsonBody, requireUser, writeAudit, ApiError } from '@ephemeris/auth';
 import { transaction } from '@ephemeris/db';
+import { packageIsChargeable } from '@ephemeris/db/package-content';
 import { uuidSchema } from '@ephemeris/db/validators/common';
 import { updatePackageSchema } from '@ephemeris/db/validators/package';
 
@@ -81,7 +82,6 @@ async function parseUpdatePackageRequest(request) {
   if (form.has('childAgeRange')) fields.childAgeRange = form.get('childAgeRange');
   if (form.has('inclusions')) fields.inclusions = parseInclusionsField(form.get('inclusions'));
   if (form.has('resortId')) fields.resortId = form.get('resortId') || null;
-  if (form.has('isChargeable')) fields.isChargeable = form.get('isChargeable') === 'true';
   if (rawIsActive !== null) fields.isActive = rawIsActive === 'true';
 
   const imageFile = form.get('image');
@@ -128,7 +128,10 @@ export async function PATCH(request, { params }) {
         adult_price_usd: body.adultPriceUsd === undefined ? Number(before.rows[0].adult_price_usd) : Number(body.adultPriceUsd || 0),
         child_price_usd: body.childPriceUsd === undefined ? before.rows[0].child_price_usd : body.childPriceUsd === null || body.childPriceUsd === '' ? null : Number(body.childPriceUsd),
         child_age_range: body.childAgeRange === undefined ? before.rows[0].child_age_range : String(body.childAgeRange || '').trim() || null,
-        is_chargeable: body.isChargeable ?? before.rows[0].is_chargeable,
+        is_chargeable: packageIsChargeable(
+          body.adultPriceUsd === undefined ? before.rows[0].adult_price_usd : body.adultPriceUsd,
+          body.childPriceUsd === undefined ? before.rows[0].child_price_usd : body.childPriceUsd,
+        ),
         is_active: body.isActive ?? before.rows[0].is_active,
       };
 
@@ -181,6 +184,9 @@ export async function PATCH(request, { params }) {
     if (!updated) return Response.json({ error: 'Package not found' }, { status: 404 });
     return Response.json({ package: updated });
   } catch (error) {
+    if (error.code === '23514' && error.constraint === 'last_active_resort_package') {
+      return Response.json({ error: 'Package aktif terakhir tidak dapat dinonaktifkan dari resort yang masih aktif.' }, { status: 409 });
+    }
     return jsonError(error);
   }
 }

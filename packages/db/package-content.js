@@ -21,3 +21,7 @@ export function formatPackageInclusions(value, fallback = '') {
   const inclusions = normalizePackageInclusions(value);
   return inclusions.length ? inclusions.join(', ') : fallback;
 }
+
+export function packageIsChargeable(adultPriceUsd, childPriceUsd) {
+  return Number(adultPriceUsd || 0) > 0 || Number(childPriceUsd || 0) > 0;
+}

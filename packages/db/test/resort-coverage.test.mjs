@@ -6,12 +6,13 @@ import {
   resortCoverageStatus,
 } from '../resort-coverage.js';
 
-test('resort coverage requires active Internal and External staff', () => {
-  assert.equal(resortCoverageStatus({ resortStatus: 'active', activeInternalCount: 1, activeExternalCount: 1 }), 'ready');
-  assert.equal(resortCoverageStatus({ resortStatus: 'active', activeInternalCount: 0, activeExternalCount: 1 }), 'needs_internal');
-  assert.equal(resortCoverageStatus({ resortStatus: 'active', activeInternalCount: 1, activeExternalCount: 0 }), 'needs_external');
-  assert.equal(resortCoverageStatus({ resortStatus: 'active', activeInternalCount: 0, activeExternalCount: 0 }), 'needs_both');
-  assert.equal(resortCoverageStatus({ resortStatus: 'inactive', activeInternalCount: 2, activeExternalCount: 2 }), 'inactive');
+test('resort coverage requires active Internal, External, and package', () => {
+  assert.equal(resortCoverageStatus({ resortStatus: 'active', activeInternalCount: 1, activeExternalCount: 1, activePackageCount: 1 }), 'ready');
+  assert.equal(resortCoverageStatus({ resortStatus: 'active', activeInternalCount: 1, activeExternalCount: 1, activePackageCount: 0 }), 'needs_package');
+  assert.equal(resortCoverageStatus({ resortStatus: 'active', activeInternalCount: 0, activeExternalCount: 1, activePackageCount: 1 }), 'needs_internal');
+  assert.equal(resortCoverageStatus({ resortStatus: 'active', activeInternalCount: 1, activeExternalCount: 0, activePackageCount: 1 }), 'needs_external');
+  assert.equal(resortCoverageStatus({ resortStatus: 'active', activeInternalCount: 0, activeExternalCount: 0, activePackageCount: 1 }), 'needs_both');
+  assert.equal(resortCoverageStatus({ resortStatus: 'inactive', activeInternalCount: 2, activeExternalCount: 2, activePackageCount: 2 }), 'inactive');
 });
 
 test('detects when an assignment removes active coverage from its original resort', () => {

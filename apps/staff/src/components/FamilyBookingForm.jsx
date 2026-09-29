@@ -1371,7 +1371,7 @@ function extractChildName(line, defaultIndex) {
   return cleaned || `Anak #${defaultIndex}`;
 }
 
-function StaffBookingView({ booking, onClose, onEdit, isInternal = false }) {
+export function StaffBookingView({ booking, onClose, onEdit, isInternal = false }) {
   const { language, t } = useLanguage();
   const [showNotesModal, setShowNotesModal] = useState(false);
   const notes = booking.package_notes || booking.notes || '';

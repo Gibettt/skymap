@@ -17,14 +17,14 @@ test('admin can create a resort staff account without exposing its password hash
   assert.doesNotMatch(route, /RETURNING \*/);
 });
 
-test('resort page manages staff and keeps activation coverage-gated', async () => {
+test('resort page manages staff and keeps activation operational-readiness-gated', async () => {
   const page = await read('../src/app/dashboard/admin/resorts/page.js');
 
   assert.match(page, /Kelola Staff/);
   assert.match(page, /StaffManagementModal/);
   assert.match(page, /Buat akun staff baru/);
   assert.match(page, /Tetapkan/);
-  assert.match(page, /disabled=\{r\.status !== 'active' && !hasStaffCoverage\(r\)\}/);
+  assert.match(page, /disabled=\{r\.status !== 'active' && !hasOperationalCoverage\(r\)\}/);
 });
 
 test('staff management modal uses an accessible responsive layout', async () => {

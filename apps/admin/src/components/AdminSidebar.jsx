@@ -103,6 +103,17 @@ const NAV_ITEMS = [
     ),
   },
   {
+    href: '/dashboard/admin/sky-events',
+    label: 'Sky Guide',
+    icon: (
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M12 3l1.4 4.1L18 8.5l-4.6 1.4L12 14l-1.4-4.1L6 8.5l4.6-1.4L12 3z" />
+        <path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8L19 15z" />
+        <circle cx="5" cy="16" r="1" />
+      </svg>
+    ),
+  },
+  {
     href: '/dashboard/admin/alerts',
     label: 'Peringatan',
     icon: (
@@ -134,6 +145,7 @@ const NAV_LABEL_KEYS = {
   '/dashboard/admin/pengguna': 'nav_users',
   '/dashboard/admin/audit': 'nav_audit',
   '/dashboard/admin/jadwal': 'nav_calendar',
+  '/dashboard/admin/sky-events': 'nav_sky_guide',
   '/dashboard/admin/alerts': 'nav_alerts',
   '/dashboard/admin/pengaturan': 'nav_settings',
 };

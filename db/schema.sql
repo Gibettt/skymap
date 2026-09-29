@@ -227,6 +227,8 @@ CREATE TABLE IF NOT EXISTS packages (
   is_active boolean NOT NULL DEFAULT true,
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz NOT NULL DEFAULT now(),
+  CONSTRAINT packages_price_chargeability_check
+    CHECK (is_chargeable = (adult_price_usd > 0 OR COALESCE(child_price_usd, 0) > 0)),
   CHECK (image_data IS NULL OR octet_length(image_data) <= 2097152)
 );
 
@@ -662,6 +664,29 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+CREATE OR REPLACE FUNCTION enforce_sky_event_manager()
+RETURNS trigger AS $$
+DECLARE
+  manager_role user_role;
+  manager_status user_status;
+  manager_resort_id uuid;
+BEGIN
+  SELECT role, status, resort_id
+  INTO manager_role, manager_status, manager_resort_id
+  FROM users
+  WHERE id = NEW.updated_by;
+
+  IF manager_status IS DISTINCT FROM 'active'
+    OR NOT (
+      manager_role = 'admin'
+      OR (manager_role = 'internal' AND manager_resort_id = NEW.resort_id)
+    ) THEN
+    RAISE EXCEPTION 'Sky Events can only be managed by active admins or assigned internal staff';
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
 DROP TRIGGER IF EXISTS sky_app_settings_set_updated_at ON sky_app_settings;
 CREATE TRIGGER sky_app_settings_set_updated_at BEFORE UPDATE ON sky_app_settings FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 DROP TRIGGER IF EXISTS sky_app_settings_internal_manager ON sky_app_settings;
@@ -669,7 +694,7 @@ CREATE TRIGGER sky_app_settings_internal_manager BEFORE INSERT OR UPDATE ON sky_
 DROP TRIGGER IF EXISTS sky_events_set_updated_at ON sky_events;
 CREATE TRIGGER sky_events_set_updated_at BEFORE UPDATE ON sky_events FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 DROP TRIGGER IF EXISTS sky_events_internal_manager ON sky_events;
-CREATE TRIGGER sky_events_internal_manager BEFORE INSERT OR UPDATE ON sky_events FOR EACH ROW EXECUTE FUNCTION enforce_internal_sky_manager();
+CREATE TRIGGER sky_events_internal_manager BEFORE INSERT OR UPDATE ON sky_events FOR EACH ROW EXECUTE FUNCTION enforce_sky_event_manager();
 CREATE INDEX IF NOT EXISTS idx_sky_events_public_starts ON sky_events(is_published, starts_at);
 CREATE INDEX IF NOT EXISTS idx_sky_events_resort_status_starts ON sky_events(resort_id, status, starts_at);
 CREATE INDEX IF NOT EXISTS idx_packages_resort_active ON packages(resort_id, is_active);
@@ -702,11 +727,15 @@ SELECT
   r.status AS resort_status,
   COALESCE(staff.active_internal_count, 0)::int AS active_internal_count,
   COALESCE(staff.active_external_count, 0)::int AS active_external_count,
+  COALESCE(package_count.active_package_count, 0)::int AS active_package_count,
   COALESCE(bookings.open_bookings_count, 0)::int AS open_bookings_count,
   CASE
     WHEN r.status <> 'active' THEN 'inactive'
     WHEN COALESCE(staff.active_internal_count, 0) > 0
-      AND COALESCE(staff.active_external_count, 0) > 0 THEN 'ready'
+      AND COALESCE(staff.active_external_count, 0) > 0
+      AND COALESCE(package_count.active_package_count, 0) > 0 THEN 'ready'
+    WHEN COALESCE(staff.active_internal_count, 0) > 0
+      AND COALESCE(staff.active_external_count, 0) > 0 THEN 'needs_package'
     WHEN COALESCE(staff.active_internal_count, 0) = 0
       AND COALESCE(staff.active_external_count, 0) = 0 THEN 'needs_both'
     WHEN COALESCE(staff.active_internal_count, 0) = 0 THEN 'needs_internal'
@@ -721,6 +750,11 @@ LEFT JOIN LATERAL (
   WHERE resort_id = r.id
 ) staff ON true
 LEFT JOIN LATERAL (
+  SELECT COUNT(*) AS active_package_count
+  FROM packages
+  WHERE resort_id = r.id AND is_active = true
+) package_count ON true
+LEFT JOIN LATERAL (
   SELECT COUNT(*) AS open_bookings_count
   FROM bookings
   WHERE resort_id = r.id AND status IN ('pending', 'active', 'rescheduled')
@@ -731,6 +765,7 @@ RETURNS trigger AS $$
 DECLARE
   internal_count integer;
   external_count integer;
+  package_count integer;
   open_count integer;
 BEGIN
   IF NEW.status = 'active' AND (TG_OP = 'INSERT' OR OLD.status IS DISTINCT FROM NEW.status) THEN
@@ -740,9 +775,16 @@ BEGIN
     INTO internal_count, external_count
     FROM users
     WHERE resort_id = NEW.id;
+    SELECT COUNT(*) INTO package_count
+    FROM packages
+    WHERE resort_id = NEW.id AND is_active = true;
     IF internal_count = 0 OR external_count = 0 THEN
       RAISE EXCEPTION 'Active resort requires Internal and External staff coverage'
         USING ERRCODE = '23514', CONSTRAINT = 'resort_staff_coverage_required';
+    END IF;
+    IF package_count = 0 THEN
+      RAISE EXCEPTION 'Active resort requires an active package'
+        USING ERRCODE = '23514', CONSTRAINT = 'resort_active_package_required';
     END IF;
   END IF;
 
@@ -799,6 +841,38 @@ DROP TRIGGER IF EXISTS users_last_resort_staff_coverage ON users;
 CREATE TRIGGER users_last_resort_staff_coverage
 BEFORE UPDATE OF role, status, resort_id OR DELETE ON users
 FOR EACH ROW EXECUTE FUNCTION enforce_last_resort_staff_coverage();
+
+CREATE OR REPLACE FUNCTION enforce_last_active_resort_package()
+RETURNS trigger AS $$
+DECLARE
+  replacement_count integer;
+  current_resort_status user_status;
+  keeps_coverage boolean;
+BEGIN
+  IF OLD.resort_id IS NULL OR OLD.is_active = false THEN RETURN COALESCE(NEW, OLD); END IF;
+  keeps_coverage := TG_OP <> 'DELETE'
+    AND NEW.is_active = true
+    AND NEW.resort_id = OLD.resort_id;
+  IF keeps_coverage THEN RETURN NEW; END IF;
+
+  SELECT status INTO current_resort_status FROM resorts WHERE id = OLD.resort_id FOR UPDATE;
+  IF current_resort_status <> 'active' THEN RETURN COALESCE(NEW, OLD); END IF;
+
+  SELECT COUNT(*) INTO replacement_count
+  FROM packages
+  WHERE resort_id = OLD.resort_id AND is_active = true AND id <> OLD.id;
+  IF replacement_count = 0 THEN
+    RAISE EXCEPTION 'Last active package cannot leave an active resort'
+      USING ERRCODE = '23514', CONSTRAINT = 'last_active_resort_package';
+  END IF;
+  RETURN COALESCE(NEW, OLD);
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS packages_last_active_resort_package ON packages;
+CREATE TRIGGER packages_last_active_resort_package
+BEFORE UPDATE OF is_active, resort_id OR DELETE ON packages
+FOR EACH ROW EXECUTE FUNCTION enforce_last_active_resort_package();
 
 CREATE OR REPLACE VIEW booking_finance_report AS
 SELECT

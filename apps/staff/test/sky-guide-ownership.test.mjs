@@ -1,13 +1,12 @@
 import assert from 'node:assert/strict';
 import { access, readFile } from 'node:fs/promises';
-import { constants } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import test from 'node:test';
 
 const path = (value) => fileURLToPath(new URL(value, import.meta.url));
 const read = (value) => readFile(path(value), 'utf8');
 
-test('Sky Guide UI belongs only to staff internal', async () => {
+test('Sky Guide management remains available to staff internal', async () => {
   const [page, sidebar, header, proxy] = await Promise.all([
     read('../src/app/dashboard/internal/sky-events/page.js'),
     read('../src/components/StaffSidebar.jsx'),
@@ -19,10 +18,10 @@ test('Sky Guide UI belongs only to staff internal', async () => {
   assert.match(sidebar, /isInternal[\s\S]*\/sky-events/);
   assert.match(header, /sky-events[\s\S]*Sky Guide/);
   assert.match(proxy, /\/dashboard\/internal\/sky-events/);
-  await assert.rejects(access(path('../../admin/src/app/dashboard/admin/sky-events/page.js'), constants.F_OK));
+  await access(path('../../admin/src/app/dashboard/admin/sky-events/page.js'));
 });
 
-test('Sky Guide write APIs require staff internal and no longer exist in admin', async () => {
+test('staff Sky Guide write APIs remain restricted to staff internal', async () => {
   const [events, event, settings] = await Promise.all([
     read('../src/app/api/sky-events/route.js'),
     read('../src/app/api/sky-events/[id]/route.js'),
@@ -34,23 +33,18 @@ test('Sky Guide write APIs require staff internal and no longer exist in admin',
     assert.doesNotMatch(source, /requirePermission\([^\n]*\['admin'\]/);
   }
   assert.match(settings, /catch \(error\)[\s\S]*jsonError\(error\)/);
-  await Promise.all([
-    assert.rejects(access(path('../../admin/src/app/api/sky-events/route.js'), constants.F_OK)),
-    assert.rejects(access(path('../../admin/src/app/api/sky-events/[id]/route.js'), constants.F_OK)),
-    assert.rejects(access(path('../../admin/src/app/api/sky-settings/route.js'), constants.F_OK)),
-  ]);
 });
 
-test('database enforces active internal ownership for Sky Guide writes', async () => {
+test('database allows active admins or resort internal staff to manage Sky Events', async () => {
   const [schema, migration] = await Promise.all([
     read('../../../db/schema.sql'),
-    read('../../../db/migrations/018_sky_guide_internal_ownership.sql'),
+    read('../../../db/migrations/023_admin_sky_guide.sql'),
   ]);
 
   for (const source of [schema, migration]) {
-    assert.match(source, /enforce_internal_sky_manager/);
-    assert.match(source, /role = 'internal'/);
-    assert.match(source, /sky_app_settings[\s\S]*updated_by uuid REFERENCES users\(id\)/);
+    assert.match(source, /enforce_sky_event_manager/);
+    assert.match(source, /manager_role = 'admin'/);
+    assert.match(source, /manager_role = 'internal'[\s\S]*manager_resort_id = NEW\.resort_id/);
   }
 });
 
@@ -63,4 +57,17 @@ test('Sky Guide event reads and writes are scoped to the staff resort', async ()
   assert.match(events, /user\.resort_id/);
   assert.match(event, /resort_id = \$2/);
   assert.match(event, /user\.resort_id/);
+});
+
+test('staff calendars overlay resort Sky Events and external reads published events only', async () => {
+  const [calendar, events] = await Promise.all([
+    read('../src/app/dashboard/external/jadwal/page.js'),
+    read('../src/app/api/sky-events/route.js'),
+  ]);
+
+  assert.match(calendar, /fetch\('\/api\/sky-events/);
+  assert.match(calendar, /calendar-sky-event/);
+  assert.match(calendar, /Sky Event/);
+  assert.match(events, /user\.role === 'external'/);
+  assert.match(events, /se\.status = 'published'/);
 });

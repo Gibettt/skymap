@@ -42,11 +42,13 @@ export async function fetchApi(url, options = {}) {
 }
 
 /* ── Bookings Hooks ─────────────────────────────────────── */
-export function useBookingsQuery(options = {}) {
+export function useBookingsQuery({ resortId = '', ...options } = {}) {
   return useQuery({
-    queryKey: queryKeys.bookings.all,
+    queryKey: queryKeys.bookings.list({ resortId }),
     queryFn: async () => {
-      const data = await fetchApi('/api/bookings');
+      const params = new URLSearchParams({ limit: '100' });
+      if (resortId) params.set('resortId', resortId);
+      const data = await fetchApi(`/api/bookings?${params}`);
       return data.bookings || [];
     },
     ...options,
@@ -93,6 +95,7 @@ export function useCreatePackageMutation() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.packages.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.resorts.all });
     },
   });
 }
@@ -101,8 +104,6 @@ export function useUpdatePackageMutation() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async ({ id, formData }) => {
-      // API expects PATCH /api/packages/:id with JSON if no image, or let's check API.
-      // Wait, in my admin route.js, I parsed JSON. Let's see if the API supports formData.
       return fetchApi(`/api/packages/${id}`, {
         method: 'PATCH',
         body: formData,
@@ -110,6 +111,7 @@ export function useUpdatePackageMutation() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.packages.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.resorts.all });
     },
   });
 }

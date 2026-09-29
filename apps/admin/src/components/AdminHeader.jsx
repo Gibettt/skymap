@@ -15,6 +15,7 @@ const PAGE_META = {
   '/dashboard/admin/pengguna': { title: 'Manajemen Pengguna', crumb: 'Pengguna' },
   '/dashboard/admin/audit': { title: 'Audit Log', crumb: 'Keamanan' },
   '/dashboard/admin/jadwal': { title: 'Kalender', crumb: 'Booking' },
+  '/dashboard/admin/sky-events': { title: 'Sky Guide', crumb: 'Kalender Langit' },
   '/dashboard/admin/alerts': { title: 'Peringatan', crumb: 'Monitoring' },
   '/dashboard/admin/pengaturan': { title: 'Pengaturan', crumb: 'Sistem' },
 };
@@ -28,6 +29,8 @@ const META_KEYS = {
   'Manajemen Pengguna': 'page_user_management',
   Keamanan: 'page_security',
   Kalender: 'nav_calendar',
+  'Kalender Langit': 'nav_sky_guide',
+  'Sky Guide': 'nav_sky_guide',
   Peringatan: 'nav_alerts',
   Pengaturan: 'nav_settings',
   Keuangan: 'nav_finance',

@@ -13,12 +13,11 @@ const EMPTY = {
   location: '',
   description: '',
   schedule: 'Upon request',
-  adultPriceUsd: 0,
+  adultPriceUsd: '',
   childPriceUsd: '',
   childAgeRange: '',
   inclusions: [''],
   resortId: '',
-  isChargeable: true,
   isActive: true,
 };
 
@@ -107,9 +106,13 @@ export default function CreatePackagePage() {
             <Input label="Location" value={form.location} onChange={(value) => setForm({ ...form, location: value })} required />
             <Input label="Schedule" value={form.schedule} onChange={(value) => setForm({ ...form, schedule: value })} maxLength={120} placeholder="Contoh: Every Thursday | 19:30 - 20:30" required />
             <Select label="Resort" value={form.resortId} onChange={(value) => setForm({ ...form, resortId: value })} options={resorts.map((resort) => ({ value: resort.id, label: resort.name }))} placeholder="Pilih resort" />
-            <Input label="Adult Price USD" type="number" min="0" value={form.adultPriceUsd} onChange={(value) => setForm({ ...form, adultPriceUsd: value })} required />
-            <Input label="Child Price USD" type="number" min="0" value={form.childPriceUsd} onChange={(value) => setForm({ ...form, childPriceUsd: value })} />
+            <Input label="Adult Price USD (opsional)" type="number" min="0" value={form.adultPriceUsd} onChange={(value) => setForm({ ...form, adultPriceUsd: value })} />
+            <Input label="Child Price USD (opsional)" type="number" min="0" value={form.childPriceUsd} onChange={(value) => setForm({ ...form, childPriceUsd: value })} />
             <Input label="Estimasi Umur Anak" value={form.childAgeRange} onChange={(value) => setForm({ ...form, childAgeRange: value })} placeholder="Contoh: 6 - 15 tahun" />
+
+            <div className="external-booking-note package-create-full">
+              Tanpa harga berarti gratis. Jika salah satu harga lebih dari 0, invoice dan komisi dihitung otomatis.
+            </div>
 
             <div className="input-group">
               <span className="input-label">Gambar Package</span>
@@ -160,10 +163,6 @@ export default function CreatePackagePage() {
           </div>
 
           <div className="package-create-options">
-            <label>
-              <input type="checkbox" checked={form.isChargeable} onChange={(event) => setForm({ ...form, isChargeable: event.target.checked })} />
-              Package berbayar (komisi & star berlaku)
-            </label>
             <label>
               <input type="checkbox" checked={form.isActive} onChange={(event) => setForm({ ...form, isActive: event.target.checked })} />
               Aktifkan package

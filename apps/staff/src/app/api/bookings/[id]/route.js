@@ -277,3 +277,37 @@ export async function PATCH(request, { params }) {
     return jsonError(error);
   }
 }
+
+export async function DELETE(request, { params }) {
+  try {
+    await assertSameOrigin(request);
+    const user = await requireUser(['internal']);
+    const { id: rawId } = await params;
+    const parsedId = uuidSchema.safeParse(rawId);
+    if (!parsedId.success) return Response.json({ error: 'ID tidak valid' }, { status: 400 });
+
+    const deleted = await transaction(async (client) => {
+      const beforeResult = await client.query('SELECT * FROM bookings WHERE id = $1 FOR UPDATE', [parsedId.data]);
+      const before = beforeResult.rows[0];
+      if (!before) return null;
+      if (!canManageBooking(user, before)) throw new ApiError(403, 'Forbidden');
+
+      await client.query('DELETE FROM bookings WHERE id = $1', [before.id]);
+      await writeAudit(client, {
+        actorId: user.id,
+        action: 'booking.delete',
+        entityType: 'booking',
+        entityId: before.id,
+        beforeData: before,
+        request,
+      });
+      await refreshAfterBookingChange(client);
+      return before;
+    });
+
+    if (!deleted) return Response.json({ error: 'Booking not found' }, { status: 404 });
+    return Response.json({ booking: deleted });
+  } catch (error) {
+    return jsonError(error);
+  }
+}

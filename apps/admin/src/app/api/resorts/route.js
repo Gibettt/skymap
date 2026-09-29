@@ -19,9 +19,15 @@ export async function GET() {
           WHERE u.resort_id = r.id AND u.status = 'active' AND u.role = 'internal') AS active_internal_count,
         (SELECT COUNT(*)::int FROM users u
           WHERE u.resort_id = r.id AND u.status = 'active' AND u.role = 'external') AS active_external_count,
+        (SELECT COUNT(*)::int FROM packages p
+          WHERE p.resort_id = r.id AND p.is_active = true) AS active_package_count,
         (SELECT COUNT(*)::int FROM bookings b WHERE b.resort_id = r.id) AS total_bookings_count,
         (SELECT COUNT(*)::int FROM bookings b
           WHERE b.resort_id = r.id AND b.status IN ('pending', 'active', 'rescheduled')) AS open_bookings_count
+        ,(SELECT COUNT(*)::int FROM bookings b JOIN users u ON u.id = b.staff_id
+          WHERE b.resort_id = r.id AND u.role = 'internal') AS internal_bookings_count
+        ,(SELECT COUNT(*)::int FROM bookings b JOIN users u ON u.id = b.staff_id
+          WHERE b.resort_id = r.id AND u.role = 'external') AS external_bookings_count
       FROM resorts r
       ORDER BY r.name ASC
     `);
@@ -33,6 +39,7 @@ export async function GET() {
           resortStatus: resort.status,
           activeInternalCount: resort.active_internal_count,
           activeExternalCount: resort.active_external_count,
+          activePackageCount: resort.active_package_count,
         }),
       })),
     });

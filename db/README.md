@@ -38,18 +38,11 @@ activity timestamps for the realtime Admin presence view.
 Then run `db/migrations/021_resort_staff_coverage.sql` once to add the resort
 coverage read model and protect activation, deactivation, and last-staff changes.
 
-Then run `db/migrations/022_admin_sky_event_management.sql` once to allow active
-admins to manage resort sky events from the Admin Calendar while preserving the
-same-resort restriction for Internal staff.
+Then run `db/migrations/022_resort_package_readiness.sql` once to derive paid/free
+status from package prices and require an active package before resort activation.
 
-Then run `db/migrations/023_access_roles_and_permissions.sql` once to add
-database-backed access-role profiles, permission sets, member assignments, and
-the compatibility bridge to the existing `admin`/`internal`/`external` portal roles.
-
-Then run migrations `024` through `029` in numeric order. Migration `028_invoices.sql`
-adds immutable customer invoices and paid staff-payout receipts. Migration
-`029_customer_payment_confirmation.sql` adds the auditable customer-payment state;
-customer invoices can only be generated after that payment is confirmed.
+Then run `db/migrations/023_admin_sky_guide.sql` once so Admin and the assigned
+Internal staff can manage the same resort Sky Events.
 
 5. Create `.env.local` in **each app folder** (`apps/landing`, `apps/admin`, `apps/staff`):
 
@@ -83,14 +76,14 @@ External: external@ephemeris.id / external123
 Admin:
 - full dashboard access
 - package/price management
-- cross-resort sky event management from the Admin Calendar
+- manages Sky Guide events for every resort
 - audit log
 - all booking and finance reports
 
 Internal:
 - sees and manages all bookings assigned to their own resort
 - can complete, cancel, sign, and reschedule resort bookings
-- manages Sky Guide events and observatory coordinates for their own resort
+- manages Sky Guide events and observatory coordinates for their assigned resort
 - earns commission only; star rewards are bypassed
 
 External:

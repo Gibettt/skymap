@@ -8,7 +8,9 @@
 - Admin may assign staff to an inactive resort while preparing it for activation.
 - Admin cannot deactivate a resort with pending, active, or rescheduled bookings.
 - Admin cannot move, deactivate, or change the role of the last active Internal or External staff member while that resort has open bookings.
-- Internal staff manages Sky Guide events and observation spots only for their assigned resort.
+- Admin manages Sky Guide events and observation spots for any resort; Internal staff manages the same records only for their assigned resort.
+- External staff reads only published Sky Guide events for its assigned resort.
+- Admin, Internal, and External calendars show resort Sky Events separately from bookings; Admin sees all resorts, while staff remains resort-scoped.
 - External staff can read its resort catalog and create bookings, but cannot approve or operate them.
 - External bookings start as `pending`; approval by an internal staff member from the same resort activates the booking and assigns that internal staff member.
 - Packages are reusable products. Sky events are dated occurrences that may reference a package and override its price.
