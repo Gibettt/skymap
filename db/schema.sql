@@ -452,6 +452,12 @@ CREATE TABLE IF NOT EXISTS invoices (
   source_snapshot jsonb NOT NULL CHECK (jsonb_typeof(source_snapshot) = 'object'),
   notes text,
   issued_by uuid NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
+  signature_data_url text,
+  signature_signer_name varchar(200),
+  signed_by uuid REFERENCES users(id) ON DELETE RESTRICT,
+  signed_at timestamptz,
+  resort_recorded_at timestamptz,
+  resort_recorded_by uuid REFERENCES users(id) ON DELETE RESTRICT,
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz NOT NULL DEFAULT now(),
   CHECK (
@@ -460,7 +466,56 @@ CREATE TABLE IF NOT EXISTS invoices (
     (invoice_type = 'staff_payout' AND status = 'paid' AND booking_id IS NULL AND payout_request_id IS NOT NULL)
   ),
   CHECK (due_date IS NULL OR due_date >= issued_at::date),
+  CHECK (
+    (signature_data_url IS NULL AND signature_signer_name IS NULL AND signed_by IS NULL AND signed_at IS NULL)
+    OR
+    (signature_data_url IS NOT NULL AND signature_signer_name IS NOT NULL AND signed_by IS NOT NULL AND signed_at IS NOT NULL)
+  ),
+  CHECK (
+    (resort_recorded_at IS NULL AND resort_recorded_by IS NULL)
+    OR
+    (resort_recorded_at IS NOT NULL AND resort_recorded_by IS NOT NULL)
+  ),
   CHECK (total_usd = subtotal_usd + service_charge_usd + tax_usd)
+);
+
+CREATE TABLE IF NOT EXISTS monthly_invoice_submissions (
+  id uuid PRIMARY KEY,
+  resort_id uuid NOT NULL REFERENCES resorts(id) ON DELETE RESTRICT,
+  period_start date NOT NULL,
+  status varchar(24) NOT NULL DEFAULT 'submitted' CHECK (status IN ('submitted', 'reviewed')),
+  submitted_by uuid NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
+  submitted_at timestamptz NOT NULL DEFAULT now(),
+  reviewed_by uuid REFERENCES users(id) ON DELETE RESTRICT,
+  reviewed_at timestamptz,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now(),
+  UNIQUE (resort_id, period_start),
+  CHECK (
+    (status = 'submitted' AND reviewed_by IS NULL AND reviewed_at IS NULL)
+    OR
+    (status = 'reviewed' AND reviewed_by IS NOT NULL AND reviewed_at IS NOT NULL)
+  )
+);
+
+CREATE TABLE IF NOT EXISTS monthly_invoice_submission_items (
+  submission_id uuid NOT NULL REFERENCES monthly_invoice_submissions(id) ON DELETE CASCADE,
+  invoice_id uuid NOT NULL REFERENCES invoices(id) ON DELETE RESTRICT,
+  PRIMARY KEY (submission_id, invoice_id),
+  UNIQUE (invoice_id)
+);
+
+CREATE TABLE IF NOT EXISTS monthly_invoice_staff_signatures (
+  id uuid PRIMARY KEY,
+  resort_id uuid NOT NULL REFERENCES resorts(id) ON DELETE RESTRICT,
+  period_start date NOT NULL,
+  signature_data_url text NOT NULL,
+  signer_id uuid NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
+  signer_name varchar(200) NOT NULL,
+  signed_at timestamptz NOT NULL DEFAULT now(),
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now(),
+  UNIQUE (resort_id, period_start)
 );
 
 CREATE TABLE IF NOT EXISTS notifications (
@@ -527,6 +582,16 @@ CREATE TRIGGER invoices_set_updated_at
 BEFORE UPDATE ON invoices
 FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 
+DROP TRIGGER IF EXISTS monthly_invoice_submissions_set_updated_at ON monthly_invoice_submissions;
+CREATE TRIGGER monthly_invoice_submissions_set_updated_at
+BEFORE UPDATE ON monthly_invoice_submissions
+FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+
+DROP TRIGGER IF EXISTS monthly_invoice_staff_signatures_set_updated_at ON monthly_invoice_staff_signatures;
+CREATE TRIGGER monthly_invoice_staff_signatures_set_updated_at
+BEFORE UPDATE ON monthly_invoice_staff_signatures
+FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+
 DROP TRIGGER IF EXISTS notifications_set_updated_at ON notifications;
 CREATE TRIGGER notifications_set_updated_at
 BEFORE UPDATE ON notifications
@@ -557,6 +622,12 @@ CREATE INDEX IF NOT EXISTS idx_payout_requests_status ON payout_requests(status)
 CREATE INDEX IF NOT EXISTS idx_invoices_type_issued ON invoices(invoice_type, issued_at DESC);
 CREATE INDEX IF NOT EXISTS idx_invoices_recipient ON invoices(recipient_name);
 CREATE INDEX IF NOT EXISTS idx_invoices_issued_by ON invoices(issued_by, issued_at DESC);
+CREATE INDEX IF NOT EXISTS idx_invoices_signed_by ON invoices(signed_by, signed_at DESC);
+CREATE INDEX IF NOT EXISTS idx_invoices_resort_recorded ON invoices(resort_recorded_at DESC);
+CREATE INDEX IF NOT EXISTS idx_monthly_invoice_submissions_period
+  ON monthly_invoice_submissions(period_start DESC, submitted_at DESC);
+CREATE INDEX IF NOT EXISTS idx_monthly_invoice_submissions_status
+  ON monthly_invoice_submissions(status, submitted_at DESC);
 CREATE INDEX IF NOT EXISTS idx_notifications_recipient_created ON notifications(recipient_user_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_notifications_recipient_read ON notifications(recipient_user_id, read_at);
 CREATE INDEX IF NOT EXISTS idx_notifications_source ON notifications(type, source_id);

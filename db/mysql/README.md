@@ -51,3 +51,11 @@ portal role. Migration `031` enables resort-managed sky event types, and migrati
 adds staff-managed public resort descriptions, contact details, and cover images.
 Migration `034` stores the selected customer tax label and rate on bookings and
 generated invoices.
+Migration `035_invoice_staff_signatures.sql` adds persistent guest signatures
+captured by internal staff to customer invoices.
+Migration `036_invoice_resort_tracking.sql` tracks whether a signed customer
+invoice has been entered into the resort finance system.
+Migration `037_monthly_invoice_submissions.sql` adds resort-scoped monthly
+invoice submissions from Internal Staff to the Admin invoice inbox.
+Migration `038_monthly_invoice_staff_signatures.sql` stores one responsible
+Internal Staff signature for each resort's monthly invoice register.

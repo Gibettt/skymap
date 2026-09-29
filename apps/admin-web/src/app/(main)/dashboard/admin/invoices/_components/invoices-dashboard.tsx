@@ -10,6 +10,7 @@ import {
   Download,
   FilePlus2,
   Hash,
+  Mail,
   Printer,
   ReceiptText,
 } from "lucide-react";
@@ -40,9 +41,16 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { getInitials } from "@/lib/utils";
 
 import { useVisibleCenterPosition } from "../../../invoice/_components/use-visible-center-position";
-import type { InvoiceRow, InvoiceWorkflowRow } from "../../_lib/admin-data";
+import type { InvoiceRow, InvoiceWorkflowRow, MonthlyInvoiceSubmissionRow } from "../../_lib/admin-data";
 import { formatUsd, titleCase } from "../../_lib/format";
 import { INVOICE_PAPER_HEIGHT, INVOICE_PAPER_WIDTH, InvoiceDocument } from "./invoice-document";
+import { InvoiceList } from "./invoice-list";
+import {
+  type MonthlyInvoiceDocumentData,
+  MonthlyResortInvoice,
+  MonthlyResortInvoiceDocument,
+} from "./monthly-resort-invoice";
+import { MonthlySubmissionsInbox } from "./monthly-submissions-inbox";
 
 type WorkflowTab = "payment" | "business";
 type InvoiceWorkflows = Record<WorkflowTab, InvoiceWorkflowRow[]>;
@@ -98,11 +106,11 @@ function upsertInvoice(current: InvoiceRow[], invoice: InvoiceRow) {
   return [invoice, ...current.filter((item) => item.id !== invoice.id)];
 }
 
-function InvoicePrintPortal({ invoice }: { invoice: InvoiceRow | null }) {
+function InvoicePrintPortal({ active, invoice }: { active: boolean; invoice: InvoiceRow | null }) {
   const [mounted, setMounted] = React.useState(false);
 
   React.useEffect(() => setMounted(true), []);
-  if (!mounted || !invoice) return null;
+  if (!mounted || !active || !invoice) return null;
 
   return createPortal(
     <div data-print-root>
@@ -112,7 +120,29 @@ function InvoicePrintPortal({ invoice }: { invoice: InvoiceRow | null }) {
   );
 }
 
-function InvoicePreview({ invoice, onPrint }: { invoice: InvoiceRow | null; onPrint: (saveAsPdf?: boolean) => void }) {
+function MonthlyInvoicePrintPortal({ active, data }: { active: boolean; data: MonthlyInvoiceDocumentData | null }) {
+  const [mounted, setMounted] = React.useState(false);
+
+  React.useEffect(() => setMounted(true), []);
+  if (!mounted || !active || !data) return null;
+
+  return createPortal(
+    <div data-print-root data-print-kind="monthly">
+      <MonthlyResortInvoiceDocument data={data} />
+    </div>,
+    document.body,
+  );
+}
+
+function InvoicePreview({
+  invoice,
+  onEmail,
+  onPrint,
+}: {
+  invoice: InvoiceRow | null;
+  onEmail: () => void;
+  onPrint: (saveAsPdf?: boolean) => void;
+}) {
   const previewBodyRef = React.useRef<HTMLDivElement>(null);
   const paperLayout = useVisibleCenterPosition(previewBodyRef, {
     height: INVOICE_PAPER_HEIGHT,
@@ -125,11 +155,30 @@ function InvoicePreview({ invoice, onPrint }: { invoice: InvoiceRow | null; onPr
       <div className="flex flex-col gap-3 px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
         <h2 className="font-medium text-lg">Preview</h2>
         <ButtonGroup className="w-full sm:w-auto">
-          <Button type="button" variant="outline" disabled={!invoice} onClick={() => onPrint()}>
+          <Button
+            type="button"
+            variant="outline"
+            disabled={!invoice?.recipient_email || (invoice.invoice_type === "customer" && !invoice.signed_at)}
+            onClick={onEmail}
+          >
+            <Mail data-icon="inline-start" />
+            Email
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            disabled={!invoice || (invoice.invoice_type === "customer" && !invoice.signed_at)}
+            onClick={() => onPrint()}
+          >
             <Printer data-icon="inline-start" />
             Print
           </Button>
-          <Button type="button" variant="outline" disabled={!invoice} onClick={() => onPrint(true)}>
+          <Button
+            type="button"
+            variant="outline"
+            disabled={!invoice || (invoice.invoice_type === "customer" && !invoice.signed_at)}
+            onClick={() => onPrint(true)}
+          >
             <Download data-icon="inline-start" />
             Download PDF
           </Button>
@@ -587,12 +636,14 @@ export function InvoicesDashboard({
   initialSelectedId,
   initialTab = "payment",
   invoices,
+  monthlySubmissions,
   workflows,
 }: {
   initialPaymentId?: string;
   initialSelectedId?: string;
   initialTab?: WorkflowTab;
   invoices: InvoiceRow[];
+  monthlySubmissions: MonthlyInvoiceSubmissionRow[];
   workflows: InvoiceWorkflows;
 }) {
   const initialPaymentRow =
@@ -604,6 +655,9 @@ export function InvoicesDashboard({
     payment: initialPaymentRow?.id ?? "",
     business: initialSelectedId ?? workflows.business[0]?.id ?? "",
   });
+  const [openedInvoiceId, setOpenedInvoiceId] = React.useState<string | null>(null);
+  const [printTarget, setPrintTarget] = React.useState<"single" | "monthly" | null>(null);
+  const [monthlyPrintData, setMonthlyPrintData] = React.useState<MonthlyInvoiceDocumentData | null>(null);
   const [pendingKey, setPendingKey] = React.useState<string | null>(null);
   const [paymentDialogRow, setPaymentDialogRow] = React.useState<InvoiceWorkflowRow | null>(null);
   const [paymentMethod, setPaymentMethod] = React.useState("Bank transfer");
@@ -619,9 +673,11 @@ export function InvoicesDashboard({
     workflowRows.payment.find((row) => row.id === selectedIds.payment) ?? workflowRows.payment[0] ?? null;
   const selectedWorkflow =
     workflowRows[activeTab].find((row) => row.id === selectedIds[activeTab]) ?? workflowRows[activeTab][0] ?? null;
-  const selectedInvoice = selectedWorkflow?.invoice_id
-    ? (issuedInvoices.find((invoice) => invoice.id === selectedWorkflow.invoice_id) ?? null)
-    : null;
+  const selectedInvoice =
+    issuedInvoices.find((invoice) => invoice.id === openedInvoiceId) ??
+    (selectedWorkflow?.invoice_id
+      ? (issuedInvoices.find((invoice) => invoice.id === selectedWorkflow.invoice_id) ?? null)
+      : null);
   const busy = pendingKey !== null;
   const parsedTaxRate = taxType === "none" ? 0 : Number(taxRate);
   const effectiveTaxRate = Number.isFinite(parsedTaxRate) ? Math.min(100, Math.max(0, parsedTaxRate)) : 0;
@@ -651,13 +707,79 @@ export function InvoicesDashboard({
   }, [activeTab, selectedIds]);
 
   function selectWorkflow(tab: WorkflowTab, id: string) {
+    setOpenedInvoiceId(null);
     setSelectedIds((current) => ({ ...current, [tab]: id }));
   }
 
   function printInvoice(saveAsPdf = false) {
     if (!selectedInvoice) return;
+    if (selectedInvoice.invoice_type === "customer" && !selectedInvoice.signed_at) {
+      toast.error("The guest must sign this invoice before it can be printed or downloaded.");
+      return;
+    }
+    setPrintTarget("single");
     if (saveAsPdf) toast.info("Choose ‘Save as PDF’ in the print destination.");
-    window.requestAnimationFrame(() => window.print());
+    window.requestAnimationFrame(() => window.requestAnimationFrame(() => window.print()));
+  }
+
+  function printMonthlyInvoice(data: MonthlyInvoiceDocumentData, saveAsPdf: boolean) {
+    setMonthlyPrintData(data);
+    setPrintTarget("monthly");
+    if (saveAsPdf) toast.info("Choose ‘Save as PDF’ in the print destination.");
+    window.requestAnimationFrame(() => window.requestAnimationFrame(() => window.print()));
+  }
+
+  function emailInvoice() {
+    if (!selectedInvoice?.recipient_email) {
+      toast.error("This invoice recipient does not have an email address.");
+      return;
+    }
+    if (selectedInvoice.invoice_type === "customer" && !selectedInvoice.signed_at) {
+      toast.error("The guest must sign this invoice before it can be emailed.");
+      return;
+    }
+    const subject = encodeURIComponent(`Invoice ${selectedInvoice.invoice_number}`);
+    const body = encodeURIComponent(
+      `Hello ${selectedInvoice.recipient_name},\n\nYour invoice ${selectedInvoice.invoice_number} is ready. Total: ${formatUsd(selectedInvoice.total_usd)}.\n\nPlease attach the downloaded PDF before sending.`,
+    );
+    window.location.href = `mailto:${encodeURIComponent(selectedInvoice.recipient_email)}?subject=${subject}&body=${body}`;
+  }
+
+  function openInvoice(invoice: InvoiceRow) {
+    setOpenedInvoiceId(invoice.id);
+    const paymentWorkflow = workflowRows.payment.find((row) => row.invoice_id === invoice.id);
+    const businessWorkflow = workflowRows.business.find((row) => row.invoice_id === invoice.id);
+    if (paymentWorkflow) {
+      setActiveTab("payment");
+      setSelectedIds((current) => ({ ...current, payment: paymentWorkflow.id }));
+    } else if (businessWorkflow) {
+      setActiveTab("business");
+      setSelectedIds((current) => ({ ...current, business: businessWorkflow.id }));
+    }
+  }
+
+  async function toggleResortStatus(invoice: InvoiceRow) {
+    if (invoice.invoice_type !== "customer" || pendingKey) return;
+    setPendingKey(`resort:${invoice.id}`);
+    try {
+      const response = await fetch(`/api/invoices/${invoice.id}/resort-status`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ recorded: !invoice.resort_recorded_at }),
+      });
+      const result = (await response.json().catch(() => ({}))) as { error?: string; invoice?: InvoiceRow };
+      if (!response.ok || !result.invoice) throw new Error(result.error ?? "Could not update resort status.");
+      setIssuedInvoices((current) =>
+        current.map((item) => (item.id === invoice.id ? (result.invoice as InvoiceRow) : item)),
+      );
+      toast.success(
+        result.invoice.resort_recorded_at ? "Marked as entered in the resort system." : "Resort entry mark removed.",
+      );
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Could not update resort status.");
+    } finally {
+      setPendingKey(null);
+    }
   }
 
   async function syncDashboard(tab: WorkflowTab, selectedId: string) {
@@ -801,44 +923,64 @@ export function InvoicesDashboard({
 
   return (
     <>
-      <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-5 xl:grid-cols-2">
-        <div className="flex min-w-0 flex-col gap-4 overflow-hidden rounded-xl border bg-card p-4">
-          <Tabs className="min-w-0" value={activeTab} onValueChange={(value) => setActiveTab(value as WorkflowTab)}>
-            <TabsList className="w-full">
-              <TabsTrigger value="payment">Payment</TabsTrigger>
-              <TabsTrigger value="business">Business</TabsTrigger>
-            </TabsList>
+      <div className="flex min-w-0 flex-col gap-5">
+        <MonthlySubmissionsInbox initialSubmissions={monthlySubmissions} />
 
-            <TabsContent value="payment">
-              <PaymentWorkflow
-                busy={busy}
-                row={activeTab === "payment" ? selectedWorkflow : null}
-                rows={workflowRows.payment}
-                onSelect={(id) => selectWorkflow("payment", id)}
-                onConfirm={openPaymentConfirmation}
-                onGenerate={generateDocument}
-                onTaxCustomLabelChange={setTaxCustomLabel}
-                onTaxRateChange={setTaxRate}
-                onTaxTypeChange={changeTaxType}
-                taxAmount={taxAmount}
-                taxCustomLabel={taxCustomLabel}
-                taxRate={taxRate}
-                taxType={taxType}
-                totalAmount={totalAmount}
-              />
-            </TabsContent>
+        <InvoiceList
+          invoices={issuedInvoices}
+          pendingId={pendingKey?.startsWith("resort:") ? pendingKey.slice("resort:".length) : null}
+          onOpen={openInvoice}
+          onToggleResortStatus={toggleResortStatus}
+        />
 
-            <TabsContent value="business">
-              <BusinessWorkflow
-                row={activeTab === "business" ? selectedWorkflow : null}
-                rows={workflowRows.business}
-                onSelect={(id) => selectWorkflow("business", id)}
-              />
-            </TabsContent>
-          </Tabs>
+        <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-5 xl:grid-cols-2">
+          <div className="flex min-w-0 flex-col gap-4 overflow-hidden rounded-xl border bg-card p-4">
+            <Tabs
+              className="min-w-0"
+              value={activeTab}
+              onValueChange={(value) => {
+                setOpenedInvoiceId(null);
+                setActiveTab(value as WorkflowTab);
+              }}
+            >
+              <TabsList className="w-full">
+                <TabsTrigger value="payment">Payment</TabsTrigger>
+                <TabsTrigger value="business">Business</TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="payment">
+                <PaymentWorkflow
+                  busy={busy}
+                  row={activeTab === "payment" ? selectedWorkflow : null}
+                  rows={workflowRows.payment}
+                  onSelect={(id) => selectWorkflow("payment", id)}
+                  onConfirm={openPaymentConfirmation}
+                  onGenerate={generateDocument}
+                  onTaxCustomLabelChange={setTaxCustomLabel}
+                  onTaxRateChange={setTaxRate}
+                  onTaxTypeChange={changeTaxType}
+                  taxAmount={taxAmount}
+                  taxCustomLabel={taxCustomLabel}
+                  taxRate={taxRate}
+                  taxType={taxType}
+                  totalAmount={totalAmount}
+                />
+              </TabsContent>
+
+              <TabsContent value="business">
+                <BusinessWorkflow
+                  row={activeTab === "business" ? selectedWorkflow : null}
+                  rows={workflowRows.business}
+                  onSelect={(id) => selectWorkflow("business", id)}
+                />
+              </TabsContent>
+            </Tabs>
+          </div>
+
+          <InvoicePreview invoice={selectedInvoice} onEmail={emailInvoice} onPrint={printInvoice} />
         </div>
 
-        <InvoicePreview invoice={selectedInvoice} onPrint={printInvoice} />
+        <MonthlyResortInvoice invoices={issuedInvoices} onPrint={printMonthlyInvoice} />
       </div>
 
       <Dialog
@@ -922,7 +1064,8 @@ export function InvoicesDashboard({
         </DialogContent>
       </Dialog>
 
-      <InvoicePrintPortal invoice={selectedInvoice} />
+      <InvoicePrintPortal active={printTarget === "single"} invoice={selectedInvoice} />
+      <MonthlyInvoicePrintPortal active={printTarget === "monthly"} data={monthlyPrintData} />
     </>
   );
 }

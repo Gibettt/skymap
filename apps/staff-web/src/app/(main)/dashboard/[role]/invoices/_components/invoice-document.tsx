@@ -21,9 +21,16 @@ function snapshotText(invoice: InvoiceRow, key: string) {
   return value == null || value === "" ? null : String(value);
 }
 
+function snapshotNumber(invoice: InvoiceRow, key: string) {
+  const value = Number(invoice.source_snapshot[key]);
+  return Number.isFinite(value) ? value : 0;
+}
+
 export function InvoiceDocument({ invoice }: { invoice: InvoiceRow }) {
   const paymentDate = snapshotText(invoice, "payment_confirmed_at") ?? invoice.issued_at;
   const paymentReference = snapshotText(invoice, "payment_reference");
+  const resortName = snapshotText(invoice, "resort_name");
+  const roomNumber = snapshotText(invoice, "room_number");
 
   return (
     <article
@@ -67,7 +74,9 @@ export function InvoiceDocument({ invoice }: { invoice: InvoiceRow }) {
           <div>
             <p className="mb-4 font-semibold uppercase">Bill to</p>
             <p>{invoice.recipient_name}</p>
-            {invoice.recipient_detail ? <p>{invoice.recipient_detail}</p> : null}
+            {resortName ? <p>{resortName}</p> : null}
+            {roomNumber ? <p>Room/Villa: {roomNumber}</p> : null}
+            {!resortName && !roomNumber && invoice.recipient_detail ? <p>{invoice.recipient_detail}</p> : null}
             {invoice.recipient_email ? <p>{invoice.recipient_email}</p> : null}
             {invoice.recipient_phone ? <p>{invoice.recipient_phone}</p> : null}
           </div>
@@ -76,20 +85,31 @@ export function InvoiceDocument({ invoice }: { invoice: InvoiceRow }) {
 
       <div className="flex flex-col gap-5">
         <section className="text-sm">
-          <div className="grid grid-cols-[1fr_74px_116px_116px] bg-neutral-200 px-3 py-3 font-semibold uppercase">
-            <span>Description</span>
-            <span className="text-right">Units</span>
-            <span className="text-right">Unit cost</span>
+          <div className="grid grid-cols-[1fr_48px_48px_92px_92px_100px] bg-neutral-200 px-3 py-3 font-semibold text-xs uppercase">
+            <span>Package</span>
+            <span className="text-right">Adults</span>
+            <span className="text-right">Kids</span>
+            <span className="text-right">Adult rate</span>
+            <span className="text-right">Kids 50%</span>
             <span className="text-right">Line total</span>
           </div>
           {invoice.line_items.map((item) => (
-            <div key={item.id} className="grid grid-cols-[1fr_74px_116px_116px] border-neutral-300 border-b px-3 py-4">
+            <div
+              key={item.id}
+              className="grid grid-cols-[1fr_48px_48px_92px_92px_100px] border-neutral-300 border-b px-3 py-4 text-xs"
+            >
               <div className="min-w-0">
                 <p>{item.description}</p>
                 {item.detail ? <p className="text-neutral-500 text-xs">{item.detail}</p> : null}
               </div>
-              <span className="text-right">{item.quantity}</span>
-              <span className="text-right">{formatUsd(item.unit_price_usd)}</span>
+              <span className="text-right">{item.adult_count ?? snapshotNumber(invoice, "adult_count")}</span>
+              <span className="text-right">{item.child_count ?? snapshotNumber(invoice, "child_count")}</span>
+              <span className="text-right">
+                {item.adult_unit_price_usd == null ? "—" : formatUsd(item.adult_unit_price_usd)}
+              </span>
+              <span className="text-right">
+                {item.child_unit_price_usd == null ? "—" : formatUsd(item.child_unit_price_usd)}
+              </span>
               <span className="text-right">{formatUsd(item.amount_usd)}</span>
             </div>
           ))}
@@ -129,11 +149,9 @@ export function InvoiceDocument({ invoice }: { invoice: InvoiceRow }) {
           <p>admin@ephemeris.id</p>
           <p>SpaceCat ASTROTOURISM Administration</p>
         </div>
-        <div>
+        <div className="text-right">
           <p>Customer payment confirmed and recorded.</p>
-          <p>
-            Issued by {invoice.issuer_name ?? "SpaceCat ASTROTOURISM Staff"} · {titleCase(invoice.status)}
-          </p>
+          <p>Issued by {invoice.issuer_name ?? "SpaceCat ASTROTOURISM Staff"} · {titleCase(invoice.status)}</p>
         </div>
       </footer>
     </article>

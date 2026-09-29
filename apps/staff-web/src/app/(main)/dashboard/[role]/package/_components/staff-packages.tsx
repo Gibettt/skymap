@@ -307,7 +307,7 @@ export function StaffPackages({ role }: { role: StaffRole }) {
   if (loading) return <PackagesLoading />;
 
   return (
-    <div className="flex min-w-0 flex-col gap-4 sm:gap-6">
+    <div data-staff-feature-page="packages" className="flex min-w-0 flex-col gap-4 sm:gap-6">
       <div className="flex flex-col justify-between gap-4 md:flex-row md:items-center">
         <div className="flex min-w-0 flex-col gap-1">
           <div className="flex flex-wrap items-center gap-2">

@@ -78,6 +78,7 @@ export function TimePicker({
     <Popover>
       <PopoverTrigger asChild>
         <Button
+          data-staff-time-picker-trigger
           id={id}
           type="button"
           variant="outline"

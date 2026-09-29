@@ -77,6 +77,10 @@ export function buildCustomerLineItems(booking, experiences = []) {
     quantity: 1,
     unit_price_usd: roundMoney(experience.base_total_usd),
     amount_usd: roundMoney(experience.base_total_usd),
+    adult_count: adultCount,
+    child_count: childCount,
+    adult_unit_price_usd: roundMoney(experience.booked_adult_price_usd ?? booking.booked_adult_price_usd),
+    child_unit_price_usd: roundMoney(experience.booked_child_price_usd ?? booking.booked_child_price_usd),
   }));
 }
 
@@ -114,6 +118,8 @@ export function normalizeInvoice(row) {
     issued_at: isoTimestamp(row.issued_at),
     created_at: isoTimestamp(row.created_at),
     updated_at: isoTimestamp(row.updated_at),
+    signed_at: isoTimestamp(row.signed_at),
+    resort_recorded_at: isoTimestamp(row.resort_recorded_at),
     due_date: isoDate(row.due_date),
   };
 }
@@ -129,6 +135,39 @@ const invoiceSelect = `SELECT i.*,
 export async function selectInvoiceById(client, id) {
   const { rows } = await client.query(`${invoiceSelect} WHERE i.id = $1 LIMIT 1`, [id]);
   return normalizeInvoice(rows[0]);
+}
+
+export async function updateInvoiceResortRecorded(client, { invoiceId, recordedById, recorded, resortId = null }) {
+  const resortScope = resortId ? " AND b.resort_id = $2" : "";
+  const params = resortId ? [invoiceId, resortId] : [invoiceId];
+  const { rows } = await client.query(
+    `SELECT i.id, i.invoice_type, i.resort_recorded_at, i.resort_recorded_by
+     FROM invoices i
+     LEFT JOIN bookings b ON b.id = i.booking_id
+     WHERE i.id = $1${resortScope}
+     FOR UPDATE`,
+    params,
+  );
+  const invoice = rows[0];
+  if (!invoice) return { error: "Invoice not found.", status: 404 };
+  if (invoice.invoice_type !== "customer") {
+    return { error: "Only customer invoices can be recorded in a resort finance system.", status: 409 };
+  }
+  await client.query(
+    `UPDATE invoices
+     SET resort_recorded_at = $2,
+       resort_recorded_by = $3
+     WHERE id = $1`,
+    [invoiceId, recorded ? new Date() : null, recorded ? recordedById : null],
+  );
+
+  return {
+    invoice: await selectInvoiceById(client, invoiceId),
+    previousStatus: {
+      resortRecordedAt: isoTimestamp(invoice.resort_recorded_at),
+      resortRecordedBy: invoice.resort_recorded_by ?? null,
+    },
+  };
 }
 
 async function selectInvoiceBySource(client, type, sourceId) {
@@ -174,7 +213,7 @@ export async function issueCustomerInvoice(client, { bookingId, issuedById, reso
 
   const experienceResult = await client.query(
     `SELECT be.id, be.event_date, be.time_start, be.time_end, be.observation_spot,
-      be.base_total_usd, p.name AS package_name
+      be.base_total_usd, be.booked_adult_price_usd, be.booked_child_price_usd, p.name AS package_name
      FROM booking_experiences be
      JOIN packages p ON p.id = be.package_id
      WHERE be.booking_id = $1
@@ -209,6 +248,8 @@ export async function issueCustomerInvoice(client, { bookingId, issuedById, reso
     payment_reference: booking.payment_reference,
     tax_label: booking.tax_label,
     tax_rate_percent: roundMoney(booking.tax_rate_percent),
+    booked_adult_price_usd: roundMoney(booking.booked_adult_price_usd),
+    booked_child_price_usd: roundMoney(booking.booked_child_price_usd),
   };
 
   await client.query(
@@ -477,5 +518,266 @@ export async function listInvoiceWorkflows(client) {
   return {
     payment: payments,
     business: payouts.rows.map(normalizeWorkflow),
+  };
+}
+
+function monthlyPeriodBounds(period) {
+  const [year, month] = String(period).split("-").map(Number);
+  const start = `${year}-${String(month).padStart(2, "0")}-01`;
+  const next = new Date(Date.UTC(year, month, 1)).toISOString().slice(0, 10);
+  return { start, next };
+}
+
+function normalizeMonthlySubmission(row, invoices = []) {
+  return {
+    ...row,
+    period_start: isoDate(row.period_start),
+    staff_signed_at: isoTimestamp(row.staff_signed_at),
+    submitted_at: isoTimestamp(row.submitted_at),
+    reviewed_at: isoTimestamp(row.reviewed_at),
+    created_at: isoTimestamp(row.created_at),
+    updated_at: isoTimestamp(row.updated_at),
+    invoices,
+  };
+}
+
+function normalizeMonthlyStaffSignature(row) {
+  if (!row) return null;
+  return {
+    ...row,
+    period_start: isoDate(row.period_start),
+    signed_at: isoTimestamp(row.signed_at),
+    created_at: isoTimestamp(row.created_at),
+    updated_at: isoTimestamp(row.updated_at),
+  };
+}
+
+export async function listMonthlyInvoiceStaffSignatures(client, { resortId }) {
+  const { rows } = await client.query(
+    `SELECT * FROM monthly_invoice_staff_signatures
+     WHERE resort_id = $1
+     ORDER BY period_start DESC
+     LIMIT 120`,
+    [resortId],
+  );
+  return rows.map(normalizeMonthlyStaffSignature);
+}
+
+export async function saveMonthlyInvoiceStaffSignature(
+  client,
+  { resortId, signedById, period, signatureDataUrl },
+) {
+  const { start } = monthlyPeriodBounds(period);
+  const submissionResult = await client.query(
+    `SELECT status FROM monthly_invoice_submissions
+     WHERE resort_id = $1 AND period_start = $2
+     FOR UPDATE`,
+    [resortId, start],
+  );
+  if (submissionResult.rows[0]?.status === "reviewed") {
+    return { error: "This monthly invoice has already been reviewed by Admin.", status: 409 };
+  }
+
+  const userResult = await client.query("SELECT name FROM users WHERE id = $1 LIMIT 1", [signedById]);
+  const signerName = String(userResult.rows[0]?.name ?? "").trim().slice(0, 200);
+  if (!signerName) return { error: "The responsible staff name could not be found.", status: 409 };
+
+  const currentResult = await client.query(
+    `SELECT * FROM monthly_invoice_staff_signatures
+     WHERE resort_id = $1 AND period_start = $2
+     FOR UPDATE`,
+    [resortId, start],
+  );
+  const current = currentResult.rows[0];
+  if (current) {
+    await client.query(
+      `UPDATE monthly_invoice_staff_signatures
+       SET signature_data_url = $3,
+         signer_id = $4,
+         signer_name = $5,
+         signed_at = CURRENT_TIMESTAMP,
+         updated_at = CURRENT_TIMESTAMP
+       WHERE resort_id = $1 AND period_start = $2`,
+      [resortId, start, signatureDataUrl, signedById, signerName],
+    );
+  } else {
+    await client.query(
+      `INSERT INTO monthly_invoice_staff_signatures
+        (id, resort_id, period_start, signature_data_url, signer_id, signer_name, signed_at)
+       VALUES ($1, $2, $3, $4, $5, $6, CURRENT_TIMESTAMP)`,
+      [randomUUID(), resortId, start, signatureDataUrl, signedById, signerName],
+    );
+  }
+
+  const savedResult = await client.query(
+    `SELECT * FROM monthly_invoice_staff_signatures
+     WHERE resort_id = $1 AND period_start = $2
+     LIMIT 1`,
+    [resortId, start],
+  );
+  return {
+    signature: normalizeMonthlyStaffSignature(savedResult.rows[0]),
+    previousSignature: normalizeMonthlyStaffSignature(current),
+  };
+}
+
+async function selectMonthlySubmissionById(client, id) {
+  const { rows } = await client.query(
+    `SELECT s.*, r.name AS resort_name,
+       submitter.name AS submitted_by_name, reviewer.name AS reviewed_by_name,
+       staff_signature.signature_data_url AS staff_signature_data_url,
+       staff_signature.signer_id AS staff_signer_id,
+       staff_signature.signer_name AS staff_signer_name,
+       staff_signature.signed_at AS staff_signed_at
+     FROM monthly_invoice_submissions s
+     JOIN resorts r ON r.id = s.resort_id
+     JOIN users submitter ON submitter.id = s.submitted_by
+     LEFT JOIN users reviewer ON reviewer.id = s.reviewed_by
+     LEFT JOIN monthly_invoice_staff_signatures staff_signature
+       ON staff_signature.resort_id = s.resort_id
+      AND staff_signature.period_start = s.period_start
+     WHERE s.id = $1
+     LIMIT 1`,
+    [id],
+  );
+  if (!rows[0]) return null;
+  const invoiceResult = await client.query(
+    `${invoiceSelect}
+     JOIN monthly_invoice_submission_items item ON item.invoice_id = i.id
+     WHERE item.submission_id = $1
+     ORDER BY i.issued_at, i.invoice_number`,
+    [id],
+  );
+  return normalizeMonthlySubmission(rows[0], invoiceResult.rows.map(normalizeInvoice));
+}
+
+/**
+ * @param {*} client
+ * @param {{ resortId?: string | null }} [options]
+ */
+export async function listMonthlyInvoiceSubmissions(client, { resortId = null } = {}) {
+  const scope = resortId ? " WHERE s.resort_id = $1" : "";
+  const params = resortId ? [resortId] : [];
+  const { rows } = await client.query(
+    `SELECT s.*, r.name AS resort_name,
+       submitter.name AS submitted_by_name, reviewer.name AS reviewed_by_name
+     FROM monthly_invoice_submissions s
+     JOIN resorts r ON r.id = s.resort_id
+     JOIN users submitter ON submitter.id = s.submitted_by
+     LEFT JOIN users reviewer ON reviewer.id = s.reviewed_by
+     ${scope}
+     ORDER BY s.period_start DESC, s.submitted_at DESC
+     LIMIT 120`,
+    params,
+  );
+  return Promise.all(rows.map((row) => selectMonthlySubmissionById(client, row.id)));
+}
+
+export async function submitMonthlyInvoices(client, { resortId, submittedById, period }) {
+  const { start, next } = monthlyPeriodBounds(period);
+  const invoiceResult = await client.query(
+    `SELECT b.id AS booking_id, i.id AS invoice_id
+     FROM bookings b
+     LEFT JOIN invoices i ON i.booking_id = b.id AND i.invoice_type = 'customer'
+     WHERE b.resort_id = $1
+       AND b.status IN ('active', 'rescheduled', 'completed')
+       AND b.invoice_total_usd > 0
+       AND b.event_date >= $2
+       AND b.event_date < $3
+     ORDER BY b.event_date, b.booking_code
+     FOR UPDATE`,
+    [resortId, start, next],
+  );
+  if (!invoiceResult.rows.length) {
+    return { error: "No chargeable customer bookings are available for the selected month.", status: 409 };
+  }
+  const missingInvoiceCount = invoiceResult.rows.filter((row) => !row.invoice_id).length;
+  if (missingInvoiceCount) {
+    return {
+      error: `${missingInvoiceCount} booking${missingInvoiceCount === 1 ? " does" : "s do"} not have a paid invoice yet.`,
+      status: 409,
+    };
+  }
+  const signatureResult = await client.query(
+    `SELECT id FROM monthly_invoice_staff_signatures
+     WHERE resort_id = $1 AND period_start = $2
+     LIMIT 1`,
+    [resortId, start],
+  );
+  if (!signatureResult.rows[0]) {
+    return { error: "The responsible Internal Staff must sign this monthly invoice before sending it.", status: 409 };
+  }
+
+  const existingResult = await client.query(
+    `SELECT id, status FROM monthly_invoice_submissions
+     WHERE resort_id = $1 AND period_start = $2
+     FOR UPDATE`,
+    [resortId, start],
+  );
+  const existing = existingResult.rows[0];
+  if (existing?.status === "reviewed") {
+    return { error: "This monthly invoice has already been reviewed by Admin.", status: 409 };
+  }
+
+  const submissionId = existing?.id ?? randomUUID();
+  if (existing) {
+    await client.query(
+      `UPDATE monthly_invoice_submissions
+       SET submitted_by = $2, submitted_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
+       WHERE id = $1`,
+      [submissionId, submittedById],
+    );
+    await client.query("DELETE FROM monthly_invoice_submission_items WHERE submission_id = $1", [submissionId]);
+  } else {
+    await client.query(
+      `INSERT INTO monthly_invoice_submissions
+        (id, resort_id, period_start, status, submitted_by, submitted_at)
+       VALUES ($1, $2, $3, 'submitted', $4, CURRENT_TIMESTAMP)`,
+      [submissionId, resortId, start, submittedById],
+    );
+  }
+
+  for (const invoice of invoiceResult.rows) {
+    await client.query(
+      `INSERT INTO monthly_invoice_submission_items (submission_id, invoice_id)
+       VALUES ($1, $2)`,
+      [submissionId, invoice.invoice_id],
+    );
+  }
+
+  return {
+    submission: await selectMonthlySubmissionById(client, submissionId),
+    resubmitted: Boolean(existing),
+  };
+}
+
+export async function reviewMonthlyInvoiceSubmission(client, { submissionId, reviewedById, reviewed }) {
+  const { rows } = await client.query(
+    `SELECT id, status, reviewed_by, reviewed_at
+     FROM monthly_invoice_submissions
+     WHERE id = $1
+     FOR UPDATE`,
+    [submissionId],
+  );
+  const current = rows[0];
+  if (!current) return { error: "Monthly invoice submission not found.", status: 404 };
+
+  await client.query(
+    `UPDATE monthly_invoice_submissions
+     SET status = $2,
+       reviewed_by = $3,
+       reviewed_at = $4,
+       updated_at = CURRENT_TIMESTAMP
+     WHERE id = $1`,
+    [submissionId, reviewed ? "reviewed" : "submitted", reviewed ? reviewedById : null, reviewed ? new Date() : null],
+  );
+
+  return {
+    submission: await selectMonthlySubmissionById(client, submissionId),
+    previousStatus: {
+      status: current.status,
+      reviewedBy: current.reviewed_by ?? null,
+      reviewedAt: isoTimestamp(current.reviewed_at),
+    },
   };
 }

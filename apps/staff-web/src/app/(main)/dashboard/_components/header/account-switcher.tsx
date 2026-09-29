@@ -46,7 +46,13 @@ export function AccountSwitcher({ user, canViewNotifications, canViewPayouts }: 
           </Avatar>
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent className="min-w-64 rounded-lg" side="bottom" align="end" sideOffset={4}>
+      <DropdownMenuContent
+        data-staff-account-menu
+        className="min-w-64 rounded-lg"
+        side="bottom"
+        align="end"
+        sideOffset={4}
+      >
         <DropdownMenuLabel className="font-normal">
           <div className="flex items-center gap-2 py-1">
             <Avatar className="size-9 rounded-lg">

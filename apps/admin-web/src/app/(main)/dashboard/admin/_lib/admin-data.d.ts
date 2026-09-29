@@ -223,6 +223,10 @@ export interface InvoiceLineItemRow {
   star_bonus_usd?: number;
   star_points?: string | number;
   full_stars?: string | number;
+  adult_count?: number;
+  child_count?: number;
+  adult_unit_price_usd?: number;
+  child_unit_price_usd?: number;
 }
 
 export interface InvoiceRow {
@@ -251,6 +255,12 @@ export interface InvoiceRow {
   notes: string | null;
   issued_by: string;
   issuer_name: string | null;
+  signature_data_url: string | null;
+  signature_signer_name: string | null;
+  signed_by: string | null;
+  signed_at: string | null;
+  resort_recorded_at: string | null;
+  resort_recorded_by: string | null;
   source_reference: string;
   created_at: string;
   updated_at: string;
@@ -298,6 +308,27 @@ export interface InvoiceWorkflowRow {
   bank_name?: string | null;
   account_holder_name?: string | null;
   masked_account_number?: string | null;
+}
+
+export interface MonthlyInvoiceSubmissionRow {
+  id: string;
+  resort_id: string;
+  resort_name: string;
+  period_start: string;
+  status: "submitted" | "reviewed";
+  submitted_by: string;
+  submitted_by_name: string;
+  submitted_at: string;
+  reviewed_by: string | null;
+  reviewed_by_name: string | null;
+  reviewed_at: string | null;
+  created_at: string;
+  updated_at: string;
+  staff_signature_data_url: string | null;
+  staff_signer_id: string | null;
+  staff_signer_name: string | null;
+  staff_signed_at: string | null;
+  invoices: InvoiceRow[];
 }
 
 export interface AuditLogRow {
@@ -383,6 +414,7 @@ export function getFinance(): Promise<{
 }>;
 export function getInvoiceDashboard(): Promise<{
   invoices: InvoiceRow[];
+  monthlySubmissions: MonthlyInvoiceSubmissionRow[];
   workflows: {
     payment: InvoiceWorkflowRow[];
     business: InvoiceWorkflowRow[];

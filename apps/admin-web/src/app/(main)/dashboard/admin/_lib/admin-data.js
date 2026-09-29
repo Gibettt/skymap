@@ -3,7 +3,7 @@ import "server-only";
 import { requirePermission } from "@ephemeris/auth";
 import { query, transaction } from "@ephemeris/db";
 import { bookingSelectQuery } from "@ephemeris/db/helpers";
-import { listInvoices, listInvoiceWorkflows } from "@ephemeris/db/invoices";
+import { listInvoices, listInvoiceWorkflows, listMonthlyInvoiceSubmissions } from "@ephemeris/db/invoices";
 import { presenceStatus } from "@ephemeris/db/presence";
 import { resortCoverageStatus } from "@ephemeris/db/resort-coverage";
 
@@ -278,8 +278,12 @@ export async function getFinance() {
 export async function getInvoiceDashboard() {
   await requirePermission("admin.finance", ["admin"]);
   const database = { query };
-  const [invoices, workflows] = await Promise.all([listInvoices(database), listInvoiceWorkflows(database)]);
-  return { invoices, workflows };
+  const [invoices, workflows, monthlySubmissions] = await Promise.all([
+    listInvoices(database),
+    listInvoiceWorkflows(database),
+    listMonthlyInvoiceSubmissions(database),
+  ]);
+  return { invoices, workflows, monthlySubmissions };
 }
 
 export async function getAuditLogs() {

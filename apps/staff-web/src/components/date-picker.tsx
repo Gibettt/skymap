@@ -80,6 +80,7 @@ export function DatePicker({
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <Button
+          data-staff-date-picker-trigger
           id={id}
           type="button"
           variant="outline"

@@ -2,7 +2,16 @@
 
 import * as React from "react";
 
-import { Banknote, CalendarDays, CheckCircle2, Download, FilePlus2, Hash, Printer, ReceiptText } from "lucide-react";
+import {
+  Banknote,
+  CalendarDays,
+  CheckCircle2,
+  Download,
+  FilePlus2,
+  Hash,
+  Printer,
+  ReceiptText,
+} from "lucide-react";
 import { createPortal } from "react-dom";
 import { toast } from "sonner";
 
@@ -31,7 +40,19 @@ import { getInitials } from "@/lib/utils";
 
 import { formatUsd, titleCase } from "../../_lib/staff-api";
 import { INVOICE_PAPER_HEIGHT, INVOICE_PAPER_WIDTH, InvoiceDocument } from "./invoice-document";
-import type { InvoiceRow, PaymentWorkflowRow } from "./types";
+import {
+  MonthlyInvoiceSubmissionPanel,
+  type MonthlyStaffInvoiceData,
+  MonthlyStaffInvoiceDocument,
+  monthLabel,
+} from "./monthly-invoice-submission";
+import { MonthlyStaffSignatureDialog } from "./monthly-staff-signature-dialog";
+import type {
+  InvoiceRow,
+  MonthlyInvoiceStaffSignature,
+  MonthlyInvoiceSubmission,
+  PaymentWorkflowRow,
+} from "./types";
 
 const MAX_PAPER_SCALE = 0.58;
 type TaxType = "none" | "tgst" | "vat" | "sales_tax" | "custom";
@@ -99,11 +120,11 @@ function usePaperScale(containerRef: React.RefObject<HTMLDivElement | null>) {
   return scale;
 }
 
-function InvoicePrintPortal({ invoice }: { invoice: InvoiceRow | null }) {
+function InvoicePrintPortal({ active, invoice }: { active: boolean; invoice: InvoiceRow | null }) {
   const [mounted, setMounted] = React.useState(false);
 
   React.useEffect(() => setMounted(true), []);
-  if (!mounted || !invoice) return null;
+  if (!mounted || !active || !invoice) return null;
 
   return createPortal(
     <div data-print-root>
@@ -113,7 +134,33 @@ function InvoicePrintPortal({ invoice }: { invoice: InvoiceRow | null }) {
   );
 }
 
-function InvoicePreview({ invoice, onPrint }: { invoice: InvoiceRow | null; onPrint: (pdf?: boolean) => void }) {
+function MonthlyInvoicePrintPortal({ active, data }: { active: boolean; data: MonthlyStaffInvoiceData | null }) {
+  const [mounted, setMounted] = React.useState(false);
+
+  React.useEffect(() => setMounted(true), []);
+  if (!mounted || !active || !data) return null;
+
+  return createPortal(
+    <div data-print-root data-print-kind="monthly">
+      <MonthlyStaffInvoiceDocument data={data} />
+    </div>,
+    document.body,
+  );
+}
+
+function InvoicePreview({
+  invoice,
+  readOnly,
+  statusPending,
+  onPrint,
+  onResortStatus,
+}: {
+  invoice: InvoiceRow | null;
+  readOnly: boolean;
+  statusPending: boolean;
+  onPrint: (pdf?: boolean) => void;
+  onResortStatus: () => void;
+}) {
   const containerRef = React.useRef<HTMLDivElement>(null);
   const scale = usePaperScale(containerRef);
 
@@ -126,11 +173,27 @@ function InvoicePreview({ invoice, onPrint }: { invoice: InvoiceRow | null; onPr
         </CardDescription>
         <CardAction>
           <ButtonGroup>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              disabled={!invoice || readOnly || statusPending}
+              onClick={onResortStatus}
+            >
+              {statusPending ? <Spinner data-icon="inline-start" /> : <CheckCircle2 data-icon="inline-start" />}
+              {invoice?.resort_recorded_at ? "Resort entered" : "Mark resort entered"}
+            </Button>
             <Button type="button" size="sm" variant="outline" disabled={!invoice} onClick={() => onPrint()}>
               <Printer data-icon="inline-start" />
               Print
             </Button>
-            <Button type="button" size="sm" variant="outline" disabled={!invoice} onClick={() => onPrint(true)}>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              disabled={!invoice}
+              onClick={() => onPrint(true)}
+            >
               <Download data-icon="inline-start" />
               PDF
             </Button>
@@ -161,6 +224,44 @@ function InvoicePreview({ invoice, onPrint }: { invoice: InvoiceRow | null; onPr
             >
               <div style={{ transform: `scale(${scale})` }} className="origin-top-left">
                 <InvoiceDocument invoice={invoice} />
+              </div>
+            </div>
+          )}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function MonthlyInvoicePreview({ data }: { data: MonthlyStaffInvoiceData | null }) {
+  const containerRef = React.useRef<HTMLDivElement>(null);
+  const scale = usePaperScale(containerRef);
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Monthly invoice preview</CardTitle>
+        <CardDescription>
+          {data ? `${monthLabel(data.month)} · ${data.invoices.length} customer invoices` : "Select a month to preview."}
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="p-0">
+        <div ref={containerRef} className="relative min-h-[42rem] overflow-hidden bg-muted p-4">
+          {!data ? (
+            <Empty className="absolute inset-0 border-0">
+              <EmptyHeader>
+                <EmptyMedia variant="icon"><ReceiptText /></EmptyMedia>
+                <EmptyTitle>No monthly invoice selected</EmptyTitle>
+                <EmptyDescription>Choose the monthly invoice view and select a billing month.</EmptyDescription>
+              </EmptyHeader>
+            </Empty>
+          ) : (
+            <div
+              style={{ height: INVOICE_PAPER_HEIGHT * scale, width: INVOICE_PAPER_WIDTH * scale }}
+              className="absolute top-4 left-1/2 -translate-x-1/2 shadow-sm"
+            >
+              <div style={{ transform: `scale(${scale})` }} className="origin-top-left">
+                <MonthlyStaffInvoiceDocument data={data} />
               </div>
             </div>
           )}
@@ -480,15 +581,23 @@ function PaymentWorkflow({
 export function PaymentInvoicesDashboard({
   initialSelectedId,
   invoices,
+  monthlySignatures,
+  monthlySubmissions,
   readOnly,
+  staffName,
   workflows,
 }: {
   initialSelectedId?: string;
   invoices: InvoiceRow[];
+  monthlySignatures: MonthlyInvoiceStaffSignature[];
+  monthlySubmissions: MonthlyInvoiceSubmission[];
   readOnly: boolean;
+  staffName: string;
   workflows: PaymentWorkflowRow[];
 }) {
   const [issuedInvoices, setIssuedInvoices] = React.useState(invoices);
+  const [staffSignatureRows, setStaffSignatureRows] = React.useState(monthlySignatures);
+  const [submissionRows, setSubmissionRows] = React.useState(monthlySubmissions);
   const [workflowRows, setWorkflowRows] = React.useState(workflows);
   const [selectedId, setSelectedId] = React.useState(
     workflows.some((workflow) => workflow.id === initialSelectedId)
@@ -496,6 +605,16 @@ export function PaymentInvoicesDashboard({
       : (workflows[0]?.id ?? ""),
   );
   const [pending, setPending] = React.useState(false);
+  const [signaturePending, setSignaturePending] = React.useState(false);
+  const [monthlySignaturePending, setMonthlySignaturePending] = React.useState(false);
+  const [monthlySignatureOpen, setMonthlySignatureOpen] = React.useState(false);
+  const [monthlySignatureMonth, setMonthlySignatureMonth] = React.useState("");
+  const [monthlySignatureCurrent, setMonthlySignatureCurrent] = React.useState<MonthlyInvoiceStaffSignature | null>(null);
+  const [monthlyPending, setMonthlyPending] = React.useState(false);
+  const [invoiceView, setInvoiceView] = React.useState<"customer" | "monthly">("customer");
+  const [printTarget, setPrintTarget] = React.useState<"individual" | "monthly" | null>(null);
+  const [monthlyPrintData, setMonthlyPrintData] = React.useState<MonthlyStaffInvoiceData | null>(null);
+  const [monthlyPreviewData, setMonthlyPreviewData] = React.useState<MonthlyStaffInvoiceData | null>(null);
   const [dialogRow, setDialogRow] = React.useState<PaymentWorkflowRow | null>(null);
   const [paymentMethod, setPaymentMethod] = React.useState("Bank transfer");
   const [paymentReference, setPaymentReference] = React.useState("");
@@ -535,8 +654,49 @@ export function PaymentInvoicesDashboard({
 
   function printInvoice(saveAsPdf = false) {
     if (!selectedInvoice) return;
+    setPrintTarget("individual");
     if (saveAsPdf) toast.info("Choose ‘Save as PDF’ in the print destination.");
-    window.requestAnimationFrame(() => window.print());
+    window.requestAnimationFrame(() => window.requestAnimationFrame(() => window.print()));
+  }
+
+  function printMonthlyInvoice(data: MonthlyStaffInvoiceData, saveAsPdf: boolean) {
+    setMonthlyPrintData(data);
+    setPrintTarget("monthly");
+    if (saveAsPdf) toast.info("Choose ‘Save as PDF’ in the print destination.");
+    window.requestAnimationFrame(() => window.requestAnimationFrame(() => window.print()));
+  }
+
+  function openMonthlyStaffSignature(month: string, signature: MonthlyInvoiceStaffSignature | null) {
+    setMonthlySignatureMonth(month);
+    setMonthlySignatureCurrent(signature);
+    setMonthlySignatureOpen(true);
+  }
+
+  async function submitMonthlyInvoice(month: string) {
+    if (monthlyPending || readOnly) return;
+    setMonthlyPending(true);
+    try {
+      const response = await fetch("/api/monthly-invoices", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ period: month }),
+      });
+      const result = (await response.json().catch(() => ({}))) as {
+        error?: string;
+        submission?: MonthlyInvoiceSubmission;
+        resubmitted?: boolean;
+      };
+      if (!response.ok || !result.submission) throw new Error(result.error ?? "Could not send the monthly invoice.");
+      setSubmissionRows((current) => [
+        result.submission as MonthlyInvoiceSubmission,
+        ...current.filter((item) => item.id !== result.submission?.id),
+      ]);
+      toast.success(result.resubmitted ? "Monthly invoice resent to Admin." : "Monthly invoice sent to Admin.");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Could not send the monthly invoice.");
+    } finally {
+      setMonthlyPending(false);
+    }
   }
 
   async function syncDashboard(keepSelectedId: string) {
@@ -677,6 +837,56 @@ export function PaymentInvoicesDashboard({
     }
   }
 
+  async function saveMonthlyStaffSignature(signatureDataUrl: string) {
+    if (!monthlySignatureMonth || monthlySignaturePending || readOnly) return;
+    setMonthlySignaturePending(true);
+    try {
+      const response = await fetch("/api/monthly-invoices/signature", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ period: monthlySignatureMonth, signatureDataUrl }),
+      });
+      const result = (await response.json().catch(() => ({}))) as {
+        error?: string;
+        signature?: MonthlyInvoiceStaffSignature;
+      };
+      if (!response.ok || !result.signature) {
+        throw new Error(result.error ?? "Could not save the responsible staff signature.");
+      }
+      setStaffSignatureRows((current) => [
+        result.signature as MonthlyInvoiceStaffSignature,
+        ...current.filter((item) => item.id !== result.signature?.id),
+      ]);
+      setMonthlySignatureCurrent(result.signature);
+      setMonthlySignatureOpen(false);
+      toast.success("Responsible staff signature saved successfully.");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Could not save the responsible staff signature.");
+    } finally {
+      setMonthlySignaturePending(false);
+    }
+  }
+
+  async function toggleResortStatus() {
+    if (!selectedInvoice || signaturePending || readOnly) return;
+    setSignaturePending(true);
+    try {
+      const response = await fetch(`/api/invoices/${selectedInvoice.id}/resort-status`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ recorded: !selectedInvoice.resort_recorded_at }),
+      });
+      const result = (await response.json().catch(() => ({}))) as { error?: string; invoice?: InvoiceRow };
+      if (!response.ok || !result.invoice) throw new Error(result.error ?? "Could not update the resort status.");
+      setIssuedInvoices((current) => upsertInvoice(current, result.invoice as InvoiceRow));
+      toast.success(result.invoice.resort_recorded_at ? "Marked as entered by the resort." : "Resort status cleared.");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Could not update the resort status.");
+    } finally {
+      setSignaturePending(false);
+    }
+  }
+
   return (
     <>
       <div className="flex flex-col gap-5">
@@ -687,37 +897,59 @@ export function PaymentInvoicesDashboard({
               Confirm customer payments and generate invoices for your resort.
             </p>
           </div>
-          <Badge variant="outline">{readOnly ? "Internal · View only" : "Internal staff"}</Badge>
+          <div className="flex flex-wrap items-center gap-2">
+            <ButtonGroup>
+              <Button type="button" size="sm" variant={invoiceView === "customer" ? "default" : "outline"} onClick={() => setInvoiceView("customer")}>Customer invoice</Button>
+              <Button type="button" size="sm" variant={invoiceView === "monthly" ? "default" : "outline"} onClick={() => setInvoiceView("monthly")}>Monthly invoice</Button>
+            </ButtonGroup>
+            <Badge variant="outline">{readOnly ? "Internal · View only" : "Internal staff"}</Badge>
+          </div>
         </div>
 
         <div className="grid gap-5 xl:grid-cols-2">
-          <Card>
-            <CardHeader>
-              <CardTitle>Payment</CardTitle>
-              <CardDescription>Customer payment confirmation and invoice generation.</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <PaymentWorkflow
-                busy={pending}
-                row={selectedWorkflow}
-                rows={workflowRows}
+          {invoiceView === "customer" ? (
+            <>
+              <Card>
+                <CardHeader><CardTitle>Payment</CardTitle><CardDescription>Customer payment confirmation and invoice generation.</CardDescription></CardHeader>
+                <CardContent>
+                  <PaymentWorkflow
+                    busy={pending}
+                    row={selectedWorkflow}
+                    rows={workflowRows}
+                    readOnly={readOnly}
+                    onSelect={setSelectedId}
+                    onConfirm={openConfirmation}
+                    onGenerate={generateInvoice}
+                    onTaxCustomLabelChange={setTaxCustomLabel}
+                    onTaxRateChange={setTaxRate}
+                    onTaxTypeChange={changeTaxType}
+                    taxAmount={taxAmount}
+                    taxCustomLabel={taxCustomLabel}
+                    taxRate={taxRate}
+                    taxType={taxType}
+                    totalAmount={totalAmount}
+                  />
+                </CardContent>
+              </Card>
+              <InvoicePreview invoice={selectedInvoice} readOnly={readOnly} statusPending={signaturePending} onPrint={printInvoice} onResortStatus={toggleResortStatus} />
+            </>
+          ) : (
+            <>
+              <MonthlyInvoiceSubmissionPanel
+                invoices={issuedInvoices}
+                pending={monthlyPending}
                 readOnly={readOnly}
-                onSelect={setSelectedId}
-                onConfirm={openConfirmation}
-                onGenerate={generateInvoice}
-                onTaxCustomLabelChange={setTaxCustomLabel}
-                onTaxRateChange={setTaxRate}
-                onTaxTypeChange={changeTaxType}
-                taxAmount={taxAmount}
-                taxCustomLabel={taxCustomLabel}
-                taxRate={taxRate}
-                taxType={taxType}
-                totalAmount={totalAmount}
+                signatures={staffSignatureRows}
+                submissions={submissionRows}
+                workflows={workflowRows}
+                onPreviewChange={setMonthlyPreviewData}
+                onPrint={printMonthlyInvoice}
+                onSign={openMonthlyStaffSignature}
+                onSubmit={submitMonthlyInvoice}
               />
-            </CardContent>
-          </Card>
-
-          <InvoicePreview invoice={selectedInvoice} onPrint={printInvoice} />
+              <MonthlyInvoicePreview data={monthlyPreviewData} />
+            </>
+          )}
         </div>
       </div>
 
@@ -783,18 +1015,29 @@ export function PaymentInvoicesDashboard({
                     <p className="truncate font-medium">{dialogRow.recipient_name}</p>
                     <p className="truncate text-muted-foreground text-xs">{dialogRow.reference}</p>
                   </div>
-                  <Badge variant="outline">{formatUsd(totalAmount)}</Badge>
+                  <Badge
+                    variant="outline"
+                    className="!border-cyan-200/35 !bg-[#071d3d] !text-cyan-50 px-3 font-semibold tabular-nums"
+                  >
+                    {formatUsd(totalAmount)}
+                  </Badge>
                 </div>
               ) : null}
             </FieldGroup>
-            <DialogFooter>
+            <DialogFooter className="gap-2 border-cyan-200/15 border-t pt-4 sm:justify-end">
               <DialogClose asChild>
-                <Button type="button" variant="outline" disabled={pending}>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="!border-cyan-200/35 !bg-[#071d3d] !text-slate-100 hover:!bg-[#0b2a54] hover:!text-white disabled:!text-slate-300 disabled:!opacity-80"
+                  disabled={pending}
+                >
                   Cancel
                 </Button>
               </DialogClose>
               <Button
                 type="submit"
+                className="!bg-gradient-to-r !from-fuchsia-600 !to-violet-700 !text-white shadow-lg shadow-fuchsia-950/30 hover:!from-fuchsia-500 hover:!to-violet-600 disabled:!from-violet-900 disabled:!to-purple-900 disabled:!text-slate-300 disabled:!opacity-80"
                 disabled={pending || (paymentMethod === "Bank transfer" && !paymentReference.trim())}
               >
                 {pending ? <Spinner data-icon="inline-start" /> : <CheckCircle2 data-icon="inline-start" />}
@@ -805,7 +1048,18 @@ export function PaymentInvoicesDashboard({
         </DialogContent>
       </Dialog>
 
-      <InvoicePrintPortal invoice={selectedInvoice} />
+      <MonthlyStaffSignatureDialog
+        current={monthlySignatureCurrent}
+        monthLabel={monthlySignatureMonth ? monthLabel(monthlySignatureMonth) : "selected month"}
+        open={monthlySignatureOpen}
+        pending={monthlySignaturePending}
+        staffName={staffName}
+        onOpenChange={setMonthlySignatureOpen}
+        onSave={saveMonthlyStaffSignature}
+      />
+
+      <InvoicePrintPortal active={printTarget === "individual"} invoice={selectedInvoice} />
+      <MonthlyInvoicePrintPortal active={printTarget === "monthly"} data={monthlyPrintData} />
     </>
   );
 }

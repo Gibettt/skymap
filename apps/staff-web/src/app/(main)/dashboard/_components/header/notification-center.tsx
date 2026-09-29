@@ -194,7 +194,11 @@ export function NotificationCenter({ role, readOnly }: { role: StaffRole; readOn
           ) : null}
         </Button>
       </PopoverTrigger>
-      <PopoverContent align="end" className="w-[min(24rem,calc(100vw-2rem))] gap-0 p-0">
+      <PopoverContent
+        data-staff-notification-popover={role}
+        align="end"
+        className="w-[min(24rem,calc(100vw-2rem))] gap-0 p-0"
+      >
         <div className="flex items-start justify-between gap-3 p-3">
           <PopoverHeader>
             <PopoverTitle>Notifications</PopoverTitle>

@@ -1,44 +1,21 @@
 import type { StaffRole } from "@/lib/staff-access";
 
-import { MetricCards } from "../../default/_components/metric-cards";
-import { PerformanceOverview } from "../../default/_components/performance-overview";
-import { SubscriberOverview } from "../../default/_components/subscriber-overview";
 import type { StaffOverviewData } from "../_lib/overview-data";
+import { ExternalStaffOverview } from "./external-staff-overview";
+import { InternalStaffOverview } from "./internal-staff-overview";
 
 type Props = {
   role: StaffRole;
   permissions: string[];
   data: StaffOverviewData;
+  userName: string;
+  resortName: string | null;
 };
 
-export function StaffOverview({ role, permissions, data }: Props) {
-  const templateMetrics = {
-    totalRevenue: data.metrics.earnedCommissionUsd,
-    revenueChange: data.metrics.commissionChange,
-    newBookings: data.metrics.newBookings,
-    bookingChange: data.metrics.bookingChange,
-    activeAccounts: data.metrics.openBookings,
-    activeAccountRate: data.metrics.openBookingRate,
-    completionRate: data.metrics.completionRate,
-    totalBookings: data.metrics.totalBookings,
-    completedBookings: data.metrics.completedBookings,
-  };
+export function StaffOverview({ role, permissions, data, userName, resortName }: Props) {
+  if (role === "external") {
+    return <ExternalStaffOverview data={data} userName={userName} resortName={resortName} />;
+  }
 
-  return (
-    <div className="@container/main flex flex-col gap-4 md:gap-6">
-      <MetricCards
-        metrics={templateMetrics}
-        variant="staff"
-        canViewFinance={permissions.includes("staff.finance")}
-        indicatorTone="purple"
-      />
-      <PerformanceOverview data={data.activity} reportHref={`/dashboard/${role}/bookings`} />
-      <SubscriberOverview
-        data={data.recentBookings}
-        total={data.metrics.totalBookings}
-        exportFilename={`ephemeris-${role}-recent-bookings-${new Date().toISOString().slice(0, 10)}.xlsx`}
-        newBookingHref={permissions.includes("staff.bookings") ? `/dashboard/${role}/bookings?new=1` : undefined}
-      />
-    </div>
-  );
+  return <InternalStaffOverview data={data} permissions={permissions} userName={userName} resortName={resortName} />;
 }
