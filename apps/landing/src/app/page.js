@@ -238,6 +238,7 @@ export default async function LandingPage() {
           <Image src="/spacecat-astrotourism-logo.jpg" alt="" width={66} height={44} />
           <span><strong>SpaceCat</strong><small>ASTROTOURISM</small></span>
         </Link>
+        <div id="masterclass" />
       </header>
 
       {/* Club Faune Luxury Header */}

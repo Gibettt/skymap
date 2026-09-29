@@ -1,4 +1,4 @@
-import { ApiError, assertSameOrigin, jsonError, parseJsonBody, requirePermission, writeAudit } from '@ephemeris/auth';
+import { ApiError, assertSameOrigin, jsonError, parseJsonBody, requirePermission, requireUser, writeAudit } from '@ephemeris/auth';
 import { query, transaction } from '@ephemeris/db';
 import { createSkyEventSchema } from '@ephemeris/db/validators/sky-event';
 import { normalizeSkyEventInput, getOfficialPresets } from '@ephemeris/sky';
@@ -44,7 +44,7 @@ function dates(request) {
 
 export async function GET(request) {
   try {
-    const user = await requirePermission('staff.sky_guide', ['internal']);
+    const user = await requireUser(['internal', 'external']);
     if (!user.resort_id) throw new ApiError(403, 'Staff resort profile is not configured');
     const { from, to } = dates(request);
     const { rows } = await query(
@@ -53,8 +53,9 @@ export async function GET(request) {
        WHERE se.resort_id = $1
          AND se.starts_at >= $2::timestamptz
          AND se.starts_at < ($3::date + INTERVAL '1 day')
+         AND ($4::boolean = false OR se.status = 'published')
        ORDER BY se.starts_at ASC`,
-      [user.resort_id, from, to]
+      [user.resort_id, from, to, user.role === 'external']
     );
     return Response.json({ events: rows.map(mapEvent) });
   } catch (error) {
