@@ -726,7 +726,7 @@ export function Calendar({ options }: { options: CalendarOptions }) {
           <AlertDialogHeader>
             <AlertDialogTitle>Delete sky event?</AlertDialogTitle>
             <AlertDialogDescription>
-              {selectedRecord?.title || "This event"} will be removed from the shared calendar. Existing bookings remain available but will no longer reference this event.
+              {selectedRecord?.title ?? "This event"} will be removed from the shared calendar. Existing bookings remain available but will no longer reference this event.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

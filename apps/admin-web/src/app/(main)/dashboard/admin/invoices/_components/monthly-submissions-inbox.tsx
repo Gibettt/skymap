@@ -37,7 +37,7 @@ function ReviewActionIcon({ pending, reviewed }: { pending: boolean; reviewed: b
   return <CheckCircle2 data-icon="inline-start" />;
 }
 
-function usePaperScale(containerRef: React.RefObject<HTMLDivElement | null>, key: string | undefined) {
+function usePaperScale(containerRef: React.RefObject<HTMLDivElement | null>) {
   const [scale, setScale] = React.useState(0.8);
 
   React.useEffect(() => {
@@ -51,7 +51,7 @@ function usePaperScale(containerRef: React.RefObject<HTMLDivElement | null>, key
     const observer = new ResizeObserver(update);
     observer.observe(container);
     return () => observer.disconnect();
-  }, [containerRef, key]);
+  }, [containerRef]);
 
   return scale;
 }
@@ -74,7 +74,7 @@ export function MonthlySubmissionsInbox({ initialSubmissions }: { initialSubmiss
   const [pendingId, setPendingId] = React.useState<string | null>(null);
   const [printSubmission, setPrintSubmission] = React.useState<MonthlyInvoiceSubmissionRow | null>(null);
   const previewRef = React.useRef<HTMLDivElement>(null);
-  const previewScale = usePaperScale(previewRef, selected?.id);
+  const previewScale = usePaperScale(previewRef);
 
   React.useEffect(() => {
     const clearPrintSubmission = () => setPrintSubmission(null);
