@@ -316,7 +316,7 @@ export function StaffPackages({ role }: { role: StaffRole }) {
             {role === "external" ? <Badge variant="secondary">Read-only catalogue</Badge> : null}
           </div>
           <p className="text-muted-foreground text-sm">
-            Active experiences and current prices for {user?.resort_name || "your assigned resort"}.
+            Active experiences and current prices for {user?.resort_name ?? "your assigned resort"}.
           </p>
         </div>
         {canCreateBooking ? (
