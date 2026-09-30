@@ -1049,13 +1049,22 @@ export function InvoicesDashboard({
                 </div>
               ) : null}
             </FieldGroup>
-            <DialogFooter>
+            <DialogFooter className="gap-2 border-cyan-200/15 border-t pt-4 sm:justify-end">
               <DialogClose asChild>
-                <Button type="button" variant="outline" disabled={busy}>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="!border-cyan-200/35 !bg-[#071d3d] !text-slate-100 hover:!bg-[#0b2a54] hover:!text-white disabled:!text-slate-300 disabled:!opacity-80 font-medium"
+                  disabled={busy}
+                >
                   Cancel
                 </Button>
               </DialogClose>
-              <Button type="submit" disabled={busy || (paymentMethod === "Bank transfer" && !paymentReference.trim())}>
+              <Button
+                type="submit"
+                disabled={busy || (paymentMethod === "Bank transfer" && !paymentReference.trim())}
+                className="!bg-gradient-to-r !from-fuchsia-600 !to-violet-700 !text-white shadow-lg shadow-fuchsia-950/30 hover:!from-fuchsia-500 hover:!to-violet-600 font-medium"
+              >
                 {busy ? <Spinner data-icon="inline-start" /> : <CheckCircle2 data-icon="inline-start" />}
                 {busy ? "Confirming..." : "Confirm & generate"}
               </Button>

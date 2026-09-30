@@ -176,7 +176,13 @@ export function MonthlyStaffSignatureDialog({
         ) : (
           <Field>
             <FieldLabel htmlFor="monthly-staff-signature-upload">Upload signature</FieldLabel>
-            <Input id="monthly-staff-signature-upload" type="file" accept="image/png,image/jpeg,image/webp" onChange={uploadSignature} />
+            <Input
+              id="monthly-staff-signature-upload"
+              type="file"
+              accept="image/png,image/jpeg,image/webp"
+              onChange={uploadSignature}
+              className="h-10 cursor-pointer border-cyan-300/35 bg-[#071d3d]/90 py-1 text-slate-100 file:mr-3 file:cursor-pointer file:rounded-md file:border file:border-cyan-300/50 file:bg-cyan-950/90 file:px-3 file:py-1 file:font-semibold file:text-cyan-200 file:shadow-sm hover:file:bg-cyan-900 hover:file:text-white"
+            />
             <FieldDescription>PNG, JPG, or WebP. Maximum file size 750 KB.</FieldDescription>
             <div className="relative grid h-44 place-items-center overflow-hidden rounded-xl border border-cyan-300/25 bg-white p-3 shadow-inner sm:h-48">
               {uploadedSignature ? (
@@ -194,11 +200,23 @@ export function MonthlyStaffSignatureDialog({
           <p className="text-slate-400 text-xs">Name is taken automatically from the signed-in account.</p>
         </div>
 
-        <DialogFooter>
+        <DialogFooter className="gap-2 border-cyan-200/15 border-t pt-4 sm:justify-end">
           <DialogClose asChild>
-            <Button type="button" variant="outline" disabled={pending}>Cancel</Button>
+            <Button
+              type="button"
+              variant="outline"
+              className="!border-cyan-200/35 !bg-[#071d3d] !text-slate-100 hover:!bg-[#0b2a54] hover:!text-white disabled:!text-slate-300 disabled:!opacity-80 font-medium"
+              disabled={pending}
+            >
+              Cancel
+            </Button>
           </DialogClose>
-          <Button type="button" disabled={pending} onClick={save}>
+          <Button
+            type="button"
+            disabled={pending}
+            onClick={save}
+            className="!bg-gradient-to-r !from-fuchsia-600 !to-violet-700 !text-white shadow-lg shadow-fuchsia-950/30 hover:!from-fuchsia-500 hover:!to-violet-600 font-medium"
+          >
             {pending ? <Spinner data-icon="inline-start" /> : <PenLine data-icon="inline-start" />}
             {pending ? "Saving..." : "Apply staff signature"}
           </Button>
