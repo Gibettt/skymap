@@ -32,10 +32,11 @@ function isoTimestamp(value) {
 export function invoiceNumberFor(type, id, issuedAt = new Date()) {
   const date = issuedAt instanceof Date ? issuedAt : new Date(issuedAt);
   if (Number.isNaN(date.getTime())) throw new TypeError("Invalid invoice issue date");
-  const datePart = date.toISOString().slice(0, 10).replaceAll("-", "");
-  const idPart = String(id).replaceAll("-", "").slice(0, 10).toUpperCase();
-  if (idPart.length < 10) throw new TypeError("Invalid invoice identifier");
-  return `EPH-${type === "staff_payout" ? "PAY" : "CUS"}-${datePart}-${idPart}`;
+  const datePart = date.toISOString().slice(2, 10).replaceAll("-", "");
+  const idPart = String(id).replaceAll("-", "").slice(0, 6).toUpperCase();
+  if (idPart.length < 6) throw new TypeError("Invalid invoice identifier");
+  const prefix = type === "staff_payout" ? "INV-PAY" : "INV";
+  return `${prefix}-${datePart}-${idPart}`;
 }
 
 export function buildCustomerLineItems(booking, experiences = []) {

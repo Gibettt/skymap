@@ -17,11 +17,11 @@ test("invoice numbers are deterministic, dated, and distinguish the source type"
 	const issuedAt = new Date("2026-09-07T10:00:00.000Z");
 	assert.equal(
 		invoiceNumberFor("customer", bookingId, issuedAt),
-		"EPH-CUS-20260907-1111111111",
+		"INV-260907-111111",
 	);
 	assert.equal(
 		invoiceNumberFor("staff_payout", payoutId, issuedAt),
-		"EPH-PAY-20260907-2222222222",
+		"INV-PAY-260907-222222",
 	);
 });
 
