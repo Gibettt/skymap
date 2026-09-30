@@ -30,6 +30,43 @@ export async function POST(request) {
         },
         request,
       });
+
+      const periodLabel = parsed.data.period;
+      const resortName = submitted.submission.resort_name || "Resort";
+      const staffName = submitted.submission.submitted_by_name || user.name || "Staff";
+      const invoiceCount = submitted.submission.invoices?.length ?? 0;
+      const title = submitted.resubmitted
+        ? `Resubmitted monthly invoice from ${resortName}`
+        : `New monthly invoice from ${resortName}`;
+      const message = `Monthly invoice for period ${periodLabel} (${invoiceCount} invoice${invoiceCount === 1 ? "" : "s"}) submitted by ${staffName}.`;
+      const meta = `${resortName} · ${periodLabel}`;
+
+      await client.query(
+        `INSERT INTO notifications (
+          recipient_user_id, type, source_table, source_id, title, message, meta, link, created_at
+        )
+        SELECT
+          admin_user.id,
+          'invoice',
+          'monthly_invoice_submissions',
+          $1,
+          $2,
+          $3,
+          $4,
+          '/dashboard/admin/invoices',
+          now()
+        FROM users admin_user
+        WHERE admin_user.role = 'admin' AND admin_user.status = 'active'
+        ON CONFLICT (recipient_user_id, type, source_id) DO UPDATE SET
+          title = EXCLUDED.title,
+          message = EXCLUDED.message,
+          meta = EXCLUDED.meta,
+          link = EXCLUDED.link,
+          read_at = NULL,
+          created_at = now()`,
+        [submitted.submission.id, title, message, meta],
+      );
+
       return submitted;
     });
 

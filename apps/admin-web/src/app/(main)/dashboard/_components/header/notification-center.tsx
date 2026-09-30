@@ -3,7 +3,7 @@
 import * as React from "react";
 
 import { formatDistanceToNow } from "date-fns";
-import { Bell, CalendarCheck, CheckCheck, CircleDollarSign } from "lucide-react";
+import { Bell, CalendarCheck, CheckCheck, CircleDollarSign, ReceiptText } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -36,6 +36,7 @@ import type { AdminNotification } from "@/types/notifications";
 const NOTIFICATIONS_CHANGED_EVENT = "ephemeris:notifications-changed";
 
 function NotificationIcon({ type }: { type: AdminNotification["type"] }) {
+  if (type === "invoice") return <ReceiptText />;
   const Icon = type === "payout" ? CircleDollarSign : CalendarCheck;
   return <Icon />;
 }

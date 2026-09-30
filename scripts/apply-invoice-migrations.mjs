@@ -185,6 +185,12 @@ async function run() {
   `);
   console.log('038: monthly_invoice_staff_signatures created.');
 
+  // Step 5: Migration 039 - notifications enum expansion for invoices
+  console.log('039: Updating notifications ENUM columns...');
+  await conn.query("ALTER TABLE notifications MODIFY COLUMN type ENUM('booking', 'payout', 'invoice') NOT NULL");
+  await conn.query("ALTER TABLE notifications MODIFY COLUMN source_table ENUM('bookings', 'payout_requests', 'monthly_invoice_submissions', 'invoices') NOT NULL");
+  console.log('039: notifications ENUM columns updated.');
+
   // Verification queries
   console.log('\n--- Verification ---');
   const [finalCols] = await conn.query('SHOW COLUMNS FROM invoices');

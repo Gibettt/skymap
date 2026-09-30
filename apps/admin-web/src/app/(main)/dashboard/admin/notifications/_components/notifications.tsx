@@ -14,6 +14,7 @@ import {
   CircleDollarSign,
   MailOpen,
   MailWarning,
+  ReceiptText,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -38,9 +39,10 @@ import type { AdminNotification } from "@/types/notifications";
 
 const NOTIFICATIONS_CHANGED_EVENT = "ephemeris:notifications-changed";
 
-type NotificationFilter = "all" | "unread" | "booking" | "payout";
+type NotificationFilter = "all" | "unread" | "booking" | "payout" | "invoice";
 
 function NotificationIcon({ type }: { type: AdminNotification["type"] }) {
+  if (type === "invoice") return <ReceiptText />;
   const Icon = type === "payout" ? CircleDollarSign : CalendarCheck;
   return <Icon />;
 }
@@ -98,13 +100,14 @@ export function Notifications({ initialNotifications }: { initialNotifications: 
       unread: notifications.filter((notification) => !notification.read_at).length,
       booking: notifications.filter((notification) => notification.type === "booking").length,
       payout: notifications.filter((notification) => notification.type === "payout").length,
+      invoice: notifications.filter((notification) => notification.type === "invoice").length,
     }),
     [notifications],
   );
 
   const filteredNotifications = React.useMemo(() => {
     if (filter === "unread") return notifications.filter((notification) => !notification.read_at);
-    if (filter === "booking" || filter === "payout") {
+    if (filter === "booking" || filter === "payout" || filter === "invoice") {
       return notifications.filter((notification) => notification.type === filter);
     }
     return notifications;
@@ -166,11 +169,12 @@ export function Notifications({ initialNotifications }: { initialNotifications: 
     { label: "Unread", mobileLabel: "Unread", value: counts.unread, icon: MailWarning },
     { label: "Booking updates", mobileLabel: "Bookings", value: counts.booking, icon: CalendarCheck },
     { label: "Payout requests", mobileLabel: "Payouts", value: counts.payout, icon: CircleDollarSign },
+    { label: "Invoice submissions", mobileLabel: "Invoices", value: counts.invoice, icon: ReceiptText },
   ];
 
   return (
     <div className="flex flex-col gap-4 md:gap-6">
-      <div className="grid grid-cols-4 gap-2 sm:gap-4">
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-5 sm:gap-4">
         {summary.map(({ label, mobileLabel, value, icon: Icon }) => (
           <Card key={label} size="sm" className="min-w-0">
             <CardHeader className="gap-1 px-2 sm:px-3">
@@ -203,11 +207,12 @@ export function Notifications({ initialNotifications }: { initialNotifications: 
           </CardHeader>
           <CardContent>
             <Tabs value={filter} onValueChange={(value) => setFilter(value as NotificationFilter)}>
-              <TabsList className="grid h-auto w-full grid-cols-2 sm:grid-cols-4">
+              <TabsList className="grid h-auto w-full grid-cols-2 sm:grid-cols-5">
                 <TabsTrigger value="all">All {counts.all}</TabsTrigger>
                 <TabsTrigger value="unread">Unread {counts.unread}</TabsTrigger>
                 <TabsTrigger value="booking">Bookings {counts.booking}</TabsTrigger>
                 <TabsTrigger value="payout">Payouts {counts.payout}</TabsTrigger>
+                <TabsTrigger value="invoice">Invoices {counts.invoice}</TabsTrigger>
               </TabsList>
               <TabsContent value={filter} className="pt-2">
                 {filteredNotifications.length ? (

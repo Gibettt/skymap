@@ -70,6 +70,40 @@ async function syncAdminNotifications(client) {
       meta = EXCLUDED.meta,
       link = EXCLUDED.link`
   );
+
+  await client.query(
+    `INSERT INTO notifications (
+      recipient_user_id,
+      type,
+      source_table,
+      source_id,
+      title,
+      message,
+      meta,
+      link,
+      created_at
+    )
+    SELECT
+      admin_user.id,
+      'invoice',
+      'monthly_invoice_submissions',
+      s.id,
+      CONCAT('Invoice bulanan dari ', r.name),
+      CONCAT('Invoice periode ', s.period_start, ' dikirim oleh ', COALESCE(submitter.name, 'Staff')),
+      CONCAT(r.name, ' · ', s.period_start),
+      '/dashboard/admin/invoices',
+      s.submitted_at
+    FROM monthly_invoice_submissions s
+    JOIN resorts r ON r.id = s.resort_id
+    JOIN users submitter ON submitter.id = s.submitted_by
+    JOIN users admin_user ON admin_user.role = 'admin' AND admin_user.status = 'active'
+    WHERE s.status IN ('submitted', 'reviewed')
+    ON CONFLICT (recipient_user_id, type, source_id) DO UPDATE SET
+      title = EXCLUDED.title,
+      message = EXCLUDED.message,
+      meta = EXCLUDED.meta,
+      link = EXCLUDED.link`
+  );
 }
 
 export async function GET() {

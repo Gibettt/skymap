@@ -523,8 +523,8 @@ CREATE TABLE IF NOT EXISTS monthly_invoice_staff_signatures (
 CREATE TABLE IF NOT EXISTS notifications (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   recipient_user_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  type text NOT NULL CHECK (type IN ('booking', 'payout')),
-  source_table text NOT NULL CHECK (source_table IN ('bookings', 'payout_requests')),
+  type text NOT NULL CHECK (type IN ('booking', 'payout', 'invoice')),
+  source_table text NOT NULL CHECK (source_table IN ('bookings', 'payout_requests', 'monthly_invoice_submissions', 'invoices')),
   source_id uuid NOT NULL,
   title text NOT NULL,
   message text NOT NULL,

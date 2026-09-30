@@ -60,6 +60,36 @@ export async function syncAdminNotifications(client) {
       OR notifications.meta IS DISTINCT FROM EXCLUDED.meta
       OR notifications.link IS DISTINCT FROM EXCLUDED.link`,
   );
+
+  await client.query(
+    `INSERT INTO notifications (
+      recipient_user_id, type, source_table, source_id, title, message, meta, link, created_at
+    )
+    SELECT
+      admin_user.id,
+      'invoice',
+      'monthly_invoice_submissions',
+      s.id,
+      CONCAT('Monthly invoice from ', r.name),
+      CONCAT('Monthly invoice for period ', s.period_start, ' submitted by ', COALESCE(submitter.name, 'Staff')),
+      CONCAT(r.name, ' · ', s.period_start),
+      '/dashboard/admin/invoices',
+      s.submitted_at
+    FROM monthly_invoice_submissions s
+    JOIN resorts r ON r.id = s.resort_id
+    JOIN users submitter ON submitter.id = s.submitted_by
+    JOIN users admin_user ON admin_user.role = 'admin' AND admin_user.status = 'active'
+    WHERE s.status IN ('submitted', 'reviewed')
+    ON CONFLICT (recipient_user_id, type, source_id) DO UPDATE SET
+      title = EXCLUDED.title,
+      message = EXCLUDED.message,
+      meta = EXCLUDED.meta,
+      link = EXCLUDED.link
+    WHERE notifications.title IS DISTINCT FROM EXCLUDED.title
+      OR notifications.message IS DISTINCT FROM EXCLUDED.message
+      OR notifications.meta IS DISTINCT FROM EXCLUDED.meta
+      OR notifications.link IS DISTINCT FROM EXCLUDED.link`,
+  );
 }
 
 export async function selectAdminNotifications(client, userId, limit = 200) {

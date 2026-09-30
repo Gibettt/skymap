@@ -551,8 +551,8 @@ CREATE TABLE IF NOT EXISTS monthly_invoice_staff_signatures (
 CREATE TABLE IF NOT EXISTS notifications (
   id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
   recipient_user_id CHAR(36) NOT NULL,
-  type ENUM('booking', 'payout') NOT NULL,
-  source_table ENUM('bookings', 'payout_requests') NOT NULL,
+  type ENUM('booking', 'payout', 'invoice') NOT NULL,
+  source_table ENUM('bookings', 'payout_requests', 'monthly_invoice_submissions', 'invoices') NOT NULL,
   source_id CHAR(36) NOT NULL,
   title VARCHAR(255) NOT NULL,
   message TEXT NOT NULL,
