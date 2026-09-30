@@ -118,13 +118,13 @@ export function RecentCustomersTable({ data }: { data: RecentCustomerRow[] }) {
   }, [sorting]);
 
   return (
-    <div className="flex min-w-0 flex-col gap-4">
-      <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+    <div className="flex min-w-0 flex-col gap-3.5">
+      <div className="flex flex-col gap-2.5 xl:flex-row xl:items-center xl:justify-between">
         <div className="flex flex-wrap items-center gap-2">
-          <div className="relative w-full lg:w-80">
+          <div className="relative w-full sm:w-64 md:w-72">
             <Search className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
             <Input
-              className="h-7 rounded-[min(var(--radius-md),12px)] pl-8"
+              className="h-8 rounded-lg pl-8 text-sm"
               placeholder="Search bookings..."
               value={searchQuery}
               onChange={(event) => {
@@ -135,12 +135,17 @@ export function RecentCustomersTable({ data }: { data: RecentCustomerRow[] }) {
           </div>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm">
-                <UsersRound />
-                Status
+              <Button variant="outline" size="sm" className="h-8 gap-1.5 font-normal">
+                <UsersRound className="size-3.5 text-muted-foreground" />
+                <span>Status</span>
+                {statusFilter !== "all" && (
+                  <span className="ml-1 rounded-full bg-cyan-400/20 px-1.5 py-0.2 text-[10px] font-medium text-cyan-200">
+                    {statusFilter}
+                  </span>
+                )}
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent className="w-35" align="start">
+            <DropdownMenuContent className="w-36" align="start">
               <DropdownMenuRadioGroup
                 value={statusFilter}
                 onValueChange={(value) => {
@@ -156,11 +161,46 @@ export function RecentCustomersTable({ data }: { data: RecentCustomerRow[] }) {
               </DropdownMenuRadioGroup>
             </DropdownMenuContent>
           </DropdownMenu>
+
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm">
-                <CalendarDays />
-                Event date
+              <Button variant="outline" size="sm" className="h-8 gap-1.5 font-normal">
+                <CreditCard className="size-3.5 text-muted-foreground" />
+                <span>Payment</span>
+                {billingFilter !== "all" && (
+                  <span className="ml-1 rounded-full bg-cyan-400/20 px-1.5 py-0.2 text-[10px] font-medium text-cyan-200">
+                    {billingFilter}
+                  </span>
+                )}
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent className="w-36" align="start">
+              <DropdownMenuRadioGroup
+                value={billingFilter}
+                onValueChange={(value) => {
+                  table.getColumn("billing")?.setFilterValue(value === "all" ? undefined : value);
+                  table.setPageIndex(0);
+                }}
+              >
+                {billingOptions.map((billing) => (
+                  <DropdownMenuRadioItem key={billing.value} value={billing.value}>
+                    {billing.label}
+                  </DropdownMenuRadioItem>
+                ))}
+              </DropdownMenuRadioGroup>
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm" className="h-8 gap-1.5 font-normal">
+                <CalendarDays className="size-3.5 text-muted-foreground" />
+                <span>Event date</span>
+                {joinedDateFilter !== "all" && (
+                  <span className="ml-1 rounded-full bg-cyan-400/20 px-1.5 py-0.2 text-[10px] font-medium text-cyan-200">
+                    {joinedDateOptions.find((o) => o.value === joinedDateFilter)?.label ?? joinedDateFilter}
+                  </span>
+                )}
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent className="w-40" align="start">
@@ -180,35 +220,13 @@ export function RecentCustomersTable({ data }: { data: RecentCustomerRow[] }) {
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
-        <div className="grid grid-cols-2 gap-2 sm:flex sm:items-center xl:w-auto">
+
+        <div className="flex items-center gap-2 self-start xl:self-auto">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm">
-                <CreditCard />
-                Payment
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuRadioGroup
-                value={billingFilter}
-                onValueChange={(value) => {
-                  table.getColumn("billing")?.setFilterValue(value === "all" ? undefined : value);
-                  table.setPageIndex(0);
-                }}
-              >
-                {billingOptions.map((billing) => (
-                  <DropdownMenuRadioItem key={billing.value} value={billing.value}>
-                    {billing.label}
-                  </DropdownMenuRadioItem>
-                ))}
-              </DropdownMenuRadioGroup>
-            </DropdownMenuContent>
-          </DropdownMenu>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm">
-                <ArrowUpDown />
-                Sort
+              <Button variant="outline" size="sm" className="h-8 gap-1.5 font-normal">
+                <ArrowUpDown className="size-3.5 text-muted-foreground" />
+                <span>Sort: {sortOptions.find((o) => o.value === sortValue)?.label ?? "Newest"}</span>
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
@@ -230,13 +248,13 @@ export function RecentCustomersTable({ data }: { data: RecentCustomerRow[] }) {
         </div>
       </div>
 
-      <div className="overflow-hidden rounded-lg border bg-card">
+      <div className="overflow-hidden rounded-xl border border-cyan-300/15 bg-card/40 backdrop-blur-sm">
         <Table>
-          <TableHeader className="bg-muted/15">
+          <TableHeader className="bg-muted/20">
             {table.getHeaderGroups().map((headerGroup) => (
-              <TableRow key={headerGroup.id}>
+              <TableRow key={headerGroup.id} className="border-b border-cyan-300/10 hover:bg-transparent">
                 {headerGroup.headers.map((header) => (
-                  <TableHead key={header.id} colSpan={header.colSpan} className="h-11 p-3 font-medium">
+                  <TableHead key={header.id} colSpan={header.colSpan} className="h-10 px-3.5 py-2.5 font-semibold text-xs tracking-wider uppercase text-muted-foreground">
                     {header.isPlaceholder ? null : <table.FlexRender header={header} />}
                   </TableHead>
                 ))}
@@ -246,9 +264,13 @@ export function RecentCustomersTable({ data }: { data: RecentCustomerRow[] }) {
           <TableBody>
             {table.getRowModel().rows.length ? (
               table.getRowModel().rows.map((row) => (
-                <TableRow key={row.id} data-state={table.state.rowSelection[row.id] && "selected"}>
+                <TableRow
+                  key={row.id}
+                  data-state={table.state.rowSelection[row.id] && "selected"}
+                  className="border-b border-cyan-300/10 transition-colors hover:bg-white/[0.04] data-[state=selected]:bg-cyan-500/10"
+                >
                   {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id} className="p-3 align-middle">
+                    <TableCell key={cell.id} className="px-3.5 py-3 align-middle">
                       <table.FlexRender cell={cell} />
                     </TableCell>
                   ))}
@@ -256,8 +278,8 @@ export function RecentCustomersTable({ data }: { data: RecentCustomerRow[] }) {
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={table.getVisibleLeafColumns().length} className="h-24 text-center">
-                  No results.
+                <TableCell colSpan={table.getVisibleLeafColumns().length} className="h-28 text-center text-muted-foreground text-sm">
+                  No booking records found.
                 </TableCell>
               </TableRow>
             )}
@@ -265,14 +287,13 @@ export function RecentCustomersTable({ data }: { data: RecentCustomerRow[] }) {
         </Table>
       </div>
 
-      <div className="flex min-w-0 items-center justify-between px-5 py-5 sm:px-6">
-        <div className="hidden flex-1 text-muted-foreground text-sm lg:flex">
-          {table.getFilteredSelectedRowModel().rows.length} of {table.getFilteredRowModel().rows.length} row(s)
-          selected.
+      <div className="flex min-w-0 flex-wrap items-center justify-between gap-3 pt-2 pb-1">
+        <div className="text-muted-foreground text-xs sm:text-sm">
+          {table.getFilteredSelectedRowModel().rows.length} of {table.getFilteredRowModel().rows.length} row(s) selected.
         </div>
-        <div className="flex w-full min-w-0 items-center justify-between gap-3 lg:w-fit lg:justify-start lg:gap-8">
-          <div className="hidden items-center gap-2 lg:flex">
-            <Label htmlFor="recent-customers-rows-per-page" className="font-medium text-sm">
+        <div className="flex flex-wrap items-center gap-4 sm:gap-6">
+          <div className="flex items-center gap-2">
+            <Label htmlFor="recent-customers-rows-per-page" className="text-muted-foreground text-xs sm:text-sm font-normal">
               Rows per page
             </Label>
             <Select
@@ -281,7 +302,7 @@ export function RecentCustomersTable({ data }: { data: RecentCustomerRow[] }) {
                 table.setPageSize(Number(value));
               }}
             >
-              <SelectTrigger size="sm" className="w-20" id="recent-customers-rows-per-page">
+              <SelectTrigger size="sm" className="h-8 w-[72px]" id="recent-customers-rows-per-page">
                 <SelectValue placeholder={table.state.pagination.pageSize} />
               </SelectTrigger>
               <SelectContent side="top">
@@ -295,16 +316,17 @@ export function RecentCustomersTable({ data }: { data: RecentCustomerRow[] }) {
               </SelectContent>
             </Select>
           </div>
-          <div className="flex w-fit items-center justify-center font-medium text-sm">
-            Page {table.state.pagination.pageIndex + 1} of {table.getPageCount()}
+          <div className="flex items-center justify-center font-medium text-xs sm:text-sm text-muted-foreground">
+            Page {table.state.pagination.pageIndex + 1} of {Math.max(table.getPageCount(), 1)}
           </div>
-          <div className="ml-auto flex items-center gap-2 lg:ml-0">
+          <div className="flex items-center gap-1">
             <Button
               variant="outline"
-              className="hidden size-8 lg:flex"
+              className="size-8"
               size="icon"
               onClick={() => table.setPageIndex(0)}
               disabled={!table.getCanPreviousPage()}
+              title="Go to first page"
             >
               <span className="sr-only">Go to first page</span>
               <ChevronsLeft className="size-4" />
@@ -315,6 +337,7 @@ export function RecentCustomersTable({ data }: { data: RecentCustomerRow[] }) {
               size="icon"
               onClick={() => table.previousPage()}
               disabled={!table.getCanPreviousPage()}
+              title="Go to previous page"
             >
               <span className="sr-only">Go to previous page</span>
               <ChevronLeft className="size-4" />
@@ -325,16 +348,18 @@ export function RecentCustomersTable({ data }: { data: RecentCustomerRow[] }) {
               size="icon"
               onClick={() => table.nextPage()}
               disabled={!table.getCanNextPage()}
+              title="Go to next page"
             >
               <span className="sr-only">Go to next page</span>
               <ChevronRight className="size-4" />
             </Button>
             <Button
               variant="outline"
-              className="hidden size-8 lg:flex"
+              className="size-8"
               size="icon"
               onClick={() => table.setPageIndex(table.getPageCount() - 1)}
               disabled={!table.getCanNextPage()}
+              title="Go to last page"
             >
               <span className="sr-only">Go to last page</span>
               <ChevronsRight className="size-4" />

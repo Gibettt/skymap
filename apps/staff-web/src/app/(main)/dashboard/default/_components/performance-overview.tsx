@@ -3,7 +3,7 @@
 import Link from "next/link";
 
 import { format, parseISO } from "date-fns";
-import { Area, CartesianGrid, ComposedChart, Line, XAxis } from "recharts";
+import { Area, CartesianGrid, ComposedChart, Line, XAxis, YAxis } from "recharts";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -91,15 +91,15 @@ export function PerformanceOverview({ data, reportHref }: { data: BookingActivit
       </CardHeader>
 
       <CardContent>
-        <ChartContainer config={chartConfig} className="aspect-auto h-44 w-full sm:h-64 lg:h-80">
-          <ComposedChart data={data} margin={{ top: 0 }}>
+        <ChartContainer config={chartConfig} className="aspect-auto h-48 w-full sm:h-64 lg:h-72">
+          <ComposedChart data={data} margin={{ top: 14, right: 12, left: 12, bottom: 4 }}>
             <defs>
               <linearGradient id="fillTotalBookings" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="5%" stopColor="var(--color-totalBookings)" stopOpacity={0.36} />
-                <stop offset="95%" stopColor="var(--color-totalBookings)" stopOpacity={0.04} />
+                <stop offset="95%" stopColor="var(--color-totalBookings)" stopOpacity={0.02} />
               </linearGradient>
             </defs>
-            <CartesianGrid vertical={false} strokeOpacity={0.5} />
+            <CartesianGrid vertical={false} strokeOpacity={0.35} />
 
             <XAxis
               dataKey="date"
@@ -113,6 +113,11 @@ export function PerformanceOverview({ data, reportHref }: { data: BookingActivit
                   day: "numeric",
                 })
               }
+            />
+            <YAxis
+              hide
+              allowDecimals={false}
+              domain={[0, (dataMax: number) => Math.max(Math.ceil(dataMax * 1.25), 4)]}
             />
 
             <ChartTooltip
@@ -132,25 +137,25 @@ export function PerformanceOverview({ data, reportHref }: { data: BookingActivit
 
             <Area
               dataKey="totalBookings"
-              type="natural"
+              type="monotone"
               fill="url(#fillTotalBookings)"
               stroke="var(--color-totalBookings)"
-              strokeWidth={1.25}
+              strokeWidth={1.5}
               dot={false}
               fillOpacity={1}
             />
             <Line
               dataKey="openBookings"
-              type="natural"
+              type="monotone"
               stroke="var(--color-openBookings)"
-              strokeWidth={1.4}
+              strokeWidth={1.5}
               dot={false}
             />
             <Line
               dataKey="completedBookings"
-              type="natural"
+              type="monotone"
               stroke="var(--color-completedBookings)"
-              strokeWidth={1.2}
+              strokeWidth={1.5}
               dot={false}
             />
           </ComposedChart>

@@ -48,7 +48,7 @@ export function SubscriberOverview({ data, total }: { data: RecentCustomerRow[];
             onClick={exportBookings}
             disabled={data.length === 0}
           >
-            <Download />
+            <Download className="size-4" data-icon="inline-start" />
             Export
           </Button>
         </CardAction>

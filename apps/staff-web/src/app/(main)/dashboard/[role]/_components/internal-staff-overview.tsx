@@ -134,7 +134,7 @@ export function InternalStaffOverview({ data, permissions, userName, resortName 
       <div className="pointer-events-none absolute inset-0 -z-10 bg-[linear-gradient(180deg,rgba(2,13,36,0.12)_0%,rgba(3,20,47,0.78)_37%,#03142f_72%)]" />
       <div className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(circle_at_20%_7%,rgba(34,211,238,0.13),transparent_25%),radial-gradient(circle_at_75%_12%,rgba(217,70,239,0.13),transparent_24%)]" />
 
-      <div className="mx-auto flex w-full max-w-[1680px] flex-col gap-5 p-3 sm:gap-6 sm:p-5 lg:p-7">
+      <div className="mx-auto flex w-full max-w-[1680px] flex-col gap-5 p-3 pb-10 sm:gap-6 sm:p-5 sm:pb-14 lg:p-7 lg:pb-16">
         <section className="grid min-w-0 gap-5 xl:grid-cols-[minmax(17rem,0.42fr)_minmax(0,1fr)]">
           <div className="flex min-w-0 flex-col justify-between rounded-3xl border border-cyan-300/20 bg-[#061936]/76 p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.08),0_24px_70px_rgba(0,0,0,0.3)] backdrop-blur-xl sm:p-7">
             <div>
