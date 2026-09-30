@@ -207,7 +207,7 @@ export async function getStaffOverviewData(user: StaffUser, permissions: string[
                  ELSE replace(b.status::text, '_', ' ')
                END AS status,
                CASE
-                 WHEN b.status = 'completed' THEN 'Paid'
+                 WHEN b.payment_status = 'paid' THEN 'Paid'
                  WHEN b.status IN ('cancelled_by_guest', 'cancelled_weather', 'rejected') THEN 'Cancelled'
                  ELSE 'Pending'
                END AS billing,
