@@ -42,10 +42,21 @@ export function SubmittedMonthlyInvoiceDocument({ submission }: { submission: Mo
       className="flex min-h-[1056px] w-[816px] flex-col bg-white px-10 py-10 font-mono text-neutral-950"
     >
       <header className="flex items-start justify-between border-neutral-300 border-b pb-7">
-        <div>
-          <p className="font-semibold text-xs uppercase tracking-[0.25em]">SpaceCat ASTROTOURISM</p>
-          <h1 className="mt-2 font-semibold text-3xl">Monthly Customer Invoice Register</h1>
-          <p className="mt-2 text-neutral-600 text-sm">{monthLabel(submission.period_start)}</p>
+        <div className="flex items-center gap-4">
+          <Image
+            unoptimized
+            priority
+            src="/spacecat-astrotourism-logo.jpg"
+            alt="SpaceCat ASTROTOURISM"
+            width={56}
+            height={56}
+            className="size-14 rounded-2xl object-cover shadow-xs"
+          />
+          <div>
+            <p className="font-semibold text-xs uppercase tracking-[0.25em]">SpaceCat ASTROTOURISM</p>
+            <h1 className="mt-1 font-semibold text-3xl">Monthly Customer Invoice Register</h1>
+            <p className="mt-1 text-neutral-600 text-sm">{monthLabel(submission.period_start)}</p>
+          </div>
         </div>
         <div className="text-right text-sm">
           <p className="font-semibold">Resort</p>

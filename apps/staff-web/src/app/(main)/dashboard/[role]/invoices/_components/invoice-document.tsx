@@ -1,3 +1,5 @@
+import Image from "next/image";
+
 import { formatUsd, titleCase } from "../../_lib/staff-api";
 import type { InvoiceRow } from "./types";
 
@@ -40,13 +42,16 @@ export function InvoiceDocument({ invoice }: { invoice: InvoiceRow }) {
       className="relative flex flex-col gap-24 bg-neutral-50 px-12 py-11 font-mono text-neutral-950"
     >
       <header className="flex flex-col gap-10">
-        <div className="grid grid-cols-2 items-start gap-14">
-          <svg className="size-12" viewBox="0 0 48 48" aria-hidden="true">
-            <rect width="20" height="20" rx="3" fill="currentColor" />
-            <rect x="28" width="20" height="20" rx="3" fill="currentColor" />
-            <rect y="28" width="20" height="20" rx="3" fill="currentColor" />
-            <rect x="28" y="28" width="20" height="20" rx="3" fill="currentColor" />
-          </svg>
+        <div className="grid grid-cols-2 items-center gap-14">
+          <Image
+            unoptimized
+            priority
+            src="/spacecat-astrotourism-logo.jpg"
+            alt="SpaceCat ASTROTOURISM"
+            width={64}
+            height={64}
+            className="size-16 rounded-2xl object-cover shadow-xs"
+          />
           <h2 className="text-4xl uppercase tracking-widest">Invoice</h2>
         </div>
 
