@@ -8,25 +8,30 @@ export async function currentUser() {
   const session = readSessionValue(cookieStore.get(SESSION_COOKIE)?.value);
   if (!session) return null;
 
-  const { rows } = await query(
-    `SELECT
-      u.id, u.name, u.email, u.role, u.status, u.resort_id, u.access_role_id,
-      ar.name AS access_role_name, ar.slug AS access_role_slug, ar.status AS access_role_status,
-      ar.access_level AS access_role_level,
-      r.name AS resort_name, r.code AS resort_code, r.location AS resort_location,
-      r.status AS resort_status
-     FROM users u
-     LEFT JOIN access_roles ar ON ar.id = u.access_role_id
-     LEFT JOIN resorts r ON r.id = u.resort_id
-     WHERE u.id = $1
-     LIMIT 1`,
-    [session.id]
-  );
-  const user = rows[0];
-  if (!user || user.status !== 'active') return null;
-  if (user.access_role_status && user.access_role_status !== 'active') return null;
-  if (['internal', 'external'].includes(user.role) && user.resort_status !== 'active') return null;
-  return user;
+  try {
+    const { rows } = await query(
+      `SELECT
+        u.id, u.name, u.email, u.role, u.status, u.resort_id, u.access_role_id,
+        ar.name AS access_role_name, ar.slug AS access_role_slug, ar.status AS access_role_status,
+        ar.access_level AS access_role_level,
+        r.name AS resort_name, r.code AS resort_code, r.location AS resort_location,
+        r.status AS resort_status
+       FROM users u
+       LEFT JOIN access_roles ar ON ar.id = u.access_role_id
+       LEFT JOIN resorts r ON r.id = u.resort_id
+       WHERE u.id = $1
+       LIMIT 1`,
+      [session.id]
+    );
+    const user = rows[0];
+    if (!user || user.status !== 'active') return null;
+    if (user.access_role_status && user.access_role_status !== 'active') return null;
+    if (['internal', 'external'].includes(user.role) && user.resort_status !== 'active') return null;
+    return user;
+  } catch (error) {
+    console.error('Failed to resolve current user session:', error);
+    return null;
+  }
 }
 
 export async function getUserPermissions(user) {

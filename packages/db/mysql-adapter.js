@@ -260,6 +260,26 @@ function rewriteSql(sql, params) {
   return { sql: rewritten, params: orderedParams };
 }
 
+function isTransientNetworkError(error) {
+  if (!error) return false;
+  const code = String(error.code || "");
+  const msg = String(error.message || "");
+  return (
+    code === "ECONNRESET" ||
+    code === "PROTOCOL_CONNECTION_LOST" ||
+    code === "PROTOCOL_ENQUEUE_AFTER_FATAL_ERROR" ||
+    code === "EPIPE" ||
+    code === "ETIMEDOUT" ||
+    code === "ECONNREFUSED" ||
+    code === "ER_NET_READ_INTERRUPTED" ||
+    code === "EHOSTUNREACH" ||
+    msg.includes("ECONNRESET") ||
+    msg.includes("Connection lost") ||
+    msg.includes("closed") ||
+    msg.includes("read ECONNRESET")
+  );
+}
+
 function normalizeError(error) {
   if (error?.code === "ER_DUP_ENTRY") error.code = "23505";
   if (error?.code === "ER_NO_REFERENCED_ROW_2" || error?.code === "ER_ROW_IS_REFERENCED_2") error.code = "23503";
@@ -267,13 +287,17 @@ function normalizeError(error) {
   return error;
 }
 
-async function executeRaw(executor, sql, params) {
+async function executeRaw(executor, sql, params, retried = false) {
   const rewritten = rewriteSql(sql, params);
   try {
     const [result, fields] = await executor.query(rewritten.sql, rewritten.params);
     if (Array.isArray(result)) return { rows: result, rowCount: result.length, fields };
     return { rows: [], rowCount: result.affectedRows || 0, fields, insertId: result.insertId || null };
   } catch (error) {
+    if (!retried && typeof executor?.getConnection === "function" && isTransientNetworkError(error)) {
+      console.warn("Transient database connection error encountered, retrying query...", error.message || error.code);
+      return executeRaw(executor, sql, params, true);
+    }
     throw normalizeError(error);
   }
 }

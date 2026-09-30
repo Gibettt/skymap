@@ -31,7 +31,11 @@ export function getPool() {
         database: databaseUrl.pathname.replace(/^\//, ''),
         waitForConnections: true,
         connectionLimit: parseInt(process.env.DB_POOL_MAX || '5', 10),
-        connectTimeout: 5000,
+        maxIdle: parseInt(process.env.DB_POOL_MAX || '5', 10),
+        idleTimeout: 30000,
+        enableKeepAlive: true,
+        keepAliveInitialDelay: 10000,
+        connectTimeout: 10000,
         timezone: 'Z',
         dateStrings: ['DATE'],
         supportBigNumbers: true,
@@ -42,6 +46,9 @@ export function getPool() {
           return next();
         },
       });
+      pool.on('error', (err) => {
+        console.error('MySQL pool error:', err?.message || err);
+      });
     } else {
       pool = new Pool({
         connectionString: process.env.DATABASE_URL,
@@ -50,7 +57,10 @@ export function getPool() {
           : false,
         max: parseInt(process.env.DB_POOL_MAX || '5', 10),
         idleTimeoutMillis: 30000,
-        connectionTimeoutMillis: 5000,
+        connectionTimeoutMillis: 10000,
+      });
+      pool.on('error', (err) => {
+        console.error('PostgreSQL pool error:', err?.message || err);
       });
     }
   }
@@ -60,7 +70,17 @@ export function getPool() {
 
 export async function query(text, params = []) {
   const activePool = getPool();
-  return poolDialect === 'mysql' ? mysqlQuery(activePool, text, params) : activePool.query(text, params);
+  if (poolDialect === 'mysql') {
+    return mysqlQuery(activePool, text, params);
+  }
+  try {
+    return await activePool.query(text, params);
+  } catch (error) {
+    if (error && (error.code === 'ECONNRESET' || error.message?.includes('Connection terminated unexpectedly'))) {
+      return activePool.query(text, params);
+    }
+    throw error;
+  }
 }
 
 export async function transaction(work) {
