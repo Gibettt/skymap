@@ -115,24 +115,59 @@ export function SubmittedMonthlyInvoiceDocument({ submission }: { submission: Mo
         </p>
       </section>
 
-      <footer className="mt-auto flex justify-end border-neutral-300 border-t pt-10">
-        <div className="flex w-60 flex-col items-end text-right text-xs">
-          <p className="mb-2 text-neutral-500 uppercase tracking-wider">Responsible Internal Staff</p>
-          <div className="relative h-20 w-52">
-            {submission.staff_signature_data_url ? (
-              <Image
-                unoptimized
-                fill
-                src={submission.staff_signature_data_url}
-                alt={`Signature of ${submission.staff_signer_name ?? submission.submitted_by_name}`}
-                className="object-contain object-right-bottom"
-              />
-            ) : null}
+      <footer className="mt-auto border-neutral-300 border-t pt-8">
+        <div className="grid grid-cols-2 gap-12 text-center text-xs">
+          {/* 1. Prepared by Staff */}
+          <div className="flex flex-col items-center">
+            <div className="relative h-20 w-48">
+              {submission.staff_signature_data_url ? (
+                <Image
+                  unoptimized
+                  fill
+                  src={submission.staff_signature_data_url}
+                  alt={`Signature of ${submission.staff_signer_name ?? submission.submitted_by_name}`}
+                  className="object-contain object-bottom"
+                />
+              ) : (
+                <span className="flex h-full items-end justify-center pb-2 font-serif text-neutral-400 italic">
+                  Awaiting staff signature
+                </span>
+              )}
+            </div>
+            <div className="w-full border-neutral-400 border-b pt-1" />
+            <p className="mt-1 font-semibold text-neutral-900">
+              PREPARED BY: {submission.staff_signer_name ?? submission.submitted_by_name}
+            </p>
+            <p className="text-[10px] text-neutral-500">
+              {submission.staff_signed_at ? `Signed ${formatDateTime(submission.staff_signed_at)}` : "Responsible Staff"}
+            </p>
           </div>
-          <p className="min-w-52 border-neutral-400 border-t pt-1 font-semibold text-neutral-900">
-            {submission.staff_signer_name ?? submission.submitted_by_name}
-          </p>
-          <p className="mt-1 text-neutral-500">Signed {formatDateTime(submission.staff_signed_at)}</p>
+
+          {/* 2. Approved by Admin */}
+          <div className="flex flex-col items-center">
+            <div className="relative h-20 w-48">
+              {submission.admin_signature_data_url ? (
+                <Image
+                  unoptimized
+                  fill
+                  src={submission.admin_signature_data_url}
+                  alt={`Signature of ${submission.admin_signer_name ?? "Admin"}`}
+                  className="object-contain object-bottom"
+                />
+              ) : (
+                <span className="flex h-full items-end justify-center pb-2 font-serif text-neutral-400 italic">
+                  {submission.status === "reviewed" ? "Approved by Admin" : "Awaiting Admin approval"}
+                </span>
+              )}
+            </div>
+            <div className="w-full border-neutral-400 border-b pt-1" />
+            <p className="mt-1 font-semibold text-neutral-900">
+              APPROVED BY: {submission.admin_signer_name ?? submission.reviewed_by_name ?? "Admin Ephemeris"}
+            </p>
+            <p className="text-[10px] text-neutral-500">
+              {submission.reviewed_at ? `Approved ${formatDateTime(submission.reviewed_at)}` : "Administration & Resort Management"}
+            </p>
+          </div>
         </div>
       </footer>
     </article>

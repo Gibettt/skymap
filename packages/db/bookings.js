@@ -78,10 +78,14 @@ const EXTERNAL_STAFF_BOOKING_RESPONSE_FIELDS = Object.freeze([
 export function bookingParticipantSummary(participants) {
 	const normalized = Array.isArray(participants) ? participants : [];
 	const adults = normalized.filter(
-		(participant) => participant?.type === "adult",
+		(participant) =>
+			participant?.type === "adult" ||
+			(participant?.age != null && Number(participant.age) >= 12),
 	);
 	const children = normalized.filter(
-		(participant) => participant?.type === "child",
+		(participant) =>
+			participant?.type === "child" &&
+			(participant?.age == null || Number(participant.age) < 12),
 	);
 
 	return {

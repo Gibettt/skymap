@@ -107,12 +107,9 @@ export async function POST(request) {
         const childPriceUsd =
           skyEvent?.price_override_usd != null
             ? Number(skyEvent.price_override_usd) * 0.5
-            : Number(
-                packageRecord.child_price_usd ??
-                  (packageRecord.package_type === "kids"
-                    ? packageRecord.adult_price_usd
-                    : Number(packageRecord.adult_price_usd) * 0.5),
-              );
+            : packageRecord.package_type === "kids" && Number(packageRecord.adult_price_usd) === 0
+              ? Number(packageRecord.child_price_usd ?? 0)
+              : Number(packageRecord.adult_price_usd) * 0.5;
         const totals = calculateBookingTotals({
           adultCount,
           childCount,

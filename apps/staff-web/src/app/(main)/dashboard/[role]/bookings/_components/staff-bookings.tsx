@@ -229,86 +229,93 @@ function BookingDetails({
   open,
   onOpenChange,
   showInternalDetails,
+  onStatus,
 }: {
   booking: StaffBooking | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   showInternalDetails: boolean;
+  onStatus?: (action: StatusAction) => void;
 }) {
   if (!booking) return null;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-2xl">
-        <DialogHeader>
-          <DialogTitle>{booking.guest_name}</DialogTitle>
-          <DialogDescription>
-            {booking.booking_code} · {booking.package_name}
-          </DialogDescription>
-        </DialogHeader>
-        <FieldGroup className="grid gap-4 md:grid-cols-2">
-          <Field>
-            <FieldLabel>Status</FieldLabel>
+      <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-3xl border border-cyan-400/25 bg-[#031229]/98 text-slate-100 shadow-2xl">
+        <DialogHeader className="border-b border-cyan-400/15 pb-4">
+          <div className="flex flex-wrap items-center justify-between gap-3 pr-6">
             <div>
-              <BookingStatusBadge status={booking.status} />
+              <DialogTitle className="flex items-center gap-2.5 font-bold text-xl text-white">
+                {booking.guest_name}
+                <BookingStatusBadge status={booking.status} />
+              </DialogTitle>
+              <DialogDescription className="mt-1 font-mono text-cyan-300/80 text-xs">
+                {booking.booking_code} · {booking.package_name}
+              </DialogDescription>
             </div>
-          </Field>
-          <Field>
-            <FieldLabel>Schedule</FieldLabel>
-            <Input
-              readOnly
-              value={`${formatDate(booking.event_date)}, ${shortTime(booking.time_start)}–${shortTime(booking.time_end)}`}
-            />
-          </Field>
-          <Field>
-            <FieldLabel>Guest phone</FieldLabel>
-            <Input readOnly value={booking.guest_phone ?? "-"} />
-          </Field>
-          <Field>
-            <FieldLabel>Guest email</FieldLabel>
-            <Input readOnly value={booking.guest_email ?? "-"} />
-          </Field>
-          <Field>
-            <FieldLabel>Room</FieldLabel>
-            <Input readOnly value={booking.room_number} />
-          </Field>
-          <Field>
-            <FieldLabel>Nationality</FieldLabel>
-            <Input readOnly value={booking.nationality} />
-          </Field>
-          <Field>
-            <FieldLabel>Guests</FieldLabel>
-            <Input readOnly value={`${booking.adult_count} adults, ${booking.child_count} children`} />
-          </Field>
+          </div>
+        </DialogHeader>
+        <div className="flex flex-col gap-4 pt-1">
+          {/* Top Info Grid */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 p-3.5 rounded-xl border border-cyan-400/20 bg-[#041633]/70">
+            <div>
+              <span className="text-[11px] font-medium text-slate-400 block">Schedule</span>
+              <span className="text-xs font-semibold text-slate-100 mt-0.5 block">
+                {formatDate(booking.event_date)}, {shortTime(booking.time_start)}–{shortTime(booking.time_end)}
+              </span>
+            </div>
+            <div>
+              <span className="text-[11px] font-medium text-slate-400 block">Room / Villa</span>
+              <span className="text-xs font-semibold text-slate-100 mt-0.5 block">{booking.room_number || "-"}</span>
+            </div>
+            <div>
+              <span className="text-[11px] font-medium text-slate-400 block">Guests</span>
+              <span className="text-xs font-semibold text-slate-100 mt-0.5 block">
+                {booking.adult_count} adults, {booking.child_count} children
+              </span>
+            </div>
+            <div>
+              <span className="text-[11px] font-medium text-slate-400 block">Phone</span>
+              <span className="text-xs font-medium text-slate-200 mt-0.5 block">{booking.guest_phone || "-"}</span>
+            </div>
+            <div>
+              <span className="text-[11px] font-medium text-slate-400 block">Email</span>
+              <span className="text-xs font-medium text-slate-200 mt-0.5 block truncate" title={booking.guest_email ?? ""}>{booking.guest_email || "-"}</span>
+            </div>
+            <div>
+              <span className="text-[11px] font-medium text-slate-400 block">Nationality</span>
+              <span className="text-xs font-medium text-slate-200 mt-0.5 block">{booking.nationality || "-"}</span>
+            </div>
+          </div>
           <Field className="md:col-span-2">
-            <FieldLabel>Experience schedule</FieldLabel>
+            <FieldLabel className="text-slate-300 font-medium text-xs">Experience schedule</FieldLabel>
             {booking.experiences?.length ? (
-              <div className="overflow-x-auto rounded-lg border">
+              <div className="overflow-x-auto rounded-xl border border-cyan-400/25 bg-[#03142e]/90 shadow-inner">
                 <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Experience</TableHead>
-                      <TableHead>Date</TableHead>
-                      <TableHead>Time</TableHead>
-                      <TableHead>Spot</TableHead>
-                      <TableHead className="text-right">Base</TableHead>
+                  <TableHeader className="border-cyan-400/20 border-b bg-[#08234c]">
+                    <TableRow className="border-cyan-400/20 hover:bg-transparent">
+                      <TableHead className="py-2.5 font-semibold text-cyan-200 text-xs uppercase tracking-wider">Experience</TableHead>
+                      <TableHead className="py-2.5 font-semibold text-cyan-200 text-xs uppercase tracking-wider">Date</TableHead>
+                      <TableHead className="py-2.5 font-semibold text-cyan-200 text-xs uppercase tracking-wider">Time</TableHead>
+                      <TableHead className="py-2.5 font-semibold text-cyan-200 text-xs uppercase tracking-wider">Spot</TableHead>
+                      <TableHead className="py-2.5 text-right font-semibold text-cyan-200 text-xs uppercase tracking-wider">Base</TableHead>
                     </TableRow>
                   </TableHeader>
-                  <TableBody>
+                  <TableBody className="divide-y divide-cyan-400/15">
                     {booking.experiences.map((experience, index) => (
-                      <TableRow key={experience.id ?? `${booking.id}-experience-${index}`}>
+                      <TableRow key={experience.id ?? `${booking.id}-experience-${index}`} className="border-cyan-400/15 hover:bg-white/5">
                         <TableCell>
                           <div className="flex items-center gap-2">
-                            <span className="font-medium">{experience.packageName}</span>
-                            {index === 0 ? <Badge variant="secondary">Primary</Badge> : null}
+                            <span className="font-medium text-white">{experience.packageName}</span>
+                            {index === 0 ? <Badge className="border-cyan-400/30 bg-cyan-500/20 text-cyan-200 text-[10px]">Primary</Badge> : null}
                           </div>
                         </TableCell>
-                        <TableCell>{formatDate(experience.eventDate)}</TableCell>
-                        <TableCell>
+                        <TableCell className="text-slate-200">{formatDate(experience.eventDate)}</TableCell>
+                        <TableCell className="text-slate-200">
                           {shortTime(experience.timeStart)}–{shortTime(experience.timeEnd)}
                         </TableCell>
-                        <TableCell>{experience.observationSpot || experience.location || "-"}</TableCell>
-                        <TableCell className="text-right tabular-nums">{formatUsd(experience.baseTotalUsd)}</TableCell>
+                        <TableCell className="text-slate-300">{experience.observationSpot || experience.location || "-"}</TableCell>
+                        <TableCell className="text-right font-semibold font-mono text-emerald-300 tabular-nums">{formatUsd(experience.baseTotalUsd)}</TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
@@ -317,75 +324,128 @@ function BookingDetails({
             ) : (
               <Input
                 readOnly
+                className="border-cyan-400/20 bg-[#051c3d]/90 font-medium text-slate-100"
                 value={`${booking.package_name} · ${formatDate(booking.event_date)}, ${shortTime(booking.time_start)}–${shortTime(booking.time_end)}`}
               />
             )}
           </Field>
           <Field className="md:col-span-2">
-            <FieldLabel>Participants</FieldLabel>
+            <FieldLabel className="text-slate-300 font-medium text-xs">Participants</FieldLabel>
             {booking.participants?.length ? (
-              <div className="overflow-x-auto rounded-lg border">
+              <div className="overflow-x-auto rounded-xl border border-cyan-400/25 bg-[#03142e]/90 shadow-inner">
                 <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Name</TableHead>
-                      <TableHead>Type</TableHead>
-                      <TableHead>Age</TableHead>
-                      <TableHead>Nationality</TableHead>
+                  <TableHeader className="border-cyan-400/20 border-b bg-[#08234c]">
+                    <TableRow className="border-cyan-400/20 hover:bg-transparent">
+                      <TableHead className="py-2.5 font-semibold text-cyan-200 text-xs uppercase tracking-wider">Name</TableHead>
+                      <TableHead className="py-2.5 font-semibold text-cyan-200 text-xs uppercase tracking-wider">Type</TableHead>
+                      <TableHead className="py-2.5 font-semibold text-cyan-200 text-xs uppercase tracking-wider">Age</TableHead>
+                      <TableHead className="py-2.5 font-semibold text-cyan-200 text-xs uppercase tracking-wider">Nationality</TableHead>
                     </TableRow>
                   </TableHeader>
-                  <TableBody>
+                  <TableBody className="divide-y divide-cyan-400/15">
                     {booking.participants.map((participant, index) => (
-                      <TableRow key={participant.id ?? `${booking.id}-${index}`}>
+                      <TableRow key={participant.id ?? `${booking.id}-${index}`} className="border-cyan-400/15 hover:bg-white/5">
                         <TableCell>
                           <div className="flex items-center gap-2">
-                            <span className="font-medium">{participant.fullName}</span>
-                            {index === 0 ? <Badge variant="secondary">Primary</Badge> : null}
+                            <span className="font-medium text-white">{participant.fullName}</span>
+                            {index === 0 ? <Badge className="border-cyan-400/30 bg-cyan-500/20 text-cyan-200 text-[10px]">Primary</Badge> : null}
                           </div>
                         </TableCell>
-                        <TableCell>{titleCase(participant.type)}</TableCell>
-                        <TableCell>{participant.age ?? "-"}</TableCell>
-                        <TableCell>{participant.nationality}</TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className={participant.type === "child" ? "border-amber-400/35 bg-amber-500/15 text-amber-200 text-[11px]" : "border-slate-500/30 bg-slate-500/15 text-slate-200 text-[11px]"}>
+                            {titleCase(participant.type)}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="font-mono text-slate-200">{participant.age ?? "-"}</TableCell>
+                        <TableCell className="text-slate-300">{participant.nationality}</TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
                 </Table>
               </div>
             ) : (
-              <Input readOnly value="Participant details are unavailable for this legacy booking." />
+              <Input readOnly className="border-cyan-400/20 bg-[#051c3d]/90 text-slate-400" value="Participant details are unavailable for this legacy booking." />
             )}
           </Field>
-          <Field>
-            <FieldLabel>Invoice total</FieldLabel>
-            <Input readOnly value={formatUsd(booking.invoice_total_usd)} />
-          </Field>
-          <Field>
-            <FieldLabel>Staff</FieldLabel>
-            <Input readOnly value={`${booking.staff_name} (${titleCase(booking.staff_role)})`} />
-          </Field>
-          <Field>
-            <FieldLabel>Resort</FieldLabel>
-            <Input readOnly value={booking.resort_name ?? "-"} />
-          </Field>
-          <Field>
-            <FieldLabel>Guest signature</FieldLabel>
-            <Input readOnly value={booking.signed_by_guest ? "Signed" : "Not signed"} />
-          </Field>
-          <Field>
-            <FieldLabel>Commission</FieldLabel>
-            <Input readOnly value={formatUsd(booking.staff_commission_5_usd)} />
-          </Field>
-          {showInternalDetails ? (
-            <Field className="md:col-span-2">
-              <FieldLabel>Operational notes</FieldLabel>
-              <Textarea readOnly value={booking.notes ?? "No notes"} />
-            </Field>
+          {/* Summary Financial & Meta Card */}
+          <div className="md:col-span-2 grid grid-cols-2 sm:grid-cols-4 gap-3 p-3.5 rounded-xl border border-cyan-400/25 bg-[#041a3a]/90 shadow-inner mt-1">
+            <div className="flex flex-col">
+              <span className="text-[11px] font-medium text-slate-400">Invoice Total</span>
+              <span className="text-lg font-bold font-mono text-emerald-300 mt-0.5">{formatUsd(booking.invoice_total_usd)}</span>
+            </div>
+            <div className="flex flex-col">
+              <span className="text-[11px] font-medium text-slate-400">Commission</span>
+              <span className="text-lg font-bold font-mono text-violet-300 mt-0.5">{formatUsd(booking.staff_commission_5_usd)}</span>
+            </div>
+            <div className="flex flex-col">
+              <span className="text-[11px] font-medium text-slate-400">Resort &amp; Staff</span>
+              <span className="text-xs font-semibold text-slate-200 mt-0.5 truncate" title={booking.resort_name ?? "-"}>{booking.resort_name ?? "-"}</span>
+              <span className="text-[10px] text-slate-400 truncate mt-0.5">{booking.staff_name}</span>
+            </div>
+            <div className="flex flex-col">
+              <span className="text-[11px] font-medium text-slate-400">Guest Signature</span>
+              <span className="mt-1">
+                <Badge variant="outline" className={booking.signed_by_guest ? "border-emerald-400/30 bg-emerald-500/15 text-emerald-300 text-[10px]" : "border-slate-500/30 bg-slate-500/15 text-slate-400 text-[10px]"}>
+                  {booking.signed_by_guest ? "✓ Signed" : "Not signed"}
+                </Badge>
+              </span>
+            </div>
+          </div>
+          {showInternalDetails && booking.notes ? (
+            <div className="flex flex-col gap-1 p-3 rounded-xl border border-cyan-400/20 bg-[#041633]/70">
+              <span className="text-xs font-medium text-slate-400">Operational notes</span>
+              <p className="text-xs text-slate-200 whitespace-pre-wrap">{booking.notes}</p>
+            </div>
           ) : null}
-        </FieldGroup>
-        <DialogFooter showCloseButton />
-      </DialogContent>
-    </Dialog>
-  );
+        </div>
+        <DialogFooter className="flex flex-wrap items-center justify-between gap-2 sm:justify-between border-t border-cyan-400/15 pt-3">
+          <div className="flex items-center gap-2">
+            {showInternalDetails && booking.status === "pending" && onStatus ? (
+              <>
+                <Button
+                  type="button"
+                  size="sm"
+                  className="bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white font-medium border-0 shadow-md"
+                  onClick={() => {
+                    onOpenChange(false);
+                    onStatus({
+                      booking,
+                      status: "active",
+                      title: "Setujui Booking ini?",
+                      description: `Booking ${booking.booking_code} (${booking.guest_name}) akan disetujui, aktif, dan siap dioperasikan tim internal.`,
+                    });
+                  }}
+                >
+                  <CheckCircle2 data-icon="inline-start" />
+                  Approve / Terima booking
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="destructive"
+                  onClick={() => {
+                    onOpenChange(false);
+                    onStatus({
+                      booking,
+                      status: "rejected",
+                      title: "Tolak Booking?",
+                      description: `Booking ${booking.booking_code} (${booking.guest_name}) akan ditolak dan ditutup.`,
+                    });
+                  }}
+                >
+                  <XCircle data-icon="inline-start" />
+                  Tolak
+                </Button>
+              </>
+            ) : null}
+          </div>
+          <DialogClose asChild>
+            <Button variant="outline" size="sm">Close</Button>
+          </DialogClose>
+        </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    );
 }
 
 interface BookingActionsProps {
@@ -445,215 +505,93 @@ function BookingActions({
         {canManage ? (
           <>
             <DropdownMenuSeparator />
-            <DropdownMenuGroup className="sm:hidden">
+            <DropdownMenuGroup>
               {booking.status === "pending" ? (
-                <DropdownMenuItem
-                  onSelect={() =>
-                    onStatus({
-                      booking,
-                      status: "active",
-                      title: "Approve booking?",
-                      description: "This booking will become active and be assigned to the internal operations team.",
-                    })
-                  }
-                >
-                  <CirclePlay />
-                  Activate booking
-                </DropdownMenuItem>
-              ) : null}
-              {booking.status === "pending" ? (
-                <DropdownMenuItem
-                  variant="destructive"
-                  onSelect={() =>
-                    onStatus({
-                      booking,
-                      status: "rejected",
-                      title: "Reject booking?",
-                      description: "The request will be closed as rejected and can no longer be operated.",
-                    })
-                  }
-                >
-                  <XCircle />
-                  Reject booking
-                </DropdownMenuItem>
+                <>
+                  <DropdownMenuItem
+                    className="text-emerald-400 font-semibold focus:text-emerald-300 focus:bg-emerald-500/20"
+                    onSelect={() =>
+                      onStatus({
+                        booking,
+                        status: "active",
+                        title: "Setujui Booking ini?",
+                        description: `Booking ${booking.booking_code} (${booking.guest_name}) akan disetujui, aktif, dan siap dioperasikan tim internal.`,
+                      })
+                    }
+                  >
+                    <CirclePlay className="text-emerald-400 size-4" />
+                    Approve / Terima booking
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    variant="destructive"
+                    onSelect={() =>
+                      onStatus({
+                        booking,
+                        status: "rejected",
+                        title: "Tolak Booking?",
+                        description: `Booking ${booking.booking_code} (${booking.guest_name}) akan ditolak dan ditutup.`,
+                      })
+                    }
+                  >
+                    <XCircle className="size-4" />
+                    Tolak booking
+                  </DropdownMenuItem>
+                </>
               ) : null}
               {operational ? (
-                <DropdownMenuItem
-                  onSelect={() =>
-                    onStatus({
-                      booking,
-                      status: "completed",
-                      title: "Complete booking?",
-                      description: "Mark this experience as completed after the field operation is finished.",
-                    })
-                  }
-                >
-                  <CheckCircle2 />
-                  Mark completed
-                </DropdownMenuItem>
-              ) : null}
-              {operational ? (
-                <DropdownMenuItem onSelect={() => onReschedule(booking)}>
-                  <CalendarClock />
-                  Reschedule
-                </DropdownMenuItem>
+                <>
+                  <DropdownMenuItem
+                    onSelect={() =>
+                      onStatus({
+                        booking,
+                        status: "completed",
+                        title: "Tandai Selesai?",
+                        description: "Tandai sesi pengamatan ini telah selesai terlaksana di lapangan.",
+                      })
+                    }
+                  >
+                    <CheckCircle2 className="text-emerald-400 size-4" />
+                    Mark completed
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onSelect={() => onReschedule(booking)}>
+                    <CalendarClock className="size-4" />
+                    Reschedule
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onSelect={() =>
+                      onStatus({
+                        booking,
+                        status: "cancelled_by_guest",
+                        title: "Batalkan oleh Tamu?",
+                        description: "Booking akan dibatalkan dengan alasan permintaan tamu.",
+                      })
+                    }
+                  >
+                    <UserX className="size-4" />
+                    Cancel by guest
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onSelect={() =>
+                      onStatus({
+                        booking,
+                        status: "cancelled_weather",
+                        title: "Batalkan karena Cuaca?",
+                        description: "Booking akan dibatalkan karena kondisi langit/cuaca tidak memungkinkan.",
+                      })
+                    }
+                  >
+                    <CloudRain className="size-4" />
+                    Cancel due to weather
+                  </DropdownMenuItem>
+                </>
               ) : null}
               {canSign ? (
                 <DropdownMenuItem onSelect={() => onSigned(booking)}>
-                  <Signature />
+                  <Signature className="size-4" />
                   {booking.signed_by_guest ? "Mark as unsigned" : "Mark as signed"}
                 </DropdownMenuItem>
               ) : null}
-              {operational ? (
-                <DropdownMenuItem
-                  onSelect={() =>
-                    onStatus({
-                      booking,
-                      status: "cancelled_by_guest",
-                      title: "Cancel by guest?",
-                      description: "The booking will be closed with the guest cancellation reason.",
-                    })
-                  }
-                >
-                  <UserX />
-                  Cancel by guest
-                </DropdownMenuItem>
-              ) : null}
-              {operational ? (
-                <DropdownMenuItem
-                  onSelect={() =>
-                    onStatus({
-                      booking,
-                      status: "cancelled_weather",
-                      title: "Cancel due to weather?",
-                      description: "The booking will be closed because observing conditions are unsafe.",
-                    })
-                  }
-                >
-                  <CloudRain />
-                  Cancel due to weather
-                </DropdownMenuItem>
-              ) : null}
               {!hasBookingActions ? <DropdownMenuItem disabled>No actions available</DropdownMenuItem> : null}
-            </DropdownMenuGroup>
-            <DropdownMenuGroup>
-              <DropdownMenuSub>
-                <DropdownMenuSubTrigger className="hidden sm:flex">
-                  <Workflow />
-                  Booking actions
-                </DropdownMenuSubTrigger>
-                <DropdownMenuSubContent className="min-w-56" sideOffset={8}>
-                  <DropdownMenuGroup>
-                    {booking.status === "pending" ? (
-                      <DropdownMenuItem
-                        onSelect={() =>
-                          onStatus({
-                            booking,
-                            status: "active",
-                            title: "Approve booking?",
-                            description:
-                              "This booking will become active and be assigned to the internal operations team.",
-                          })
-                        }
-                      >
-                        <CirclePlay />
-                        Activate booking
-                      </DropdownMenuItem>
-                    ) : null}
-                    {booking.status === "pending" ? (
-                      <DropdownMenuItem
-                        variant="destructive"
-                        onSelect={() =>
-                          onStatus({
-                            booking,
-                            status: "rejected",
-                            title: "Reject booking?",
-                            description: "The request will be closed as rejected and can no longer be operated.",
-                          })
-                        }
-                      >
-                        <XCircle />
-                        Reject booking
-                      </DropdownMenuItem>
-                    ) : null}
-                    {operational ? (
-                      <DropdownMenuItem
-                        onSelect={() =>
-                          onStatus({
-                            booking,
-                            status: "completed",
-                            title: "Complete booking?",
-                            description: "Mark this experience as completed after the field operation is finished.",
-                          })
-                        }
-                      >
-                        <CheckCircle2 />
-                        Mark completed
-                      </DropdownMenuItem>
-                    ) : null}
-                    {operational ? (
-                      <DropdownMenuItem onSelect={() => onReschedule(booking)}>
-                        <CalendarClock />
-                        Reschedule
-                      </DropdownMenuItem>
-                    ) : null}
-                    {canSign ? (
-                      <DropdownMenuItem onSelect={() => onSigned(booking)}>
-                        <Signature />
-                        {booking.signed_by_guest ? "Mark as unsigned" : "Mark as signed"}
-                      </DropdownMenuItem>
-                    ) : null}
-                  </DropdownMenuGroup>
-                  {operational ? <DropdownMenuSeparator /> : null}
-                  {operational ? (
-                    <DropdownMenuGroup>
-                      <DropdownMenuSub>
-                        <DropdownMenuSubTrigger>
-                          <Ban />
-                          Cancel booking
-                        </DropdownMenuSubTrigger>
-                        <DropdownMenuSubContent className="min-w-56" sideOffset={8}>
-                          <DropdownMenuGroup>
-                            <DropdownMenuItem
-                              className="whitespace-nowrap"
-                              onSelect={() =>
-                                onStatus({
-                                  booking,
-                                  status: "cancelled_by_guest",
-                                  title: "Cancel by guest?",
-                                  description: "The booking will be closed with the guest cancellation reason.",
-                                })
-                              }
-                            >
-                              <UserX />
-                              Cancel by guest
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              className="whitespace-nowrap"
-                              onSelect={() =>
-                                onStatus({
-                                  booking,
-                                  status: "cancelled_weather",
-                                  title: "Cancel due to weather?",
-                                  description: "The booking will be closed because observing conditions are unsafe.",
-                                })
-                              }
-                            >
-                              <CloudRain />
-                              Cancel due to weather
-                            </DropdownMenuItem>
-                          </DropdownMenuGroup>
-                        </DropdownMenuSubContent>
-                      </DropdownMenuSub>
-                    </DropdownMenuGroup>
-                  ) : null}
-                  {!hasBookingActions ? (
-                    <DropdownMenuGroup>
-                      <DropdownMenuItem disabled>No actions available</DropdownMenuItem>
-                    </DropdownMenuGroup>
-                  ) : null}
-                </DropdownMenuSubContent>
-              </DropdownMenuSub>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
@@ -732,16 +670,30 @@ function createStaffBookingsColumns(actions: BookingActionContext): ColumnDef<Da
       accessorFn: (row) => row.guest_name,
       header: "Booking",
       cell: ({ row }) => (
-        <div className="flex items-center gap-3">
-          <Avatar size="lg" className="font-medium">
+        <div
+          className="flex items-center gap-3 cursor-pointer group/guest"
+          onClick={() => actions.onView(row.original)}
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => e.key === "Enter" && actions.onView(row.original)}
+        >
+          <Avatar size="lg" className="font-medium transition-all group-hover/guest:ring-2 group-hover/guest:ring-cyan-400/50">
             <AvatarFallback>{getInitials(row.original.guest_name)}</AvatarFallback>
           </Avatar>
           <div className="min-w-0">
-            <div className="truncate font-medium text-foreground text-sm">{row.original.guest_name}</div>
+            <div className="truncate font-semibold text-foreground text-sm transition-colors group-hover/guest:text-cyan-300">
+              {row.original.guest_name}
+            </div>
             <div className="truncate font-mono text-muted-foreground text-xs">{row.original.booking_code}</div>
           </div>
         </div>
       ),
+    },
+    {
+      id: "createdAt",
+      accessorFn: (row) => new Date(row.created_at || row.event_date).getTime(),
+      enableHiding: true,
+      enableSorting: true,
     },
     {
       id: "eventDate",
@@ -920,8 +872,16 @@ function StaffBookingsGrid({
             <Avatar size="lg" className="font-medium">
               <AvatarFallback>{getInitials(booking.guest_name)}</AvatarFallback>
             </Avatar>
-            <div className="min-w-0">
-              <CardTitle className="truncate text-base">{booking.guest_name}</CardTitle>
+            <div
+              className="min-w-0 cursor-pointer group/guest"
+              onClick={() => actions.onView(booking)}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => e.key === "Enter" && actions.onView(booking)}
+            >
+              <CardTitle className="truncate text-base transition-colors group-hover/guest:text-cyan-300">
+                {booking.guest_name}
+              </CardTitle>
               <CardDescription className="truncate font-mono text-xs">{booking.booking_code}</CardDescription>
             </div>
             <BookingActions
@@ -1128,9 +1088,9 @@ export function StaffBookings({ role, initialNewBooking = false }: { role: Staff
   const [error, setError] = React.useState("");
   const searchInputRef = React.useRef<HTMLInputElement>(null);
   const [rowSelection, setRowSelection] = React.useState({});
-  const [sorting, setSorting] = React.useState<SortingState>([{ id: "eventDate", desc: true }]);
+  const [sorting, setSorting] = React.useState<SortingState>([{ id: "createdAt", desc: true }]);
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
-  const [columnVisibility, setColumnVisibility] = React.useState<ColumnVisibilityState>({ search: false });
+  const [columnVisibility, setColumnVisibility] = React.useState<ColumnVisibilityState>({ search: false, createdAt: false });
   const [pagination, setPagination] = React.useState<PaginationState>({ pageIndex: 0, pageSize: 10 });
   const [viewMode, setViewMode] = React.useState<"list" | "grid">("list");
   const [newBookingOpen, setNewBookingOpen] = React.useState(initialNewBooking);
@@ -1798,6 +1758,7 @@ export function StaffBookings({ role, initialNewBooking = false }: { role: Staff
         open={Boolean(viewBooking)}
         onOpenChange={(open) => !open && setViewBooking(null)}
         showInternalDetails={role === "internal"}
+        onStatus={setStatusAction}
       />
 
       <Dialog open={Boolean(editBooking)} onOpenChange={(open) => !open && setEditBooking(null)}>

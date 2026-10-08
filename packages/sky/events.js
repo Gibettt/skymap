@@ -1,7 +1,10 @@
 export const DEFAULT_SKY_EVENT_TYPES = Object.freeze([
   { slug: 'astronomy', name: 'Astronomy', isSystem: true },
+  { slug: 'stargazing', name: 'Stargazing', isSystem: true },
   { slug: 'meteor', name: 'Meteor', isSystem: true },
+  { slug: 'kids-club', name: 'Kids Club Classes', isSystem: true },
   { slug: 'resort', name: 'Resort', isSystem: true },
+  { slug: 'others', name: 'Others', isSystem: true },
 ]);
 
 const EVENT_TYPE_SLUG = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;

@@ -6,7 +6,7 @@ import { monthlyInvoiceSubmissionSchema } from "@ephemeris/db/validators/invoice
 export async function POST(request) {
   try {
     await assertSameOrigin(request);
-    const user = await requirePermission("staff.finance", ["internal"], { write: true });
+    const user = await requirePermission("staff.finance", ["internal", "external"], { write: true });
     if (!user.resort_id) throw new ApiError(403, "An active resort assignment is required.");
     const parsed = monthlyInvoiceSubmissionSchema.safeParse(await parseJsonBody(request));
     if (!parsed.success) throw new ApiError(400, "Select a valid invoice month.");

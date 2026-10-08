@@ -30,7 +30,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { dataTableFeatures } from "@/lib/data-table-features";
 
 import { CreatePackageDialog } from "../../_components/create-dialogs";
-import type { PackageRow } from "../../_lib/admin-data";
+import type { PackageRow, PackageTypeOption } from "../../_lib/admin-data";
 import { titleCase } from "../../_lib/format";
 import { getPackagesColumns, type PackageResortOption } from "./packages-columns";
 import { PackagesGrid } from "./packages-grid";
@@ -55,7 +55,21 @@ function uniqueOptions(values: string[]) {
   return ["All", ...Array.from(new Set(values.filter(Boolean))).sort()];
 }
 
-export function Packages({ packages, resorts }: { packages: PackageRow[]; resorts: PackageResortOption[] }) {
+export function Packages({
+  packages,
+  resorts,
+  initialPackageTypes,
+  addButtonClassName,
+  cardTitle = "Packages",
+  cardDescription = "Manage experience packages, pricing, availability, and resort assignments.",
+}: {
+  packages: PackageRow[];
+  resorts: PackageResortOption[];
+  initialPackageTypes?: PackageTypeOption[];
+  addButtonClassName?: string;
+  cardTitle?: string;
+  cardDescription?: string;
+}) {
   const searchInputRef = React.useRef<HTMLInputElement>(null);
   const columns = React.useMemo(() => getPackagesColumns(resorts), [resorts]);
   const [sorting, setSorting] = React.useState<SortingState>([{ id: "updated_at", desc: true }]);
@@ -165,10 +179,8 @@ export function Packages({ packages, resorts }: { packages: PackageRow[]; resort
   return (
     <Card>
       <CardHeader className="border-b has-data-[slot=card-action]:grid-cols-1 md:has-data-[slot=card-action]:grid-cols-[1fr_auto]">
-        <CardTitle className="text-xl leading-none">Packages</CardTitle>
-        <CardDescription className="max-w-sm leading-snug">
-          Manage experience packages, pricing, availability, and resort assignments.
-        </CardDescription>
+        <CardTitle className="text-xl leading-none">{cardTitle}</CardTitle>
+        <CardDescription className="max-w-sm leading-snug">{cardDescription}</CardDescription>
         <CardAction className="col-start-1 row-start-auto flex w-full flex-wrap justify-start gap-2 justify-self-stretch md:col-start-2 md:row-span-2 md:row-start-1 md:w-auto md:flex-nowrap md:justify-end md:justify-self-end">
           <InputGroup className="h-7 w-full md:w-64">
             <InputGroupAddon align="inline-start">
@@ -218,7 +230,7 @@ export function Packages({ packages, resorts }: { packages: PackageRow[]; resort
             <Download data-icon="inline-start" />
             Export
           </Button>
-          <CreatePackageDialog resorts={resorts} />
+          <CreatePackageDialog resorts={resorts} initialPackageTypes={initialPackageTypes} triggerClassName={addButtonClassName} />
         </CardAction>
       </CardHeader>
 

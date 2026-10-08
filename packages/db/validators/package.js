@@ -6,7 +6,7 @@ import {
   normalizePackageInclusions,
 } from '../package-content.js';
 
-export const packageTypeSchema = z.enum(['regular', 'private', 'kids']);
+export const packageTypeSchema = z.string().trim().min(1, 'Package type wajib diisi').max(80);
 export const experienceTypeSchema = z.enum(['communal', 'private', 'kids']);
 
 const nullableMoneySchema = z.preprocess(

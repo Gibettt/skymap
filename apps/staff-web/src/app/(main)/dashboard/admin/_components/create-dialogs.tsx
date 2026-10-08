@@ -1,6 +1,6 @@
 "use client";
 
-import { type FormEvent, useState } from "react";
+import { type FormEvent, useEffect, useState } from "react";
 
 import { useRouter } from "next/navigation";
 
@@ -19,15 +19,23 @@ import {
 } from "@/components/ui/dialog";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Select, SelectContent, SelectGroup, SelectItem, SelectSeparator, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Spinner } from "@/components/ui/spinner";
 import { Textarea } from "@/components/ui/textarea";
+
+import { PackageImageField, type PackageImageValue } from "./package-image-field";
 
 interface ResortOption {
   id: string;
   name: string;
   status?: string;
 }
+export interface PackageTypeOption {
+  id: string;
+  name: string;
+  slug: string;
+}
+
 
 async function postJson(url: string, body: object, fallbackMessage = "Data gagal disimpan.") {
   const response = await fetch(url, {
@@ -35,6 +43,12 @@ async function postJson(url: string, body: object, fallbackMessage = "Data gagal
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
   });
+  const result = (await response.json().catch(() => ({}))) as { error?: string };
+  if (!response.ok) throw new Error(result.error ?? fallbackMessage);
+}
+
+async function postForm(url: string, body: FormData, fallbackMessage = "Data gagal disimpan.") {
+  const response = await fetch(url, { method: "POST", body });
   const result = (await response.json().catch(() => ({}))) as { error?: string };
   if (!response.ok) throw new Error(result.error ?? fallbackMessage);
 }
@@ -277,14 +291,78 @@ export function CreateUserDialog({ resorts }: { resorts: ResortOption[] }) {
   );
 }
 
-export function CreatePackageDialog({ resorts }: { resorts: ResortOption[] }) {
+export function CreatePackageDialog({
+  resorts,
+  initialPackageTypes,
+  triggerClassName,
+}: {
+  resorts: ResortOption[];
+  initialPackageTypes?: PackageTypeOption[];
+  triggerClassName?: string;
+}) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [pending, setPending] = useState(false);
+  const [packageTypes, setPackageTypes] = useState<PackageTypeOption[]>(
+    initialPackageTypes ?? [
+      { id: "regular", name: "Regular", slug: "regular" },
+      { id: "private", name: "Private", slug: "private" },
+      { id: "kids", name: "Kids", slug: "kids" },
+    ]
+  );
   const [packageType, setPackageType] = useState("regular");
   const [experienceType, setExperienceType] = useState("communal");
   const [resortId, setResortId] = useState(resorts[0]?.id ?? "");
+  const [image, setImage] = useState<PackageImageValue>(undefined);
+  const [isAddingType, setIsAddingType] = useState(false);
+  const [newTypeName, setNewTypeName] = useState("");
+  const [addingTypePending, setAddingTypePending] = useState(false);
+  const [billing, setBilling] = useState<"chargeable" | "foc">("chargeable");
+  const [adultPrice, setAdultPrice] = useState("");
+  const [childPrice, setChildPrice] = useState("");
 
+  useEffect(() => {
+    if (open) {
+      fetch("/api/package-types")
+        .then((res) => res.json())
+        .then((data) => {
+          if (Array.isArray(data.packageTypes) && data.packageTypes.length > 0) {
+            setPackageTypes(data.packageTypes);
+          }
+        })
+        .catch(() => {});
+    }
+  }, [open]);
+
+  async function handleAddNewType() {
+    const trimmed = newTypeName.trim();
+    if (!trimmed) return;
+    setAddingTypePending(true);
+    try {
+      const res = await fetch("/api/package-types", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: trimmed }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Gagal menambahkan package type");
+      const created = data.packageType;
+      if (created) {
+        setPackageTypes((prev) => {
+          if (prev.some((item) => item.slug === created.slug)) return prev;
+          return [...prev, created].sort((a, b) => a.name.localeCompare(b.name));
+        });
+        setPackageType(created.slug);
+        toast.success(`Package type "${created.name}" berhasil ditambahkan.`);
+      }
+      setIsAddingType(false);
+      setNewTypeName("");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Gagal menambahkan package type");
+    } finally {
+      setAddingTypePending(false);
+    }
+  }
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
@@ -292,29 +370,24 @@ export function CreatePackageDialog({ resorts }: { resorts: ResortOption[] }) {
       .split("\n")
       .map((item) => item.trim())
       .filter(Boolean);
-    const childPriceUsd = form.get("childPriceUsd");
+    const finalAdultPrice = billing === "foc" ? "0" : (form.get("adultPriceUsd") ? String(form.get("adultPriceUsd")) : adultPrice);
+    const finalChildPrice = billing === "foc" ? "0" : (form.get("childPriceUsd") ? String(form.get("childPriceUsd")) : (childPrice || null));
+    const payload = new FormData(event.currentTarget);
+    payload.set("packageType", packageType);
+    payload.set("experienceType", experienceType);
+    payload.set("resortId", resortId);
+    payload.set("adultPriceUsd", finalAdultPrice || "0");
+    if (finalChildPrice) payload.set("childPriceUsd", finalChildPrice);
+    else payload.delete("childPriceUsd");
+    payload.set("isChargeable", billing === "foc" ? "false" : "true");
+    payload.set("isActive", "true");
+    payload.set("inclusions", JSON.stringify(inclusions));
+    if (image instanceof File) payload.set("image", image);
     setPending(true);
     try {
-      await postJson(
-        "/api/packages",
-        {
-          name: form.get("name"),
-          packageType,
-          experienceType,
-          location: form.get("location"),
-          description: form.get("description"),
-          schedule: form.get("schedule"),
-          resortId,
-          adultPriceUsd: form.get("adultPriceUsd"),
-          childPriceUsd: childPriceUsd === "" ? null : childPriceUsd,
-          childAgeRange: form.get("childAgeRange"),
-          inclusions,
-          isChargeable: true,
-          isActive: true,
-        },
-        "Package data could not be saved.",
-      );
+      await postForm("/api/packages", payload, "Package data could not be saved.");
       toast.success("Package added.");
+      setImage(undefined);
       setOpen(false);
       router.refresh();
     } catch (error) {
@@ -325,9 +398,15 @@ export function CreatePackageDialog({ resorts }: { resorts: ResortOption[] }) {
   }
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog
+      open={open}
+      onOpenChange={(next) => {
+        setOpen(next);
+        if (next) setImage(undefined);
+      }}
+    >
       <DialogTrigger asChild>
-        <Button size="sm" disabled={!resorts.length}>
+        <Button size="sm" disabled={!resorts.length} className={triggerClassName}>
           <Plus data-icon="inline-start" />
           Add package
         </Button>
@@ -361,19 +440,90 @@ export function CreatePackageDialog({ resorts }: { resorts: ResortOption[] }) {
               </Select>
             </Field>
             <Field>
-              <FieldLabel>Package type</FieldLabel>
-              <Select value={packageType} onValueChange={(value) => value && setPackageType(value)}>
-                <SelectTrigger className="w-full">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectGroup>
-                    <SelectItem value="regular">Regular</SelectItem>
-                    <SelectItem value="private">Private</SelectItem>
-                    <SelectItem value="kids">Kids</SelectItem>
-                  </SelectGroup>
-                </SelectContent>
-              </Select>
+              <div className="flex items-center justify-between">
+                <FieldLabel>Package type</FieldLabel>
+                {!isAddingType && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="xs"
+                    className="h-6 text-xs text-primary hover:text-primary/80"
+                    onClick={() => setIsAddingType(true)}
+                  >
+                    <Plus className="mr-1 h-3 w-3" />
+                    Add type
+                  </Button>
+                )}
+              </div>
+              {isAddingType ? (
+                <div className="flex items-center gap-1.5">
+                  <Input
+                    autoFocus
+                    placeholder="New type (e.g. VIP, Luxury)"
+                    value={newTypeName}
+                    onChange={(e) => setNewTypeName(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        handleAddNewType();
+                      } else if (e.key === "Escape") {
+                        setIsAddingType(false);
+                        setNewTypeName("");
+                      }
+                    }}
+                    className="h-8 text-sm"
+                  />
+                  <Button
+                    type="button"
+                    size="xs"
+                    className="h-8 px-2.5"
+                    disabled={!newTypeName.trim() || addingTypePending}
+                    onClick={handleAddNewType}
+                  >
+                    {addingTypePending ? "..." : "Save"}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="xs"
+                    className="h-8 px-2"
+                    onClick={() => {
+                      setIsAddingType(false);
+                      setNewTypeName("");
+                    }}
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              ) : (
+                <Select
+                  value={packageType}
+                  onValueChange={(value) => {
+                    if (value === "__add_new__") {
+                      setIsAddingType(true);
+                    } else if (value) {
+                      setPackageType(value);
+                    }
+                  }}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectGroup>
+                      {packageTypes.map((t) => (
+                        <SelectItem key={t.slug} value={t.slug}>
+                          {t.name}
+                        </SelectItem>
+                      ))}
+                    </SelectGroup>
+                    <SelectSeparator />
+                    <SelectItem value="__add_new__" className="text-primary font-medium">
+                      + Add new package type...
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              )}
             </Field>
             <Field>
               <FieldLabel>Experience type</FieldLabel>
@@ -398,14 +548,78 @@ export function CreatePackageDialog({ resorts }: { resorts: ResortOption[] }) {
               <FieldLabel htmlFor="package-schedule">Schedule</FieldLabel>
               <Input id="package-schedule" name="schedule" defaultValue="Upon request" required />
             </Field>
-            <Field>
-              <FieldLabel htmlFor="package-adult-price">Adult price (USD)</FieldLabel>
-              <Input id="package-adult-price" name="adultPriceUsd" type="number" min="0" step="0.01" required />
+            <Field className="md:col-span-2">
+              <div className="flex flex-wrap items-center justify-between gap-1.5">
+                <FieldLabel>Pricing / Rate</FieldLabel>
+                <div className="flex items-center gap-1.5">
+                  <Button
+                    type="button"
+                    size="xs"
+                    variant={billing === "chargeable" ? "default" : "outline"}
+                    className="h-6 text-xs"
+                    onClick={() => {
+                      setBilling("chargeable");
+                      if (adultPrice === "0") setAdultPrice("");
+                      if (childPrice === "0") setChildPrice("");
+                    }}
+                  >
+                    Chargeable
+                  </Button>
+                  <Button
+                    type="button"
+                    size="xs"
+                    variant={billing === "foc" ? "default" : "outline"}
+                    className={`h-6 text-xs ${
+                      billing === "foc"
+                        ? "border-emerald-600 bg-emerald-600 text-white hover:bg-emerald-700"
+                        : "border-emerald-500/40 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/30"
+                    }`}
+                    onClick={() => {
+                      setBilling("foc");
+                      setAdultPrice("0");
+                      setChildPrice("0");
+                    }}
+                  >
+                    FOC (Free of Charge)
+                  </Button>
+                </div>
+              </div>
+              {billing === "foc" ? (
+                <div className="flex h-9 items-center justify-between rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 font-medium text-emerald-600 text-sm dark:text-emerald-400">
+                  <span>✓ FOC (Free of Charge)</span>
+                  <span className="text-muted-foreground text-xs">$0.00 — Complimentary experience</span>
+                </div>
+              ) : null}
             </Field>
-            <Field>
-              <FieldLabel htmlFor="package-child-price">Child price (USD)</FieldLabel>
-              <Input id="package-child-price" name="childPriceUsd" type="number" min="0" step="0.01" />
-            </Field>
+            {billing === "chargeable" ? (
+              <>
+                <Field>
+                  <FieldLabel htmlFor="package-adult-price">Adult price (USD)</FieldLabel>
+                  <Input
+                    id="package-adult-price"
+                    name="adultPriceUsd"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    required
+                    value={adultPrice}
+                    onChange={(e) => setAdultPrice(e.target.value)}
+                  />
+                </Field>
+                <Field>
+                  <FieldLabel htmlFor="package-child-price">Child price (USD)</FieldLabel>
+                  <Input
+                    id="package-child-price"
+                    name="childPriceUsd"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={childPrice}
+                    onChange={(e) => setChildPrice(e.target.value)}
+                  />
+                </Field>
+              </>
+            ) : null}
             <Field>
               <FieldLabel htmlFor="package-age">Child age range</FieldLabel>
               <Input id="package-age" name="childAgeRange" />
@@ -418,6 +632,9 @@ export function CreatePackageDialog({ resorts }: { resorts: ResortOption[] }) {
               <FieldLabel htmlFor="package-inclusions">Inclusions (one per line)</FieldLabel>
               <Textarea id="package-inclusions" name="inclusions" />
             </Field>
+            <div className="md:col-span-2">
+              <PackageImageField onChange={setImage} />
+            </div>
           </FieldGroup>
           <DialogFooter>
             <Button type="submit" disabled={pending || !resortId}>

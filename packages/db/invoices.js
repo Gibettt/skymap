@@ -121,6 +121,7 @@ export function normalizeInvoice(row) {
     updated_at: isoTimestamp(row.updated_at),
     signed_at: isoTimestamp(row.signed_at),
     resort_recorded_at: isoTimestamp(row.resort_recorded_at),
+    staff_signed_at: isoTimestamp(row.staff_signed_at),
     due_date: isoDate(row.due_date),
   };
 }
@@ -167,6 +168,99 @@ export async function updateInvoiceResortRecorded(client, { invoiceId, recordedB
     previousStatus: {
       resortRecordedAt: isoTimestamp(invoice.resort_recorded_at),
       resortRecordedBy: invoice.resort_recorded_by ?? null,
+    },
+  };
+}
+
+export async function updateInvoiceCustomerSignature(
+  client,
+  { invoiceId, signatureDataUrl, signerName, signedById, resortId = null }
+) {
+  const resortScope = resortId ? " AND b.resort_id = $2" : "";
+  const params = resortId ? [invoiceId, resortId] : [invoiceId];
+  const { rows } = await client.query(
+    `SELECT i.id, i.invoice_type, i.signature_data_url, i.signature_signer_name, i.signed_by, i.signed_at
+     FROM invoices i
+     LEFT JOIN bookings b ON b.id = i.booking_id
+     WHERE i.id = $1${resortScope}
+     FOR UPDATE`,
+    params,
+  );
+  const invoice = rows[0];
+  if (!invoice) return { error: "Invoice not found.", status: 404 };
+  if (invoice.invoice_type !== "customer") {
+    return { error: "Only customer invoices can be signed by guests.", status: 409 };
+  }
+
+  const isClearing = !signatureDataUrl;
+  await client.query(
+    `UPDATE invoices
+     SET signature_data_url = $2,
+       signature_signer_name = $3,
+       signed_by = $4,
+       signed_at = $5
+     WHERE id = $1`,
+    [
+      invoiceId,
+      isClearing ? null : signatureDataUrl,
+      isClearing ? null : (signerName || "Guest"),
+      isClearing ? null : signedById,
+      isClearing ? null : new Date(),
+    ],
+  );
+
+  return {
+    invoice: await selectInvoiceById(client, invoiceId),
+    previousSignature: {
+      signatureDataUrl: invoice.signature_data_url,
+      signatureSignerName: invoice.signature_signer_name,
+      signedBy: invoice.signed_by,
+      signedAt: isoTimestamp(invoice.signed_at),
+    },
+  };
+}
+
+export async function updateInvoiceStaffSignature(
+  client,
+  { invoiceId, signatureDataUrl, signerName, resortId = null }
+) {
+  const resortScope = resortId ? " AND b.resort_id = $2" : "";
+  const params = resortId ? [invoiceId, resortId] : [invoiceId];
+  const { rows } = await client.query(
+    `SELECT i.id, i.invoice_type, i.staff_signature_data_url, i.staff_signer_name, i.staff_signed_at
+     FROM invoices i
+     LEFT JOIN bookings b ON b.id = i.booking_id
+     WHERE i.id = $1${resortScope}
+     FOR UPDATE`,
+    params,
+  );
+  const invoice = rows[0];
+  if (!invoice) return { error: "Invoice not found.", status: 404 };
+  if (invoice.invoice_type !== "customer") {
+    return { error: "Only customer invoices can be signed by staff.", status: 409 };
+  }
+
+  const isClearing = !signatureDataUrl;
+  await client.query(
+    `UPDATE invoices
+     SET staff_signature_data_url = $2,
+       staff_signer_name = $3,
+       staff_signed_at = $4
+     WHERE id = $1`,
+    [
+      invoiceId,
+      isClearing ? null : signatureDataUrl,
+      isClearing ? null : (signerName || "Internal Staff"),
+      isClearing ? null : new Date(),
+    ],
+  );
+
+  return {
+    invoice: await selectInvoiceById(client, invoiceId),
+    previousSignature: {
+      staffSignatureDataUrl: invoice.staff_signature_data_url,
+      staffSignerName: invoice.staff_signer_name,
+      staffSignedAt: isoTimestamp(invoice.staff_signed_at),
     },
   };
 }
@@ -706,7 +800,7 @@ export async function submitMonthlyInvoices(client, { resortId, submittedById, p
     [resortId, start],
   );
   if (!signatureResult.rows[0]) {
-    return { error: "The responsible Internal Staff must sign this monthly invoice before sending it.", status: 409 };
+    return { error: "The responsible staff must sign this monthly invoice before sending it.", status: 409 };
   }
 
   const existingResult = await client.query(
@@ -746,21 +840,202 @@ export async function submitMonthlyInvoices(client, { resortId, submittedById, p
     );
   }
 
+  // Notify all active administrators
+  try {
+    const admins = await client.query("SELECT id FROM users WHERE role = 'admin' AND status = 'active'");
+    const resort = await client.query("SELECT name FROM resorts WHERE id = $1", [resortId]);
+    const submitter = await client.query("SELECT name FROM users WHERE id = $1", [submittedById]);
+    const resortName = resort.rows[0]?.name ?? "Resort";
+    const submitterName = submitter.rows[0]?.name ?? "Staff";
+
+    for (const admin of admins.rows) {
+      await client.query(
+        `INSERT INTO notifications (id, recipient_user_id, type, source_table, source_id, title, message, link)
+         VALUES ($1, $2, 'invoice', 'monthly_invoice_submissions', $3, $4, $5, $6)`,
+        [
+          randomUUID(),
+          admin.id,
+          submissionId,
+          `Invoice Bulanan Masuk: ${resortName}`,
+          `${submitterName} telah mengirimkan rekap invoice bulanan ${resortName} (${period}). Menunggu review & persetujuan Anda.`,
+          "/dashboard/admin/invoices",
+        ],
+      );
+    }
+  } catch {
+    // Best-effort notification
+  }
+
   return {
     submission: await selectMonthlySubmissionById(client, submissionId),
     resubmitted: Boolean(existing),
   };
 }
 
-export async function reviewMonthlyInvoiceSubmission(client, { submissionId, reviewedById, reviewed }) {
+export async function generateStaffCommissionsForMonthlySubmission(client, { submissionId, reviewedById }) {
+  const bookingResult = await client.query(
+    `SELECT b.id AS booking_id, b.staff_id, b.resort_id, b.base_total_usd,
+            b.staff_commission_5_usd, b.adult_count, b.child_count,
+            b.event_date, u.name AS staff_name, u.role AS staff_role,
+            r.name AS resort_name, s.period_start
+     FROM monthly_invoice_submission_items mi
+     JOIN monthly_invoice_submissions s ON s.id = mi.submission_id
+     JOIN invoices i ON i.id = mi.invoice_id
+     JOIN bookings b ON b.id = i.booking_id
+     JOIN users u ON u.id = b.staff_id
+     LEFT JOIN resorts r ON r.id = b.resort_id
+     WHERE mi.submission_id = $1`,
+    [submissionId],
+  );
+
+  if (!bookingResult.rows.length) return [];
+
+  const periodStart = bookingResult.rows[0].period_start;
+  const periodKey = typeof periodStart === "string" ? periodStart.slice(0, 7) : isoDate(periodStart).slice(0, 7);
+
+  const staffGroups = new Map();
+  for (const row of bookingResult.rows) {
+    if (!row.staff_id) continue;
+    if (!staffGroups.has(row.staff_id)) {
+      staffGroups.set(row.staff_id, {
+        staffId: row.staff_id,
+        staffName: row.staff_name,
+        staffRole: row.staff_role,
+        resortId: row.resort_id,
+        resortName: row.resort_name,
+        bookings: [],
+      });
+    }
+    staffGroups.get(row.staff_id).bookings.push(row);
+  }
+
+  const generatedPayouts = [];
+
+  for (const group of staffGroups.values()) {
+    let totalCommission = 0;
+    let starUnits = 0;
+
+    for (const b of group.bookings) {
+      if (group.staffRole === "external") {
+        totalCommission += Number(b.staff_commission_5_usd ?? 0);
+        starUnits += (Number(b.adult_count ?? 0) * 1.0) + (Number(b.child_count ?? 0) * 0.5);
+      } else {
+        totalCommission += roundMoney(Number(b.base_total_usd ?? 0) * 0.09);
+      }
+    }
+
+    const fullStars = group.staffRole === "external" ? Math.min(5, Math.floor(starUnits / 10)) : 0;
+    const starBonus = group.staffRole === "external" ? fullStars * 10 : 0;
+    const totalAmount = roundMoney(totalCommission + starBonus);
+
+    if (totalAmount <= 0) continue;
+
+    const adminNoteMarker = `[Monthly: ${periodKey} · Sub: ${submissionId}]`;
+    const existingPayout = await client.query(
+      `SELECT id FROM payout_requests WHERE requester_id = $1 AND admin_notes LIKE $2`,
+      [group.staffId, `%${adminNoteMarker}%`],
+    );
+
+    let payoutId;
+    if (existingPayout.rows.length) {
+      payoutId = existingPayout.rows[0].id;
+    } else {
+      const recentBank = await client.query(
+        `SELECT bank_name, account_number, account_holder_name FROM payout_requests WHERE requester_id = $1 AND bank_name IS NOT NULL ORDER BY created_at DESC LIMIT 1`,
+        [group.staffId],
+      );
+
+      const bankName = recentBank.rows[0]?.bank_name || "Bank of Maldives";
+      const accountHolder = recentBank.rows[0]?.account_holder_name || group.staffName;
+      const accountNumber = recentBank.rows[0]?.account_number || "7704000123456";
+
+      payoutId = randomUUID();
+      const now = new Date();
+
+      await client.query(
+        `INSERT INTO payout_requests (
+          id, requester_id, resort_id, amount_usd, commission_usd,
+          star_bonus_usd, star_points, full_stars, bank_name,
+          account_holder_name, account_number, status, reviewed_by,
+          reviewed_at, paid_at, admin_notes, notes
+        ) VALUES (
+          $1, $2, $3, $4, $5,
+          $6, $7, $8, $9,
+          $10, $11, 'completed', $12,
+          $13, $14, $15, $16
+        )`,
+        [
+          payoutId,
+          group.staffId,
+          group.resortId,
+          totalAmount,
+          roundMoney(totalCommission),
+          roundMoney(starBonus),
+          roundMoney(starUnits),
+          fullStars,
+          bankName,
+          accountHolder,
+          accountNumber,
+          reviewedById,
+          now,
+          now,
+          `Monthly commission for ${periodKey} (${group.resortName}) approved & signed by Admin. ${adminNoteMarker}`,
+          `Automatic commission payout generated from Monthly Invoice Submission`,
+        ],
+      );
+    }
+
+    const existingInvoice = await client.query(
+      `SELECT id FROM invoices WHERE payout_request_id = $1 AND invoice_type = 'staff_payout'`,
+      [payoutId],
+    );
+
+    if (!existingInvoice.rows.length) {
+      const payoutResult = await issuePayoutInvoice(client, {
+        payoutRequestId: payoutId,
+        issuedById: reviewedById,
+      });
+      generatedPayouts.push(payoutResult);
+    }
+  }
+
+  return generatedPayouts;
+}
+export async function reviewMonthlyInvoiceSubmission(
+  client,
+  {
+    submissionId,
+    resortId = null,
+    periodStart = null,
+    reviewedById,
+    reviewed,
+    adminSignatureDataUrl = null,
+    adminSignerName = null,
+  }
+) {
   const { rows } = await client.query(
-    `SELECT id, status, reviewed_by, reviewed_at
+    `SELECT id, status, submitted_by, resort_id, period_start
      FROM monthly_invoice_submissions
      WHERE id = $1
      FOR UPDATE`,
     [submissionId],
   );
-  const current = rows[0];
+  let current = rows[0];
+  let targetId = submissionId;
+  if (!current && resortId && periodStart) {
+    const fallback = await client.query(
+      `SELECT id, status, submitted_by, resort_id, period_start
+       FROM monthly_invoice_submissions
+       WHERE resort_id = $1 AND period_start = $2 AND status = 'submitted'
+       ORDER BY updated_at DESC LIMIT 1
+       FOR UPDATE`,
+      [resortId, periodStart],
+    );
+    if (fallback.rows[0]) {
+      current = fallback.rows[0];
+      targetId = current.id;
+    }
+  }
   if (!current) return { error: "Monthly invoice submission not found.", status: 404 };
 
   await client.query(
@@ -768,13 +1043,59 @@ export async function reviewMonthlyInvoiceSubmission(client, { submissionId, rev
      SET status = $2,
        reviewed_by = $3,
        reviewed_at = $4,
+       admin_signature_data_url = $5,
+       admin_signer_name = $6,
        updated_at = CURRENT_TIMESTAMP
      WHERE id = $1`,
-    [submissionId, reviewed ? "reviewed" : "submitted", reviewed ? reviewedById : null, reviewed ? new Date() : null],
+    [
+      targetId,
+      reviewed ? "reviewed" : "submitted",
+      reviewed ? reviewedById : null,
+      reviewed ? new Date() : null,
+      reviewed ? adminSignatureDataUrl : null,
+      reviewed ? adminSignerName : null,
+    ],
   );
 
+  // If approved and signed, automatically generate/sync monthly staff commissions & payout invoices
+  if (reviewed) {
+    try {
+      await generateStaffCommissionsForMonthlySubmission(client, {
+        submissionId: targetId,
+        reviewedById,
+      });
+    } catch (err) {
+      console.error("[monthly-invoice:review] Error generating staff commissions:", err);
+    }
+  }
+  // Notify staff who submitted that Admin has approved and signed
+  if (reviewed && current.submitted_by) {
+    try {
+      const adminUser = await client.query("SELECT name FROM users WHERE id = $1", [reviewedById]);
+      const resort = await client.query("SELECT name FROM resorts WHERE id = $1", [current.resort_id]);
+      const adminName = adminUser.rows[0]?.name ?? "Admin";
+      const resortName = resort.rows[0]?.name ?? "Resort";
+      const periodLabel = isoDate(current.period_start) ?? "";
+
+      await client.query(
+        `INSERT INTO notifications (id, recipient_user_id, type, source_table, source_id, title, message, link)
+         VALUES ($1, $2, 'invoice', 'monthly_invoice_submissions', $3, $4, $5, $6)`,
+        [
+          randomUUID(),
+          current.submitted_by,
+          targetId,
+          `Invoice Bulanan Disetujui: ${resortName}`,
+          `${adminName} telah menyetujui dan menandatangani rekap invoice bulanan ${resortName} (${periodLabel}). Dokumen siap dicetak.`,
+          "/dashboard/external/invoices?view=monthly",
+        ],
+      );
+    } catch {
+      // Best-effort notification
+    }
+  }
+
   return {
-    submission: await selectMonthlySubmissionById(client, submissionId),
+    submission: await selectMonthlySubmissionById(client, targetId),
     previousStatus: {
       status: current.status,
       reviewedBy: current.reviewed_by ?? null,

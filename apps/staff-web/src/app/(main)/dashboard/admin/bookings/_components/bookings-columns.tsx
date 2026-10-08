@@ -104,6 +104,12 @@ export function createBookingsColumns(options: BookingOptions): ColumnDef<DataTa
     ),
   },
   {
+    id: "createdAt",
+    accessorFn: (row) => new Date(row.created_at || row.event_date).getTime(),
+    enableHiding: true,
+    enableSorting: true,
+  },
+  {
     id: "eventDate",
     accessorFn: (row) => new Date(row.event_date).getTime(),
     header: "Schedule",

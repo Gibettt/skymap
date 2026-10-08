@@ -45,12 +45,14 @@ function dates(request) {
 export async function GET(request) {
   try {
     const user = await requireUser(['internal', 'external']);
+    if (user.role === 'internal') await requirePermission('staff.sky_guide', ['internal']);
     if (!user.resort_id) throw new ApiError(403, 'Staff resort profile is not configured');
     const { from, to } = dates(request);
     const { rows } = await query(
       `SELECT se.*, p.name AS package_name FROM sky_events se
        LEFT JOIN packages p ON p.id = se.package_id
        WHERE se.resort_id = $1
+         AND ($4::boolean = false OR (se.status = 'published' AND se.is_published = true))
          AND se.starts_at >= $2::timestamptz
          AND se.starts_at < ($3::date + INTERVAL '1 day')
          AND ($4::boolean = false OR se.status = 'published')

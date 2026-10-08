@@ -39,9 +39,6 @@ export function proxy(request: NextRequest) {
     return NextResponse.redirect(new URL("/dashboard/external", request.url));
   }
 
-  if (session.role === "external" && pathname.startsWith("/dashboard/external/invoices")) {
-    return NextResponse.redirect(new URL("/dashboard/external", request.url));
-  }
 
   return NextResponse.next();
 }

@@ -205,8 +205,8 @@ export function MonthlyStaffSignatureDialog({
             <Button
               type="button"
               variant="outline"
-              className="!border-cyan-200/35 !bg-[#071d3d] !text-slate-100 hover:!bg-[#0b2a54] hover:!text-white disabled:!text-slate-300 disabled:!opacity-80 font-medium"
               disabled={pending}
+              className="border-cyan-400/25 bg-[#051c3d]/90 text-slate-100 hover:bg-[#0c2a56] hover:text-white"
             >
               Cancel
             </Button>

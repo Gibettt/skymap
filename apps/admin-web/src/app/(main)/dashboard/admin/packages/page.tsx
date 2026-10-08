@@ -1,9 +1,13 @@
-import { getPackageResortOptions, getPackages } from "../_lib/admin-data";
+import { getPackageResortOptions, getPackageTypes, getPackages } from "../_lib/admin-data";
 import { Packages } from "./_components/packages";
 
 export default async function PackagesPage() {
-  const [packages, resorts] = await Promise.all([getPackages(), getPackageResortOptions()]);
+  const [packages, resorts, packageTypes] = await Promise.all([
+    getPackages(),
+    getPackageResortOptions(),
+    getPackageTypes(),
+  ]);
   const resortOptions = resorts.map((resort) => ({ id: resort.id, name: resort.name }));
 
-  return <Packages packages={packages} resorts={resortOptions} />;
+  return <Packages packages={packages} resorts={resortOptions} initialPackageTypes={packageTypes} />;
 }

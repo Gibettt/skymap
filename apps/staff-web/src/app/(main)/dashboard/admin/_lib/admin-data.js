@@ -1,6 +1,6 @@
 import "server-only";
 
-import { requirePermission } from "@ephemeris/auth";
+import { requirePermission, requireUser } from "@ephemeris/auth";
 import { query, transaction } from "@ephemeris/db";
 import { bookingSelectQuery } from "@ephemeris/db/helpers";
 import { presenceStatus } from "@ephemeris/db/presence";
@@ -35,14 +35,14 @@ export async function getOverview() {
 
 export async function getBookings() {
   await requirePermission("admin.bookings", ["admin"]);
-  const { rows } = await query(`${bookingSelectQuery} ORDER BY b.event_date DESC, b.created_at DESC LIMIT 200`);
+  const { rows } = await query(`${bookingSelectQuery} ORDER BY b.created_at DESC, b.event_date DESC LIMIT 200`);
   return rows;
 }
 
 export async function getBookingOptions() {
   await requirePermission("admin.bookings", ["admin"]);
   const [packages, staff, resorts] = await Promise.all([
-    query(`SELECT id, name, resort_id, is_active FROM packages ORDER BY is_active DESC, name`),
+    query(`SELECT id, name, resort_id, is_active FROM packages ORDER BY is_active DESC, created_at DESC`),
     query(`SELECT id, name, role, resort_id, status FROM users
       WHERE role IN ('admin', 'internal', 'external')
       ORDER BY status = 'active' DESC, name`),
@@ -99,7 +99,7 @@ export async function getResorts() {
 }
 
 export async function getPackages() {
-  await requirePermission("admin.packages", ["admin"]);
+  await requireUser(["admin", "internal", "external"]);
   const { rows } = await query(`
     SELECT p.id, p.name, p.package_type, p.experience_type, p.location, p.description, p.schedule,
       p.resort_id, p.adult_price_usd, p.child_price_usd, p.child_age_range, p.is_chargeable,
@@ -113,14 +113,27 @@ export async function getPackages() {
       ), '[]') AS inclusions
     FROM packages p
     LEFT JOIN resorts r ON r.id = p.resort_id
-    ORDER BY p.name`);
+    ORDER BY p.created_at DESC, p.updated_at DESC`);
   return rows;
 }
 
 export async function getPackageResortOptions() {
-  await requirePermission("admin.packages", ["admin"]);
+  await requireUser(["admin", "internal", "external"]);
   const { rows } = await query("SELECT id, name FROM resorts ORDER BY name");
   return rows;
+}
+
+export async function getPackageTypes() {
+  await requireUser(["admin", "internal", "external"]);
+  try {
+    const { rows } = await query("SELECT id, name, slug FROM package_types WHERE is_active = true ORDER BY name");
+    if (rows.length) return rows;
+  } catch {}
+  return [
+    { id: "regular", name: "Regular", slug: "regular" },
+    { id: "private", name: "Private", slug: "private" },
+    { id: "kids", name: "Kids", slug: "kids" },
+  ];
 }
 
 export async function getUsers() {

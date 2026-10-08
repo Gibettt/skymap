@@ -51,6 +51,11 @@ import {
   MonthlyResortInvoiceDocument,
 } from "./monthly-resort-invoice";
 import { MonthlySubmissionsInbox } from "./monthly-submissions-inbox";
+import {
+  SUBMITTED_MONTHLY_PAPER_HEIGHT,
+  SUBMITTED_MONTHLY_PAPER_WIDTH,
+  SubmittedMonthlyInvoiceDocument,
+} from "./submitted-monthly-invoice-document";
 
 type WorkflowTab = "payment" | "business";
 type InvoiceWorkflows = Record<WorkflowTab, InvoiceWorkflowRow[]>;
@@ -656,9 +661,38 @@ export function InvoicesDashboard({
     business: initialSelectedId ?? workflows.business[0]?.id ?? "",
   });
   const [openedInvoiceId, setOpenedInvoiceId] = React.useState<string | null>(null);
+  const [modalInvoice, setModalInvoice] = React.useState<InvoiceRow | null>(null);
+  const modalPaperRef = React.useRef<HTMLDivElement>(null);
+  const [modalScale, setModalScale] = React.useState(0.85);
   const [printTarget, setPrintTarget] = React.useState<"single" | "monthly" | null>(null);
   const [monthlyPrintData, setMonthlyPrintData] = React.useState<MonthlyInvoiceDocumentData | null>(null);
   const [pendingKey, setPendingKey] = React.useState<string | null>(null);
+  const [submissions, setSubmissions] = React.useState(monthlySubmissions);
+  const [selectedMonthlySubmission, setSelectedMonthlySubmission] =
+    React.useState<MonthlyInvoiceSubmissionRow | null>(null);
+  const monthlyModalPaperRef = React.useRef<HTMLDivElement>(null);
+  const [monthlyModalScale, setMonthlyModalScale] = React.useState(0.7);
+
+  React.useEffect(() => {
+    const updateMonthly = () => {
+      if (!monthlyModalPaperRef.current) return;
+      const width = monthlyModalPaperRef.current.clientWidth - 32;
+      setMonthlyModalScale(Math.min(1, Math.max(0.4, width / SUBMITTED_MONTHLY_PAPER_WIDTH)));
+    };
+    updateMonthly();
+    window.addEventListener("resize", updateMonthly);
+    return () => window.removeEventListener("resize", updateMonthly);
+  }, [selectedMonthlySubmission]);
+  React.useEffect(() => {
+    function update() {
+      if (!modalPaperRef.current) return;
+      const width = modalPaperRef.current.clientWidth - 32;
+      setModalScale(Math.min(1, Math.max(0.4, width / INVOICE_PAPER_WIDTH)));
+    }
+    update();
+    window.addEventListener("resize", update);
+    return () => window.removeEventListener("resize", update);
+  }, []);
   const [paymentDialogRow, setPaymentDialogRow] = React.useState<InvoiceWorkflowRow | null>(null);
   const [paymentMethod, setPaymentMethod] = React.useState("Bank transfer");
   const [paymentReference, setPaymentReference] = React.useState("");
@@ -746,6 +780,7 @@ export function InvoicesDashboard({
   }
 
   function openInvoice(invoice: InvoiceRow) {
+    setModalInvoice(invoice);
     setOpenedInvoiceId(invoice.id);
     const paymentWorkflow = workflowRows.payment.find((row) => row.invoice_id === invoice.id);
     const businessWorkflow = workflowRows.business.find((row) => row.invoice_id === invoice.id);
@@ -924,12 +959,17 @@ export function InvoicesDashboard({
   return (
     <>
       <div className="flex min-w-0 flex-col gap-5">
-        <MonthlySubmissionsInbox initialSubmissions={monthlySubmissions} />
+        <MonthlySubmissionsInbox
+          initialSubmissions={monthlySubmissions}
+          onSubmissionsChange={setSubmissions}
+        />
 
         <InvoiceList
           invoices={issuedInvoices}
+          monthlySubmissions={submissions}
           pendingId={pendingKey?.startsWith("resort:") ? pendingKey.slice("resort:".length) : null}
           onOpen={openInvoice}
+          onOpenMonthly={setSelectedMonthlySubmission}
           onToggleResortStatus={toggleResortStatus}
         />
 
@@ -1073,6 +1113,147 @@ export function InvoicesDashboard({
         </DialogContent>
       </Dialog>
 
+      <Dialog open={Boolean(modalInvoice)} onOpenChange={(open) => !open && setModalInvoice(null)}>
+        <DialogContent className="max-h-[94svh] overflow-y-auto sm:!max-w-5xl p-6">
+          <DialogHeader className="border-b pb-4">
+            <div className="flex flex-wrap items-center justify-between gap-3 pr-6">
+              <div>
+                <DialogTitle className="flex items-center gap-2.5 font-bold text-xl">
+                  <span>{modalInvoice?.invoice_number}</span>
+                  <Badge variant={modalInvoice?.status === "issued" ? "default" : "outline"}>
+                    {modalInvoice?.status ?? "draft"}
+                  </Badge>
+                </DialogTitle>
+                <DialogDescription className="mt-1 font-mono text-xs">
+                  {modalInvoice?.recipient_name} · {modalInvoice?.invoice_type === "customer" ? "Customer invoice" : "Staff payout invoice"} · {formatUsd(modalInvoice?.total_usd ?? 0)}
+                </DialogDescription>
+              </div>
+              <ButtonGroup>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  disabled={!modalInvoice?.recipient_email}
+                  onClick={() => {
+                    if (!modalInvoice?.recipient_email) return;
+                    const subject = encodeURIComponent(`Invoice ${modalInvoice.invoice_number}`);
+                    const body = encodeURIComponent(
+                      `Dear ${modalInvoice.recipient_name},\n\nPlease find your invoice ${modalInvoice.invoice_number}.\n\nTotal: ${formatUsd(modalInvoice.total_usd)}`,
+                    );
+                    window.location.href = `mailto:${encodeURIComponent(modalInvoice.recipient_email)}?subject=${subject}&body=${body}`;
+                  }}
+                >
+                  <Mail data-icon="inline-start" /> Email
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    if (modalInvoice) {
+                      setOpenedInvoiceId(modalInvoice.id);
+                      setPrintTarget("single");
+                    }
+                  }}
+                >
+                  <Printer data-icon="inline-start" /> Print
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    if (modalInvoice) {
+                      setOpenedInvoiceId(modalInvoice.id);
+                      setPrintTarget("single");
+                    }
+                  }}
+                >
+                  <Download data-icon="inline-start" /> PDF
+                </Button>
+              </ButtonGroup>
+            </div>
+          </DialogHeader>
+
+          {modalInvoice ? (
+            <div ref={modalPaperRef} className="relative min-h-[42rem] overflow-hidden rounded-xl border bg-stone-200 p-4 dark:bg-stone-900">
+              <div
+                style={{
+                  height: INVOICE_PAPER_HEIGHT * modalScale,
+                  width: INVOICE_PAPER_WIDTH * modalScale,
+                }}
+                className="mx-auto shadow-2xl"
+              >
+                <div style={{ transform: `scale(${modalScale})` }} className="origin-top-left">
+                  <InvoiceDocument invoice={modalInvoice} />
+                </div>
+              </div>
+            </div>
+          ) : null}
+
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button variant="outline">Close</Button>
+            </DialogClose>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={Boolean(selectedMonthlySubmission)} onOpenChange={(open) => !open && setSelectedMonthlySubmission(null)}>
+        <DialogContent className="max-h-[94svh] overflow-y-auto sm:!max-w-6xl p-6">
+          <DialogHeader className="border-b pb-4">
+            <div className="flex flex-wrap items-center justify-between gap-3 pr-6">
+              <div>
+                <DialogTitle className="flex items-center gap-2.5 font-bold text-xl">
+                  <span>{selectedMonthlySubmission?.resort_name}</span>
+                  <Badge className="bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border-emerald-500/40">
+                    {selectedMonthlySubmission?.status === "reviewed" ? "✓ Reviewed & Signed" : "Submitted"}
+                  </Badge>
+                </DialogTitle>
+                <DialogDescription className="mt-1 font-mono text-xs">
+                  Period: {selectedMonthlySubmission?.period_start?.slice(0, 7)} · {selectedMonthlySubmission?.invoices.length} vouchers · Submitted by {selectedMonthlySubmission?.submitted_by_name}
+                </DialogDescription>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    if (selectedMonthlySubmission) {
+                      window.print();
+                    }
+                  }}
+                >
+                  <Printer data-icon="inline-start" /> Print
+                </Button>
+              </div>
+            </div>
+          </DialogHeader>
+
+          {selectedMonthlySubmission ? (
+            <div ref={monthlyModalPaperRef} className="relative min-h-[42rem] overflow-hidden rounded-xl border bg-[#132f55] p-4">
+              <div
+                style={{
+                  height: SUBMITTED_MONTHLY_PAPER_HEIGHT * monthlyModalScale,
+                  width: SUBMITTED_MONTHLY_PAPER_WIDTH * monthlyModalScale,
+                }}
+                className="mx-auto shadow-2xl"
+              >
+                <div style={{ transform: `scale(${monthlyModalScale})` }} className="origin-top-left">
+                  <SubmittedMonthlyInvoiceDocument submission={selectedMonthlySubmission} />
+                </div>
+              </div>
+            </div>
+          ) : null}
+
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button variant="outline">Close</Button>
+            </DialogClose>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       <InvoicePrintPortal active={printTarget === "single"} invoice={selectedInvoice} />
       <MonthlyInvoicePrintPortal active={printTarget === "monthly"} data={monthlyPrintData} />
     </>

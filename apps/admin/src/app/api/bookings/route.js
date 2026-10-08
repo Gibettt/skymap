@@ -61,7 +61,10 @@ export async function POST(request) {
         throw new Error('Package is not available at the selected resort');
       }
 
-      const childPriceUsd = pkg.rows[0].child_price_usd ?? (pkg.rows[0].package_type === 'kids' ? pkg.rows[0].adult_price_usd : pkg.rows[0].adult_price_usd * 0.5);
+      const childPriceUsd =
+        pkg.rows[0].package_type === 'kids' && Number(pkg.rows[0].adult_price_usd) === 0
+          ? Number(pkg.rows[0].child_price_usd ?? 0)
+          : Number(pkg.rows[0].adult_price_usd) * 0.5;
       const totals = calculateBookingTotals({
         adultCount: data.adultCount,
         childCount: data.childCount,

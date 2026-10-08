@@ -28,4 +28,8 @@ export const monthlyInvoiceSignatureSchema = monthlyInvoiceSubmissionSchema.exte
 
 export const monthlyInvoiceReviewSchema = z.object({
   reviewed: z.boolean(),
+  signatureDataUrl: z.string().nullable().optional(),
+  signerName: z.string().max(200).nullable().optional(),
+  resortId: z.string().uuid().optional(),
+  periodStart: z.string().optional(),
 });

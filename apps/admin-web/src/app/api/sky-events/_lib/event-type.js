@@ -3,7 +3,23 @@ import { DEFAULT_SKY_EVENT_TYPES } from '@ephemeris/sky';
 
 const DEFAULT_SLUGS = new Set(DEFAULT_SKY_EVENT_TYPES.map((type) => type.slug));
 
-export async function assertAvailableEventType(client, resortId, slug) {
+export function mapCustomEventType(row) {
+  return {
+    id: row.id,
+    name: row.name,
+    slug: row.slug,
+    isSystem: false,
+  };
+}
+
+export function defaultEventTypes() {
+  return DEFAULT_SKY_EVENT_TYPES.map((type) => ({
+    id: `system:${type.slug}`,
+    ...type,
+  }));
+}
+
+export async function assertAvailableEventType(client, resortId, slug, name = null) {
   if (DEFAULT_SLUGS.has(slug)) return;
   const { rows } = await client.query(
     `SELECT id FROM sky_event_types
@@ -11,5 +27,16 @@ export async function assertAvailableEventType(client, resortId, slug) {
      LIMIT 1`,
     [resortId, slug],
   );
-  if (!rows[0]) throw new ApiError(400, 'Event type is not available for this resort');
+  if (!rows[0]) {
+    try {
+      const typeName = name || slug.replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+      await client.query(
+        `INSERT INTO sky_event_types (name, slug, resort_id, is_active)
+         VALUES ($1, $2, $3, true)`,
+        [typeName, slug, resortId],
+      );
+    } catch {
+      // Proceed if already exists or concurrent insertion
+    }
+  }
 }

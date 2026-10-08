@@ -50,6 +50,20 @@ export async function handleBookingCreated(payload, { client, query }) {
         });
       }
     }
+
+    // 3. Notify creator (external or internal staff) that booking was created
+    if (creatorId) {
+      await insertNotification(db, {
+        recipientUserId: creatorId,
+        type: 'booking',
+        sourceTable: 'bookings',
+        sourceId: bookingId,
+        title: 'Booking berhasil dibuat',
+        message: `${bookingCode || 'Booking'} - ${guestName || 'Tamu'}${packageName ? `, ${packageName}` : ''}`,
+        meta: `${creatorName || 'Staff'} - ${resortName || 'Resort'}`,
+        link: creatorRole === 'internal' ? '/dashboard/internal/bookings' : '/dashboard/external/bookings',
+      });
+    }
   } catch (err) {
     console.error('[events:booking:created] Error processing booking.created event:', err);
   }

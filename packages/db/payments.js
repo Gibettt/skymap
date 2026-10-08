@@ -106,7 +106,9 @@ export async function confirmCustomerPayment(
       };
   const subtotal = roundMoney(booking.base_total_usd);
   const serviceCharge = roundMoney(booking.service_charge_10_usd);
-  const taxAmount = roundMoney(subtotal * (normalizedTax.taxRatePercent / 100));
+  const isTgst = String(normalizedTax.taxLabel).toUpperCase().includes("TGST") || String(normalizedTax.taxLabel).toUpperCase().includes("TOURIS");
+  const taxableBase = isTgst ? roundMoney(subtotal + serviceCharge) : subtotal;
+  const taxAmount = roundMoney(taxableBase * (normalizedTax.taxRatePercent / 100));
   const invoiceTotal = roundMoney(subtotal + serviceCharge + taxAmount);
   const updateScope = resortId ? " AND resort_id = $10" : "";
   const updateParams = [

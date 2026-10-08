@@ -61,9 +61,9 @@ export function Bookings({ bookings, options }: { bookings: BookingRow[]; option
   const router = useRouter();
   const searchInputRef = React.useRef<HTMLInputElement>(null);
   const [rowSelection, setRowSelection] = React.useState({});
-  const [sorting, setSorting] = React.useState<SortingState>([{ id: "eventDate", desc: true }]);
+  const [sorting, setSorting] = React.useState<SortingState>([{ id: "createdAt", desc: true }]);
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
-  const [columnVisibility, setColumnVisibility] = React.useState<ColumnVisibilityState>({ search: false });
+  const [columnVisibility, setColumnVisibility] = React.useState<ColumnVisibilityState>({ search: false, createdAt: false });
   const [pagination, setPagination] = React.useState<PaginationState>({ pageIndex: 0, pageSize: 10 });
   const [view, setView] = React.useState<BookingView>("list");
   const [newBookingOpen, setNewBookingOpen] = React.useState(false);

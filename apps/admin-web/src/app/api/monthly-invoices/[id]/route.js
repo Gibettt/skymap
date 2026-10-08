@@ -16,8 +16,12 @@ export async function PATCH(request, { params }) {
     const submission = await transaction(async (client) => {
       const result = await reviewMonthlyInvoiceSubmission(client, {
         submissionId: parsedId.data,
+        resortId: parsed.data.resortId || null,
+        periodStart: parsed.data.periodStart || null,
         reviewedById: user.id,
         reviewed: parsed.data.reviewed,
+        adminSignatureDataUrl: parsed.data.signatureDataUrl || null,
+        adminSignerName: parsed.data.signerName || user.name || "Admin",
       });
       if (result.error) throw new ApiError(result.status ?? 409, result.error);
       await writeAudit(client, {

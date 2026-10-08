@@ -257,10 +257,11 @@ export function SkyEventDialog({
                 </Select>
               </Field>
               <Field>
-                <FieldLabel htmlFor="sky-spot">Observation spot</FieldLabel>
+                <FieldLabel htmlFor="sky-spot">Observation spot / Location</FieldLabel>
                 <Input
                   id="sky-spot"
                   list="observation-spots"
+                  placeholder="Observation spot or location"
                   value={form.observationSpot}
                   maxLength={120}
                   onChange={(e) => update("observationSpot", e.target.value)}
@@ -285,15 +286,51 @@ export function SkyEventDialog({
                 />
               </Field>
               <Field>
-                <FieldLabel htmlFor="sky-price">Price override (USD)</FieldLabel>
-                <Input
-                  id="sky-price"
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={form.priceOverrideUsd}
-                  onChange={(e) => update("priceOverrideUsd", e.target.value)}
-                />
+                <div className="flex flex-wrap items-center justify-between gap-1">
+                  <FieldLabel htmlFor="sky-price">Pricing / Rate</FieldLabel>
+                  <div className="flex items-center gap-1">
+                    <Button
+                      type="button"
+                      size="xs"
+                      variant={form.priceOverrideUsd === "0" ? "outline" : "default"}
+                      className="h-5 px-1.5 text-[11px]"
+                      onClick={() => {
+                        if (form.priceOverrideUsd === "0") update("priceOverrideUsd", "");
+                      }}
+                    >
+                      Paid
+                    </Button>
+                    <Button
+                      type="button"
+                      size="xs"
+                      variant={form.priceOverrideUsd === "0" ? "default" : "outline"}
+                      className={`h-5 px-1.5 text-[11px] ${
+                        form.priceOverrideUsd === "0"
+                          ? "border-emerald-600 bg-emerald-600 text-white hover:bg-emerald-700"
+                          : "border-emerald-500/40 text-emerald-500"
+                      }`}
+                      onClick={() => update("priceOverrideUsd", "0")}
+                    >
+                      FOC
+                    </Button>
+                  </div>
+                </div>
+                {form.priceOverrideUsd === "0" ? (
+                  <div className="flex h-9 items-center justify-between rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-2.5 font-medium text-emerald-400 text-xs">
+                    <span>✓ FOC</span>
+                    <span className="text-[10px] text-muted-foreground">$0.00 / Free</span>
+                  </div>
+                ) : (
+                  <Input
+                    id="sky-price"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    placeholder="USD price"
+                    value={form.priceOverrideUsd}
+                    onChange={(e) => update("priceOverrideUsd", e.target.value)}
+                  />
+                )}
               </Field>
               <Field>
                 <FieldLabel htmlFor="sky-status">Status</FieldLabel>

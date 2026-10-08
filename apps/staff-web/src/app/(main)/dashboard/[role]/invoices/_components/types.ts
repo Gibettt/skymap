@@ -41,6 +41,9 @@ export interface InvoiceRow {
   signature_signer_name: string | null;
   signed_by: string | null;
   signed_at: string | null;
+  staff_signature_data_url?: string | null;
+  staff_signer_name?: string | null;
+  staff_signed_at?: string | null;
   resort_recorded_at: string | null;
   resort_recorded_by: string | null;
   source_reference: string;
@@ -91,6 +94,8 @@ export interface MonthlyInvoiceSubmission {
   staff_signer_id: string | null;
   staff_signer_name: string | null;
   staff_signed_at: string | null;
+  admin_signature_data_url?: string | null;
+  admin_signer_name?: string | null;
   invoices: InvoiceRow[];
 }
 

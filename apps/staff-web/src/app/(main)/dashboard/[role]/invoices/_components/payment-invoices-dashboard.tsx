@@ -9,6 +9,7 @@ import {
   Download,
   FilePlus2,
   Hash,
+  PenLine,
   Printer,
   ReceiptText,
 } from "lucide-react";
@@ -47,6 +48,7 @@ import {
   monthLabel,
 } from "./monthly-invoice-submission";
 import { MonthlyStaffSignatureDialog } from "./monthly-staff-signature-dialog";
+import { CustomerSignatureDialog } from "./customer-signature-dialog";
 import type {
   InvoiceRow,
   MonthlyInvoiceStaffSignature,
@@ -154,12 +156,20 @@ function InvoicePreview({
   statusPending,
   onPrint,
   onResortStatus,
+  onSignGuest,
+  onSignStaff,
+  staffRole,
+  staffName,
 }: {
   invoice: InvoiceRow | null;
   readOnly: boolean;
   statusPending: boolean;
   onPrint: (pdf?: boolean) => void;
   onResortStatus: () => void;
+  onSignGuest?: () => void;
+  onSignStaff?: () => void;
+  staffRole?: string;
+  staffName?: string;
 }) {
   const containerRef = React.useRef<HTMLDivElement>(null);
   const scale = usePaperScale(containerRef);
@@ -173,6 +183,28 @@ function InvoicePreview({
         </CardDescription>
         <CardAction>
           <ButtonGroup>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              disabled={!invoice || readOnly}
+              onClick={onSignGuest}
+              className={invoice?.signature_data_url ? "border-emerald-500/40 text-emerald-600 dark:text-emerald-400 font-medium" : ""}
+            >
+              <PenLine data-icon="inline-start" className="size-3.5" />
+              {invoice?.signature_data_url ? "Guest signed ✓" : "Guest signature"}
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              disabled={!invoice || readOnly}
+              onClick={onSignStaff}
+              className={invoice?.staff_signature_data_url ? "border-emerald-500/40 text-emerald-600 dark:text-emerald-400 font-medium" : ""}
+            >
+              <PenLine data-icon="inline-start" className="size-3.5" />
+              {invoice?.staff_signature_data_url ? "Staff signed ✓" : "Staff signature"}
+            </Button>
             <Button
               type="button"
               size="sm"
@@ -223,7 +255,7 @@ function InvoicePreview({
               className="absolute top-4 left-1/2 -translate-x-1/2 shadow-sm"
             >
               <div style={{ transform: `scale(${scale})` }} className="origin-top-left">
-                <InvoiceDocument invoice={invoice} />
+                <InvoiceDocument invoice={invoice} onSignGuest={onSignGuest} onSignStaff={onSignStaff} staffRole={staffRole} currentStaffName={staffName} />
               </div>
             </div>
           )}
@@ -580,20 +612,24 @@ function PaymentWorkflow({
 
 export function PaymentInvoicesDashboard({
   initialSelectedId,
+  initialView = "customer",
   invoices,
   monthlySignatures,
   monthlySubmissions,
   readOnly,
   staffName,
   workflows,
+  staffRole = "internal",
 }: {
   initialSelectedId?: string;
+  initialView?: "customer" | "monthly";
   invoices: InvoiceRow[];
   monthlySignatures: MonthlyInvoiceStaffSignature[];
   monthlySubmissions: MonthlyInvoiceSubmission[];
   readOnly: boolean;
   staffName: string;
   workflows: PaymentWorkflowRow[];
+  staffRole?: string;
 }) {
   const [issuedInvoices, setIssuedInvoices] = React.useState(invoices);
   const [staffSignatureRows, setStaffSignatureRows] = React.useState(monthlySignatures);
@@ -611,7 +647,7 @@ export function PaymentInvoicesDashboard({
   const [monthlySignatureMonth, setMonthlySignatureMonth] = React.useState("");
   const [monthlySignatureCurrent, setMonthlySignatureCurrent] = React.useState<MonthlyInvoiceStaffSignature | null>(null);
   const [monthlyPending, setMonthlyPending] = React.useState(false);
-  const [invoiceView, setInvoiceView] = React.useState<"customer" | "monthly">("customer");
+  const [invoiceView, setInvoiceView] = React.useState<"customer" | "monthly">(initialView);
   const [printTarget, setPrintTarget] = React.useState<"individual" | "monthly" | null>(null);
   const [monthlyPrintData, setMonthlyPrintData] = React.useState<MonthlyStaffInvoiceData | null>(null);
   const [monthlyPreviewData, setMonthlyPreviewData] = React.useState<MonthlyStaffInvoiceData | null>(null);
@@ -631,7 +667,11 @@ export function PaymentInvoicesDashboard({
     : null;
   const parsedTaxRate = taxType === "none" ? 0 : Number(taxRate);
   const effectiveTaxRate = Number.isFinite(parsedTaxRate) ? Math.min(100, Math.max(0, parsedTaxRate)) : 0;
-  const taxAmount = roundMoney((selectedWorkflow?.base_total_usd ?? 0) * (effectiveTaxRate / 100));
+  const isTgst = taxType === "tgst" || taxCustomLabel.toUpperCase().includes("TGST") || taxCustomLabel.toUpperCase().includes("TOURIS");
+  const taxableBase = isTgst
+    ? roundMoney((selectedWorkflow?.base_total_usd ?? 0) + (selectedWorkflow?.service_charge_usd ?? 0))
+    : (selectedWorkflow?.base_total_usd ?? 0);
+  const taxAmount = roundMoney(taxableBase * (effectiveTaxRate / 100));
   const totalAmount = roundMoney(
     (selectedWorkflow?.base_total_usd ?? 0) + (selectedWorkflow?.service_charge_usd ?? 0) + taxAmount,
   );
@@ -886,6 +926,94 @@ export function PaymentInvoicesDashboard({
       setSignaturePending(false);
     }
   }
+  const [customerSignatureOpen, setCustomerSignatureOpen] = React.useState(false);
+  const [customerSignaturePending, setCustomerSignaturePending] = React.useState(false);
+
+  async function saveCustomerSignature(signatureDataUrl: string, signerName: string) {
+    if (!selectedInvoice) return;
+    setCustomerSignaturePending(true);
+    try {
+      const response = await fetch(`/api/invoices/${selectedInvoice.id}/signature`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ signatureDataUrl, signerName }),
+      });
+      const result = await response.json();
+      if (!response.ok || !result.invoice) throw new Error(result.error ?? "Gagal menyimpan tanda tangan tamu.");
+      setIssuedInvoices((current) => upsertInvoice(current, result.invoice as InvoiceRow));
+      setCustomerSignatureOpen(false);
+      toast.success("Tanda tangan tamu berhasil dibubuhkan.");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Gagal menyimpan tanda tangan.");
+    } finally {
+      setCustomerSignaturePending(false);
+    }
+  }
+
+  async function clearCustomerSignature() {
+    if (!selectedInvoice) return;
+    setCustomerSignaturePending(true);
+    try {
+      const response = await fetch(`/api/invoices/${selectedInvoice.id}/signature`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ signatureDataUrl: null }),
+      });
+      const result = await response.json();
+      if (!response.ok || !result.invoice) throw new Error(result.error ?? "Gagal menghapus tanda tangan.");
+      setIssuedInvoices((current) => upsertInvoice(current, result.invoice as InvoiceRow));
+      setCustomerSignatureOpen(false);
+      toast.success("Tanda tangan tamu berhasil dihapus.");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Gagal menghapus tanda tangan.");
+    } finally {
+      setCustomerSignaturePending(false);
+    }
+  }
+  const [staffSignatureOpen, setStaffSignatureOpen] = React.useState(false);
+  const [staffSignaturePending, setStaffSignaturePending] = React.useState(false);
+
+  async function saveStaffSignature(signatureDataUrl: string, signerName: string) {
+    if (!selectedInvoice) return;
+    setStaffSignaturePending(true);
+    try {
+      const response = await fetch(`/api/invoices/${selectedInvoice.id}/signature`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ signatureDataUrl, signerName, target: "staff" }),
+      });
+      const result = await response.json();
+      if (!response.ok || !result.invoice) throw new Error(result.error ?? "Gagal menyimpan tanda tangan staf.");
+      setIssuedInvoices((current) => upsertInvoice(current, result.invoice as InvoiceRow));
+      setStaffSignatureOpen(false);
+      toast.success("Tanda tangan staf berhasil dibubuhkan.");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Gagal menyimpan tanda tangan staf.");
+    } finally {
+      setStaffSignaturePending(false);
+    }
+  }
+
+  async function clearStaffSignature() {
+    if (!selectedInvoice) return;
+    setStaffSignaturePending(true);
+    try {
+      const response = await fetch(`/api/invoices/${selectedInvoice.id}/signature`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ signatureDataUrl: null, target: "staff" }),
+      });
+      const result = await response.json();
+      if (!response.ok || !result.invoice) throw new Error(result.error ?? "Gagal menghapus tanda tangan staf.");
+      setIssuedInvoices((current) => upsertInvoice(current, result.invoice as InvoiceRow));
+      setStaffSignatureOpen(false);
+      toast.success("Tanda tangan staf berhasil dihapus.");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Gagal menghapus tanda tangan staf.");
+    } finally {
+      setStaffSignaturePending(false);
+    }
+  }
 
   return (
     <>
@@ -902,7 +1030,7 @@ export function PaymentInvoicesDashboard({
               <Button type="button" size="sm" variant={invoiceView === "customer" ? "default" : "outline"} onClick={() => setInvoiceView("customer")}>Customer invoice</Button>
               <Button type="button" size="sm" variant={invoiceView === "monthly" ? "default" : "outline"} onClick={() => setInvoiceView("monthly")}>Monthly invoice</Button>
             </ButtonGroup>
-            <Badge variant="outline">{readOnly ? "Internal · View only" : "Internal staff"}</Badge>
+            <Badge variant="outline">{readOnly ? `${titleCase(staffRole)} · View only` : `${titleCase(staffRole)} staff`}</Badge>
           </div>
         </div>
 
@@ -931,7 +1059,7 @@ export function PaymentInvoicesDashboard({
                   />
                 </CardContent>
               </Card>
-              <InvoicePreview invoice={selectedInvoice} readOnly={readOnly} statusPending={signaturePending} onPrint={printInvoice} onResortStatus={toggleResortStatus} />
+              <InvoicePreview invoice={selectedInvoice} readOnly={readOnly} statusPending={signaturePending} onPrint={printInvoice} onResortStatus={toggleResortStatus} onSignGuest={() => setCustomerSignatureOpen(true)} onSignStaff={() => setStaffSignatureOpen(true)} staffRole={staffRole} staffName={staffName} />
             </>
           ) : (
             <>
@@ -1058,6 +1186,31 @@ export function PaymentInvoicesDashboard({
         onSave={saveMonthlyStaffSignature}
       />
 
+
+      <CustomerSignatureDialog
+        open={customerSignatureOpen}
+        pending={customerSignaturePending}
+        title="Guest Signature"
+        description="Provide guest signature for Miscellaneous Charge Voucher."
+        signerLabel="Guest Name"
+        guestName={selectedInvoice?.recipient_name ?? ""}
+        currentSignatureUrl={selectedInvoice?.signature_data_url ?? null}
+        onOpenChange={setCustomerSignatureOpen}
+        onSave={saveCustomerSignature}
+        onClear={clearCustomerSignature}
+      />
+      <CustomerSignatureDialog
+        open={staffSignatureOpen}
+        pending={staffSignaturePending}
+        title="Staff Signature"
+        description={`Provide signature of responsible staff (${staffRole === "external" ? "External Staff" : "Internal Staff"}) for Miscellaneous Charge Voucher.`}
+        signerLabel={`Staff Name (${staffRole === "external" ? "External Staff" : "Internal Staff"})`}
+        guestName={selectedInvoice?.staff_signer_name || staffName || (staffRole === "external" ? "External Staff" : "Internal Staff")}
+        currentSignatureUrl={selectedInvoice?.staff_signature_data_url ?? null}
+        onOpenChange={setStaffSignatureOpen}
+        onSave={saveStaffSignature}
+        onClear={clearStaffSignature}
+      />
       <InvoicePrintPortal active={printTarget === "individual"} invoice={selectedInvoice} />
       <MonthlyInvoicePrintPortal active={printTarget === "monthly"} data={monthlyPrintData} />
     </>

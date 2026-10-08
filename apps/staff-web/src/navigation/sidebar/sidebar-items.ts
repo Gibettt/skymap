@@ -71,7 +71,7 @@ export function getStaffSidebarItems({ role, permissions }: StaffNavigationOptio
     );
   }
 
-  if (role === "internal" && can("staff.finance")) {
+  if ((role === "internal" || role === "external") && can("staff.finance")) {
     items.push({ id: "staff-invoices", title: "Invoices", url: `${basePath}/invoices`, icon: "invoices" });
   }
 

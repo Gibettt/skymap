@@ -133,7 +133,7 @@ export function NotificationsCenter({ role, readOnly }: { role: StaffRole; readO
 
   const openNotification = async (notification: Notification) => {
     if (!notification.read_at && !readOnly) await markRead([notification.id]);
-    router.push(staffNotificationHref(notification.link, role));
+    router.push(staffNotificationHref(notification.link, role, notification.type));
   };
 
   let notificationContent: React.ReactNode;

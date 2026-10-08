@@ -6,8 +6,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 import { formatDistanceToNow } from "date-fns";
-import { Bell, CalendarCheck, CheckCheck, CircleDollarSign } from "lucide-react";
-
+import { Bell, Calendar, CalendarCheck, CheckCheck, CircleDollarSign, ReceiptText } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty";
@@ -30,8 +29,9 @@ import type { AdminNotification } from "@/types/notifications";
 const NOTIFICATIONS_CHANGED_EVENT = "ephemeris:notifications-changed";
 
 function NotificationIcon({ type }: { type: AdminNotification["type"] }) {
-  const Icon = type === "payout" ? CircleDollarSign : CalendarCheck;
-  return <Icon />;
+  if (type === "payout") return <CircleDollarSign className="size-4.5 text-emerald-300" />;
+  if (type === "invoice") return <ReceiptText className="size-4.5 text-violet-300" />;
+  return <Calendar className="size-4.5 text-cyan-300" />;
 }
 
 export function NotificationCenter({ role, readOnly }: { role: StaffRole; readOnly: boolean }) {
@@ -115,7 +115,7 @@ export function NotificationCenter({ role, readOnly }: { role: StaffRole; readOn
       }
     }
     setOpen(false);
-    router.push(staffNotificationHref(notification.link, role));
+    router.push(staffNotificationHref(notification.link, role, notification.type));
   }
 
   let notificationContent: React.ReactNode;
@@ -132,27 +132,43 @@ export function NotificationCenter({ role, readOnly }: { role: StaffRole; readOn
     );
   } else if (notifications.length) {
     notificationContent = (
-      <ItemGroup className="gap-1 p-1.5">
+      <div className="flex flex-col gap-2 p-2.5">
         {notifications.map((notification) => (
-          <Item key={notification.id} asChild size="sm" variant={notification.read_at ? "default" : "muted"}>
-            <button type="button" className="text-left" onClick={() => openNotification(notification)}>
-              <ItemMedia variant="icon">
+          <button
+            key={notification.id}
+            type="button"
+            className={`w-full rounded-xl border p-3 text-left transition-all relative ${
+              notification.read_at
+                ? "border-cyan-400/15 bg-[#061b3b]/70 hover:bg-[#0c2650] hover:border-cyan-400/35"
+                : "border-cyan-400/35 bg-[#092452]/90 hover:bg-[#0e2f65] hover:border-cyan-400/50 shadow-sm"
+            }`}
+            onClick={() => openNotification(notification)}
+          >
+            {!notification.read_at ? (
+              <span className="absolute top-3 right-3 size-2 rounded-full bg-cyan-400 shadow-[0_0_8px_rgba(34,211,238,0.9)]" />
+            ) : null}
+            <div className="flex items-start gap-3">
+              <div className="size-9 rounded-lg border border-cyan-400/35 bg-cyan-400/10 text-cyan-300 flex items-center justify-center shrink-0 mt-0.5">
                 <NotificationIcon type={notification.type} />
-              </ItemMedia>
-              <ItemContent>
-                <ItemTitle>{notification.title}</ItemTitle>
-                <ItemDescription>{notification.message}</ItemDescription>
-              </ItemContent>
-              <ItemFooter>
-                <span className="truncate text-muted-foreground text-xs">{notification.meta}</span>
-                <span className="shrink-0 text-muted-foreground text-xs">
-                  {formatDistanceToNow(new Date(notification.created_at), { addSuffix: true })}
-                </span>
-              </ItemFooter>
-            </button>
-          </Item>
+              </div>
+              <div className="min-w-0 flex-1 pr-2">
+                <p className="font-semibold text-sm text-white leading-tight truncate">
+                  {notification.title}
+                </p>
+                <p className="text-xs text-slate-300 mt-1 leading-snug line-clamp-2">
+                  {notification.message}
+                </p>
+                <div className="flex items-center justify-between text-[11px] text-slate-400 mt-2.5 pt-0.5">
+                  <span className="truncate pr-2">{notification.meta || "Notification"}</span>
+                  <span className="shrink-0 font-mono text-[10px]">
+                    {formatDistanceToNow(new Date(notification.created_at), { addSuffix: true })}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </button>
         ))}
-      </ItemGroup>
+      </div>
     );
   } else {
     notificationContent = (
@@ -197,27 +213,36 @@ export function NotificationCenter({ role, readOnly }: { role: StaffRole; readOn
       <PopoverContent
         data-staff-notification-popover={role}
         align="end"
-        className="w-[min(24rem,calc(100vw-2rem))] gap-0 p-0"
+        className="w-[min(26rem,calc(100vw-2rem))] gap-0 p-0 rounded-2xl border border-cyan-400/25 bg-[#051530]/98 backdrop-blur-2xl shadow-2xl overflow-hidden text-white"
       >
-        <div className="flex items-start justify-between gap-3 p-3">
-          <PopoverHeader>
-            <PopoverTitle>Notifications</PopoverTitle>
-            <PopoverDescription>
+        <div className="flex items-start justify-between gap-3 p-3.5 border-b border-cyan-400/20 bg-[#071b3b]/60">
+          <div>
+            <h4 className="font-semibold text-base text-white">Notifications</h4>
+            <p className="text-xs text-slate-400 mt-0.5">
               {unreadCount ? `${unreadCount} unread notifications` : "You're all caught up"}
-            </PopoverDescription>
-          </PopoverHeader>
+            </p>
+          </div>
           {readOnly ? null : (
-            <Button size="sm" variant="ghost" disabled={markingAll || unreadCount === 0} onClick={markAllRead}>
-              {markingAll ? <Spinner data-icon="inline-start" /> : <CheckCheck data-icon="inline-start" />}
+            <Button
+              size="sm"
+              variant="ghost"
+              className="text-xs text-slate-400 hover:text-white hover:bg-white/10 h-7 px-2"
+              disabled={markingAll || unreadCount === 0}
+              onClick={markAllRead}
+            >
+              {markingAll ? <Spinner data-icon="inline-start" className="size-3" /> : <CheckCheck data-icon="inline-start" className="size-3.5" />}
               Mark all read
             </Button>
           )}
         </div>
-        <Separator />
-        <ScrollArea className="h-80">{notificationContent}</ScrollArea>
-        <Separator />
-        <div className="p-2">
-          <Button className="w-full" variant="ghost" asChild onClick={() => setOpen(false)}>
+        <ScrollArea className="max-h-[22rem] min-h-60 overflow-y-auto">{notificationContent}</ScrollArea>
+        <div className="p-2.5 border-t border-cyan-400/20 bg-[#071b3b]/60">
+          <Button
+            className="w-full rounded-xl border border-cyan-400/25 bg-[#051633]/80 text-slate-200 text-xs font-medium py-2 hover:bg-[#0a2046] hover:text-white hover:border-cyan-400/40 transition-all"
+            variant="outline"
+            asChild
+            onClick={() => setOpen(false)}
+          >
             <Link href={`/dashboard/${role}/notifications`}>View all notifications</Link>
           </Button>
         </div>

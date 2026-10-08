@@ -10,7 +10,7 @@ function requireResort(user) {
 
 export async function GET() {
   try {
-    const user = await requirePermission("staff.finance", ["internal"]);
+    const user = await requirePermission("staff.finance", ["internal", "external"]);
     const resortId = requireResort(user);
     const database = { query };
     const [invoices, payment] = await Promise.all([
@@ -26,7 +26,7 @@ export async function GET() {
 export async function POST(request) {
   try {
     await assertSameOrigin(request);
-    const user = await requirePermission("staff.finance", ["internal"], { write: true });
+    const user = await requirePermission("staff.finance", ["internal", "external"], { write: true });
     const resortId = requireResort(user);
     const parsed = issueInvoiceSchema.safeParse(await parseJsonBody(request));
     if (!parsed.success || parsed.data.type !== "customer") {

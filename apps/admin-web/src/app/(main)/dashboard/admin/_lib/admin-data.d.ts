@@ -119,6 +119,12 @@ export interface ResortRow {
   updated_at: string;
 }
 
+export interface PackageTypeOption {
+  id: string;
+  name: string;
+  slug: string;
+}
+
 export interface PackageRow {
   id: string;
   name: string;
@@ -232,7 +238,7 @@ export interface InvoiceLineItemRow {
 export interface InvoiceRow {
   id: string;
   invoice_number: string;
-  invoice_type: "customer" | "staff_payout";
+  invoice_type: "customer" | "staff_payout" | "monthly";
   status: "issued" | "paid";
   booking_id: string | null;
   payout_request_id: string | null;
@@ -259,6 +265,9 @@ export interface InvoiceRow {
   signature_signer_name: string | null;
   signed_by: string | null;
   signed_at: string | null;
+  staff_signature_data_url?: string | null;
+  staff_signer_name?: string | null;
+  staff_signed_at?: string | null;
   resort_recorded_at: string | null;
   resort_recorded_by: string | null;
   source_reference: string;
@@ -328,6 +337,8 @@ export interface MonthlyInvoiceSubmissionRow {
   staff_signer_id: string | null;
   staff_signer_name: string | null;
   staff_signed_at: string | null;
+  admin_signature_data_url?: string | null;
+  admin_signer_name?: string | null;
   invoices: InvoiceRow[];
 }
 
@@ -379,6 +390,7 @@ export function getCalendarOptions(): Promise<CalendarOptions>;
 export function getResorts(): Promise<ResortRow[]>;
 export function getPackages(): Promise<PackageRow[]>;
 export function getPackageResortOptions(): Promise<Array<{ id: string; name: string }>>;
+export function getPackageTypes(): Promise<PackageTypeOption[]>;
 export function getUsers(): Promise<{ users: UserRow[]; resorts: UserResortOption[] }>;
 export function getFinance(): Promise<{
   summary: {

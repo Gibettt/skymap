@@ -2,7 +2,7 @@
 
 import * as React from "react";
 
-import { CheckCircle2, Download, Eye, Inbox, Printer, RotateCcw } from "lucide-react";
+import { CheckCircle2, Download, Eye, Inbox, PenLine, Printer, RotateCcw } from "lucide-react";
 import { createPortal } from "react-dom";
 import { toast } from "sonner";
 
@@ -18,6 +18,7 @@ import {
   SUBMITTED_MONTHLY_PAPER_WIDTH,
   SubmittedMonthlyInvoiceDocument,
 } from "./submitted-monthly-invoice-document";
+import { AdminSignatureDialog } from "./admin-signature-dialog";
 
 function monthLabel(value: string) {
   const [year, month] = value.slice(0, 7).split("-").map(Number);
@@ -68,13 +69,102 @@ function SubmissionPrintPortal({ submission }: { submission: MonthlyInvoiceSubmi
   );
 }
 
-export function MonthlySubmissionsInbox({ initialSubmissions }: { initialSubmissions: MonthlyInvoiceSubmissionRow[] }) {
+export function MonthlySubmissionsInbox({
+  initialSubmissions,
+  onSubmissionsChange,
+}: {
+  initialSubmissions: MonthlyInvoiceSubmissionRow[];
+  onSubmissionsChange?: (submissions: MonthlyInvoiceSubmissionRow[]) => void;
+}) {
   const [submissions, setSubmissions] = React.useState(initialSubmissions);
+
+  React.useEffect(() => {
+    setSubmissions(initialSubmissions);
+  }, [initialSubmissions]);
+
   const [selected, setSelected] = React.useState<MonthlyInvoiceSubmissionRow | null>(null);
   const [pendingId, setPendingId] = React.useState<string | null>(null);
   const [printSubmission, setPrintSubmission] = React.useState<MonthlyInvoiceSubmissionRow | null>(null);
   const previewRef = React.useRef<HTMLDivElement>(null);
   const previewScale = usePaperScale(previewRef);
+  const [adminSignatureOpen, setAdminSignatureOpen] = React.useState(false);
+  const [adminSignaturePending, setAdminSignaturePending] = React.useState(false);
+
+  async function saveAdminSignature(signatureDataUrl: string, signerName: string) {
+    if (!selected) return;
+    setAdminSignaturePending(true);
+    try {
+      const response = await fetch(`/api/monthly-invoices/${selected.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          reviewed: true,
+          signatureDataUrl,
+          signerName,
+          resortId: selected.resort_id,
+          periodStart: selected.period_start,
+        }),
+      });
+      const result = (await response.json().catch(() => ({}))) as {
+        error?: string;
+        submission?: MonthlyInvoiceSubmissionRow;
+      };
+      if (!response.ok || !result.submission) throw new Error(result.error ?? "Gagal menyimpan tanda tangan persetujuan.");
+      const oldId = selected.id;
+      const newSub = result.submission as MonthlyInvoiceSubmissionRow;
+      const found = submissions.some((item) => item.id === newSub.id);
+      const nextSubmissions = found
+        ? submissions.map((item) => (item.id === newSub.id ? newSub : item))
+        : submissions.map((item) => (item.id === oldId ? newSub : item));
+      setSubmissions(nextSubmissions);
+      setSelected(newSub);
+      setAdminSignatureOpen(false);
+      onSubmissionsChange?.(nextSubmissions);
+      toast.success("Rekap invoice bulanan disetujui dan ditandatangani!");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Gagal menyimpan tanda tangan persetujuan.");
+    } finally {
+      setAdminSignaturePending(false);
+    }
+  }
+
+  async function clearAdminSignature() {
+    if (!selected) return;
+    setAdminSignaturePending(true);
+    try {
+      const response = await fetch(`/api/monthly-invoices/${selected.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          reviewed: false,
+          signatureDataUrl: null,
+          signerName: null,
+          resortId: selected.resort_id,
+          periodStart: selected.period_start,
+        }),
+      });
+      const result = (await response.json().catch(() => ({}))) as {
+        error?: string;
+        submission?: MonthlyInvoiceSubmissionRow;
+      };
+      if (!response.ok || !result.submission) throw new Error(result.error ?? "Gagal menghapus tanda tangan.");
+      const oldId = selected.id;
+      const newSub = result.submission as MonthlyInvoiceSubmissionRow;
+      const found = submissions.some((item) => item.id === newSub.id);
+      const nextSubmissions = found
+        ? submissions.map((item) => (item.id === newSub.id ? newSub : item))
+        : submissions.map((item) => (item.id === oldId ? newSub : item));
+      setSubmissions(nextSubmissions);
+      setSelected(newSub);
+      setAdminSignatureOpen(false);
+      onSubmissionsChange?.(nextSubmissions);
+      toast.success("Tanda tangan persetujuan dihapus.");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Gagal menghapus tanda tangan.");
+    } finally {
+      setAdminSignaturePending(false);
+    }
+  }
 
   React.useEffect(() => {
     const clearPrintSubmission = () => setPrintSubmission(null);
@@ -103,12 +193,12 @@ export function MonthlySubmissionsInbox({ initialSubmissions }: { initialSubmiss
         submission?: MonthlyInvoiceSubmissionRow;
       };
       if (!response.ok || !result.submission) throw new Error(result.error ?? "Could not update the submission.");
-      setSubmissions((current) =>
-        current.map((item) => (item.id === submission.id ? (result.submission as MonthlyInvoiceSubmissionRow) : item)),
+      const nextSubmissions = submissions.map((item) =>
+        item.id === submission.id ? (result.submission as MonthlyInvoiceSubmissionRow) : item,
       );
-      setSelected((current) =>
-        current?.id === submission.id ? (result.submission as MonthlyInvoiceSubmissionRow) : current,
-      );
+      setSubmissions(nextSubmissions);
+      setSelected(result.submission as MonthlyInvoiceSubmissionRow);
+      onSubmissionsChange?.(nextSubmissions);
       toast.success(
         result.submission.status === "reviewed" ? "Monthly invoice marked as reviewed." : "Monthly invoice reopened.",
       );
@@ -151,36 +241,38 @@ export function MonthlySubmissionsInbox({ initialSubmissions }: { initialSubmiss
               </tr>
             </thead>
             <tbody>
-              {submissions.map((submission) => {
-                const total = submission.invoices.reduce((sum, invoice) => sum + invoice.total_usd, 0);
-                return (
-                  <tr key={submission.id} className="border-t transition-colors hover:bg-muted/40">
-                    <td className="p-3 font-medium">{monthLabel(submission.period_start)}</td>
-                    <td className="p-3">{submission.resort_name}</td>
-                    <td className="p-3">
-                      <p>{submission.submitted_by_name}</p>
-                      <p className="text-muted-foreground text-xs">{formatDateTime(submission.submitted_at)}</p>
-                    </td>
-                    <td className="p-3">{submission.invoices.length}</td>
-                    <td className="p-3 text-right font-medium">{formatUsd(total)}</td>
-                    <td className="p-3">
-                      <Badge variant={submission.status === "reviewed" ? "default" : "outline"}>
-                        {submission.status}
-                      </Badge>
-                    </td>
-                    <td className="p-3 text-right">
-                      <Button type="button" size="sm" variant="outline" onClick={() => setSelected(submission)}>
-                        <Eye data-icon="inline-start" />
-                        Open
-                      </Button>
-                    </td>
-                  </tr>
-                );
-              })}
-              {!submissions.length ? (
+              {submissions
+                .filter((item) => item.status === "submitted")
+                .map((submission) => {
+                  const total = submission.invoices.reduce((sum, invoice) => sum + invoice.total_usd, 0);
+                  return (
+                    <tr key={submission.id} className="border-t transition-colors hover:bg-muted/40">
+                      <td className="p-3 font-medium">{monthLabel(submission.period_start)}</td>
+                      <td className="p-3">{submission.resort_name}</td>
+                      <td className="p-3">
+                        <p>{submission.submitted_by_name}</p>
+                        <p className="text-muted-foreground text-xs">{formatDateTime(submission.submitted_at)}</p>
+                      </td>
+                      <td className="p-3">{submission.invoices.length}</td>
+                      <td className="p-3 text-right font-medium">{formatUsd(total)}</td>
+                      <td className="p-3">
+                        <Badge variant="outline">
+                          {submission.status}
+                        </Badge>
+                      </td>
+                      <td className="p-3 text-right">
+                        <Button type="button" size="sm" variant="outline" onClick={() => setSelected(submission)}>
+                          <Eye data-icon="inline-start" />
+                          Open
+                        </Button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              {!submissions.filter((item) => item.status === "submitted").length ? (
                 <tr>
                   <td colSpan={7} className="p-8 text-center text-muted-foreground">
-                    No monthly invoice submissions have been sent yet.
+                    No monthly invoice submissions waiting for review. Approved registers are in the Invoice list below.
                   </td>
                 </tr>
               ) : null}
@@ -232,23 +324,48 @@ export function MonthlySubmissionsInbox({ initialSubmissions }: { initialSubmiss
               <div className="flex flex-col gap-3 border-t pt-4 sm:flex-row sm:items-center sm:justify-between">
                 <p className="text-muted-foreground text-sm">
                   {selected.status === "reviewed"
-                    ? `Reviewed by ${selected.reviewed_by_name ?? "Admin"} on ${formatDateTime(selected.reviewed_at)}.`
-                    : "Review the bundle, then mark it as reviewed."}
+                    ? `Reviewed & signed by ${selected.admin_signer_name ?? selected.reviewed_by_name ?? "Admin"} on ${formatDateTime(selected.reviewed_at)}.`
+                    : "Review the monthly register, then sign and approve it."}
                 </p>
-                <Button
-                  type="button"
-                  variant={selected.status === "reviewed" ? "outline" : "default"}
-                  disabled={pendingId === selected.id}
-                  onClick={() => toggleReviewed(selected)}
-                >
-                  <ReviewActionIcon pending={pendingId === selected.id} reviewed={selected.status === "reviewed"} />
-                  {selected.status === "reviewed" ? "Reopen" : "Mark reviewed"}
-                </Button>
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button
+                    type="button"
+                    size="sm"
+                    className="bg-emerald-600 hover:bg-emerald-700 text-white"
+                    disabled={pendingId === selected.id}
+                    onClick={() => setAdminSignatureOpen(true)}
+                  >
+                    <PenLine data-icon="inline-start" className="size-3.5" />
+                    {selected.admin_signature_data_url ? "Edit Admin Signature" : "Approve & Sign (Admin)"}
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    disabled={pendingId === selected.id}
+                    onClick={() => toggleReviewed(selected)}
+                  >
+                    <ReviewActionIcon pending={pendingId === selected.id} reviewed={selected.status === "reviewed"} />
+                    {selected.status === "reviewed" ? "Reopen" : "Mark reviewed"}
+                  </Button>
+                </div>
               </div>
             </>
           ) : null}
         </DialogContent>
       </Dialog>
+      <AdminSignatureDialog
+        open={adminSignatureOpen}
+        pending={adminSignaturePending}
+        title="Tanda Tangan Persetujuan Admin (Admin Approval)"
+        description="Tanda tangani rekap invoice bulanan ini sebagai tanda persetujuan resmi Admin."
+        signerLabel="Nama Admin / Jabatan"
+        defaultName={selected?.admin_signer_name || "Admin Ephemeris"}
+        currentSignatureUrl={selected?.admin_signature_data_url ?? null}
+        onOpenChange={setAdminSignatureOpen}
+        onSave={saveAdminSignature}
+        onClear={clearAdminSignature}
+      />
       <SubmissionPrintPortal submission={printSubmission} />
     </>
   );

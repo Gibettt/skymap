@@ -1,7 +1,7 @@
 export interface AdminNotification {
   id: string;
-  type: "booking" | "payout";
-  source_table: "bookings" | "payout_requests";
+  type: "booking" | "payout" | "invoice";
+  source_table: "bookings" | "payout_requests" | "monthly_invoice_submissions" | string;
   source_id: string;
   title: string;
   message: string;

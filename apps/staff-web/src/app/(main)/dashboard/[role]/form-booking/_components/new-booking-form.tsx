@@ -10,11 +10,20 @@ import {
   Dot,
   Info,
   Package,
+  Plus,
   ShieldAlert,
   Trash2,
   UserPlus,
   Users,
 } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { toast } from "sonner";
 
 import { DatePicker } from "@/components/date-picker";
@@ -33,7 +42,7 @@ import {
 } from "@/components/ui/card";
 import { Field, FieldError, FieldGroup, FieldLabel, FieldLegend, FieldSet } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Select, SelectContent, SelectGroup, SelectItem, SelectSeparator, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Spinner } from "@/components/ui/spinner";
@@ -185,6 +194,48 @@ export function NewBookingForm({ role, onCreated, onCancel }: NewBookingFormProp
   const [loading, setLoading] = React.useState(true);
   const [submitting, setSubmitting] = React.useState(false);
   const [error, setError] = React.useState("");
+  const [quickPackageOpen, setQuickPackageOpen] = React.useState(false);
+  const [quickPkgName, setQuickPkgName] = React.useState("Stargazing with Astronomer");
+  const [quickPkgAdultPrice, setQuickPkgAdultPrice] = React.useState("65");
+  const [quickPkgChildPrice, setQuickPkgChildPrice] = React.useState("65");
+  const [quickPkgLocation, setQuickPkgLocation] = React.useState("Observatory Deck");
+  const [quickPkgPending, setQuickPkgPending] = React.useState(false);
+
+  async function handleSaveQuickPackage() {
+    if (!quickPkgName.trim()) return;
+    setQuickPkgPending(true);
+    try {
+      const res = await fetch("/api/packages", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: quickPkgName.trim(),
+          packageType: "regular",
+          experienceType: "communal",
+          location: quickPkgLocation.trim() || "Observatory Deck",
+          schedule: "Upon request",
+          adultPriceUsd: quickPkgAdultPrice || "65",
+          childPriceUsd: quickPkgChildPrice || quickPkgAdultPrice || "65",
+          resortId: user?.resort_id,
+          isActive: true,
+          isChargeable: Number(quickPkgAdultPrice || "65") > 0,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Gagal membuat package.");
+      const newPkg = normalizePackage(data.package);
+      setPackages((prev) => [newPkg, ...prev]);
+      setExperiences((prev) =>
+        prev.map((exp, idx) => (idx === 0 ? { ...exp, packageId: newPkg.id } : exp))
+      );
+      setQuickPackageOpen(false);
+      toast.success(`Package "${newPkg.name}" berhasil dibuat dan dipilih!`);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Gagal membuat package");
+    } finally {
+      setQuickPkgPending(false);
+    }
+  }
 
   React.useEffect(() => {
     let active = true;
@@ -216,14 +267,19 @@ export function NewBookingForm({ role, onCreated, onCancel }: NewBookingFormProp
     (experience) => packages.find((item) => item.id === experience.packageId) || null,
   );
   const selectedPackage = scheduledPackages[0] || null;
-  const adultCount = participants.filter((participant) => participant.type === "adult").length;
-  const childCount = participants.filter((participant) => participant.type === "child").length;
+  const adultCount = participants.filter(
+    (p) => p.type === "adult" || (p.age !== "" && Number(p.age) >= 12),
+  ).length;
+  const childCount = participants.filter(
+    (p) => p.type === "child" && (p.age === "" || Number(p.age) < 12),
+  ).length;
   const estimatedBase = scheduledPackages.reduce((total, scheduledPackage) => {
     if (!scheduledPackage?.is_chargeable) return total;
     const adultPrice = Number(scheduledPackage.adult_price_usd ?? 0);
-    const childPrice = Number(
-      scheduledPackage.child_price_usd ?? (scheduledPackage.package_type === "kids" ? adultPrice : adultPrice * 0.5),
-    );
+    const childPrice =
+      scheduledPackage.package_type === "kids" && Number(scheduledPackage.adult_price_usd) === 0
+        ? Number(scheduledPackage.child_price_usd ?? 0)
+        : adultPrice * 0.5;
     return total + adultCount * adultPrice + childCount * childPrice;
   }, 0);
   const summaryInclusions = Array.from(
@@ -455,11 +511,19 @@ export function NewBookingForm({ role, onCreated, onCancel }: NewBookingFormProp
       ) : null}
 
       {!loading && !packages.length ? (
-        <Alert>
-          <Package />
-          <AlertTitle>No active package is available</AlertTitle>
-          <AlertDescription>
-            An active package for your assigned resort is required before a booking can be created.
+        <Alert className="border-amber-500/30 bg-amber-500/10">
+          <Package className="text-amber-500" />
+          <AlertTitle>No active package is available for this resort</AlertTitle>
+          <AlertDescription className="flex flex-col gap-3">
+            <span>An active package is required to create a booking. You can create one quickly below:</span>
+            <Button
+              type="button"
+              size="sm"
+              className="w-fit bg-gradient-to-r from-fuchsia-500 to-violet-600 text-white shadow-sm hover:from-fuchsia-400 hover:to-violet-500 border-0"
+              onClick={() => setQuickPackageOpen(true)}
+            >
+              <Plus data-icon="inline-start" /> Quick create package (e.g. Stargazing with Astronomer - $65)
+            </Button>
           </AlertDescription>
         </Alert>
       ) : null}
@@ -694,7 +758,7 @@ export function NewBookingForm({ role, onCreated, onCancel }: NewBookingFormProp
                         </FieldSet>
                       ))}
                       <p className="text-muted-foreground text-xs">
-                        {participants.length} of 20 participants · {adultCount} adults · {childCount} children
+                        {participants.length} of 20 participants · {adultCount} adults (100%) · {childCount} children (under 12y · 50% off)
                       </p>
                     </CardContent>
                   </Card>
@@ -742,9 +806,13 @@ export function NewBookingForm({ role, onCreated, onCancel }: NewBookingFormProp
                               <FieldLabel htmlFor={`${experience.clientId}-package`}>Package</FieldLabel>
                               <Select
                                 value={experience.packageId}
-                                onValueChange={(value) =>
-                                  value && updateExperience(experience.clientId, { packageId: value })
-                                }
+                                onValueChange={(value) => {
+                                  if (value === "__new_package__") {
+                                    setQuickPackageOpen(true);
+                                  } else if (value) {
+                                    updateExperience(experience.clientId, { packageId: value });
+                                  }
+                                }}
                               >
                                 <SelectTrigger id={`${experience.clientId}-package`} className="w-full">
                                   <SelectValue placeholder="Select a package" />
@@ -757,6 +825,10 @@ export function NewBookingForm({ role, onCreated, onCancel }: NewBookingFormProp
                                       </SelectItem>
                                     ))}
                                   </SelectGroup>
+                                  <SelectSeparator />
+                                  <SelectItem value="__new_package__" className="text-primary font-medium">
+                                    + Quick create package (e.g. Stargazing with Astronomer - $65)
+                                  </SelectItem>
                                 </SelectContent>
                               </Select>
                             </Field>
@@ -771,13 +843,13 @@ export function NewBookingForm({ role, onCreated, onCancel }: NewBookingFormProp
                             </Field>
                             <Field>
                               <FieldLabel htmlFor={`${experience.clientId}-observation-spot`}>
-                                Observation spot
+                                Location
                               </FieldLabel>
                               <Input
                                 id={`${experience.clientId}-observation-spot`}
                                 value={experience.observationSpot}
                                 maxLength={120}
-                                placeholder="Upon assignment"
+                                placeholder="e.g. Observatory Deck, Beach, Kids Club, Room"
                                 onChange={(event) =>
                                   updateExperience(experience.clientId, { observationSpot: event.target.value })
                                 }
@@ -979,6 +1051,77 @@ export function NewBookingForm({ role, onCreated, onCancel }: NewBookingFormProp
       {!loading && !error && packages.length && adultCount + childCount <= 0 ? (
         <FieldError>At least one adult or child is required.</FieldError>
       ) : null}
+      <Dialog open={quickPackageOpen} onOpenChange={setQuickPackageOpen}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Quick create package</DialogTitle>
+            <DialogDescription>
+              Create an experience package for your resort so you can proceed with the booking.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-2">
+            <Field>
+              <FieldLabel htmlFor="qp-name">Package name</FieldLabel>
+              <Input
+                id="qp-name"
+                value={quickPkgName}
+                onChange={(e) => setQuickPkgName(e.target.value)}
+                placeholder="e.g. Stargazing with Astronomer"
+              />
+            </Field>
+            <div className="grid grid-cols-2 gap-3">
+              <Field>
+                <FieldLabel htmlFor="qp-adult-price">Adult price (USD)</FieldLabel>
+                <Input
+                  id="qp-adult-price"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={quickPkgAdultPrice}
+                  onChange={(e) => setQuickPkgAdultPrice(e.target.value)}
+                  placeholder="65.00"
+                />
+              </Field>
+              <Field>
+                <FieldLabel htmlFor="qp-child-price">Child price (USD)</FieldLabel>
+                <Input
+                  id="qp-child-price"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={quickPkgChildPrice}
+                  onChange={(e) => setQuickPkgChildPrice(e.target.value)}
+                  placeholder="65.00"
+                />
+              </Field>
+            </div>
+            <Field>
+              <FieldLabel htmlFor="qp-location">Location</FieldLabel>
+              <Input
+                id="qp-location"
+                value={quickPkgLocation}
+                onChange={(e) => setQuickPkgLocation(e.target.value)}
+                placeholder="e.g. Observatory Deck / Beach / Kids Club"
+              />
+            </Field>
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="outline" size="sm" onClick={() => setQuickPackageOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              disabled={quickPkgPending || !quickPkgName.trim()}
+              className="bg-gradient-to-r from-fuchsia-500 to-violet-600 text-white shadow-sm hover:from-fuchsia-400 hover:to-violet-500 border-0"
+              onClick={handleSaveQuickPackage}
+            >
+              {quickPkgPending ? <Spinner data-icon="inline-start" /> : <Plus data-icon="inline-start" />}
+              Save &amp; use package
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

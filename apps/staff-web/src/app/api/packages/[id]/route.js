@@ -1,5 +1,6 @@
-import { assertSameOrigin, jsonError, parseJsonBody, requirePermission, writeAudit, ApiError } from '@ephemeris/auth';
+import { assertSameOrigin, jsonError, parseJsonBody, requireUser, writeAudit, ApiError } from '@ephemeris/auth';
 import { transaction } from '@ephemeris/db';
+import { packageIsChargeable } from '@ephemeris/db/package-content';
 import { uuidSchema } from '@ephemeris/db/validators/common';
 import { updatePackageSchema } from '@ephemeris/db/validators/package';
 
@@ -100,7 +101,10 @@ async function parseUpdatePackageRequest(request) {
 export async function PATCH(request, { params }) {
   try {
     await assertSameOrigin(request);
-    const user = await requirePermission('admin.packages', ['admin'], { write: true });
+    const user = await requireUser(['admin', 'internal', 'external']);
+    if (user.access_role_level === 'read_only') {
+      throw new ApiError(403, 'This role has read-only access');
+    }
     const { id: rawId } = await params;
     const parseId = uuidSchema.safeParse(rawId);
     if (!parseId.success) return Response.json({ error: 'ID tidak valid' }, { status: 400 });
@@ -116,6 +120,9 @@ export async function PATCH(request, { params }) {
     const updated = await transaction(async (client) => {
       const before = await client.query(`SELECT ${PACKAGE_SELECT} FROM packages WHERE id = $1`, [id]);
       if (!before.rows[0]) return null;
+      if ((user.role === 'internal' || user.role === 'external') && before.rows[0].resort_id && before.rows[0].resort_id !== user.resort_id) {
+        throw new ApiError(403, 'Anda hanya dapat mengelola package untuk resort Anda.');
+      }
 
       let childPriceUsd = before.rows[0].child_price_usd;
       if (body.childPriceUsd !== undefined) {
@@ -133,7 +140,10 @@ export async function PATCH(request, { params }) {
         adult_price_usd: body.adultPriceUsd === undefined ? Number(before.rows[0].adult_price_usd) : Number(body.adultPriceUsd || 0),
         child_price_usd: childPriceUsd,
         child_age_range: body.childAgeRange === undefined ? before.rows[0].child_age_range : String(body.childAgeRange || '').trim() || null,
-        is_chargeable: body.isChargeable ?? before.rows[0].is_chargeable,
+        is_chargeable: packageIsChargeable(
+          body.adultPriceUsd === undefined ? before.rows[0].adult_price_usd : body.adultPriceUsd,
+          childPriceUsd
+        ),
         is_active: body.isActive ?? before.rows[0].is_active,
       };
 
@@ -193,7 +203,10 @@ export async function PATCH(request, { params }) {
 export async function DELETE(request, { params }) {
   try {
     await assertSameOrigin(request);
-    const user = await requirePermission('admin.packages', ['admin'], { write: true });
+    const user = await requireUser(['admin', 'internal', 'external']);
+    if (user.access_role_level === 'read_only') {
+      throw new ApiError(403, 'This role has read-only access');
+    }
     const { id: rawId } = await params;
     const parseId = uuidSchema.safeParse(rawId);
     if (!parseId.success) return Response.json({ error: 'ID tidak valid' }, { status: 400 });
@@ -202,6 +215,9 @@ export async function DELETE(request, { params }) {
     const deleted = await transaction(async (client) => {
       const before = await client.query('SELECT * FROM packages WHERE id = $1 FOR UPDATE', [id]);
       if (!before.rows[0]) return null;
+      if ((user.role === 'internal' || user.role === 'external') && before.rows[0].resort_id && before.rows[0].resort_id !== user.resort_id) {
+        throw new ApiError(403, 'Anda hanya dapat menghapus package untuk resort Anda.');
+      }
 
       const bookingCount = await client.query('SELECT COUNT(*)::int AS count FROM bookings WHERE package_id = $1', [id]);
       if (bookingCount.rows[0].count > 0) {

@@ -18,13 +18,13 @@ export default async function InvoicesPage({
   searchParams,
 }: {
   params: Promise<{ role: string }>;
-  searchParams: Promise<{ payment?: string | string[] }>;
+  searchParams: Promise<{ payment?: string | string[]; view?: string | string[]; tab?: string | string[] }>;
 }) {
   const { role } = await params;
   const queryParams = await searchParams;
   const context = await requireStaffContext(role, "staff.finance");
 
-  if (context.role !== "internal" || !context.user.resort_id) {
+  if ((context.role !== "internal" && context.role !== "external") || !context.user.resort_id) {
     redirect(`/dashboard/${context.role}`);
   }
 
@@ -44,16 +44,24 @@ export default async function InvoicesPage({
   if (workflows.some((workflow: PaymentWorkflowRow) => workflow.id === requestedPaymentId)) {
     initialSelectedId = requestedPaymentId;
   }
+  const requestedViewParam = Array.isArray(queryParams.view)
+    ? queryParams.view[0]
+    : Array.isArray(queryParams.tab)
+      ? queryParams.tab[0]
+      : (queryParams.view ?? queryParams.tab);
+  const initialView = requestedViewParam === "monthly" ? "monthly" : "customer";
 
   return (
     <PaymentInvoicesDashboard
       initialSelectedId={initialSelectedId}
+      initialView={initialView}
       invoices={invoices}
       monthlySubmissions={monthlySubmissions}
       monthlySignatures={monthlySignatures}
       staffName={context.user.name}
       workflows={workflows}
       readOnly={context.readOnly}
+      staffRole={context.role}
     />
   );
 }

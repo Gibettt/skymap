@@ -2,8 +2,8 @@ import { Pool } from 'pg';
 import mysql from 'mysql2/promise';
 import { mysqlQuery } from './mysql-adapter.js';
 
-let pool;
-let poolDialect;
+let pool = globalThis.__ephemeris_pool__;
+let poolDialect = globalThis.__ephemeris_pool_dialect__;
 
 export function getDatabaseDialect() {
   const databaseUrl = process.env.DATABASE_URL || '';
@@ -19,7 +19,7 @@ export function getPool() {
     throw new Error('DATABASE_URL is not configured');
   }
 
-  if (!pool) {
+  if (!globalThis.__ephemeris_pool__) {
     poolDialect = getDatabaseDialect();
     if (poolDialect === 'mysql') {
       const databaseUrl = new URL(process.env.DATABASE_URL);
@@ -63,9 +63,12 @@ export function getPool() {
         console.error('PostgreSQL pool error:', err?.message || err);
       });
     }
+    globalThis.__ephemeris_pool__ = pool;
+    globalThis.__ephemeris_pool_dialect__ = poolDialect;
   }
 
-  return pool;
+  poolDialect = globalThis.__ephemeris_pool_dialect__;
+  return globalThis.__ephemeris_pool__;
 }
 
 export async function query(text, params = []) {

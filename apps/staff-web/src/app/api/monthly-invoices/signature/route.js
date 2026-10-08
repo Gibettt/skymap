@@ -6,7 +6,7 @@ import { monthlyInvoiceSignatureSchema } from "@ephemeris/db/validators/invoice"
 export async function PATCH(request) {
   try {
     await assertSameOrigin(request);
-    const user = await requirePermission("staff.finance", ["internal"], { write: true });
+    const user = await requirePermission("staff.finance", ["internal", "external"], { write: true });
     if (!user.resort_id) throw new ApiError(403, "An active resort assignment is required.");
 
     const parsed = monthlyInvoiceSignatureSchema.safeParse(await parseJsonBody(request));

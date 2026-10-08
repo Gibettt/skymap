@@ -1,10 +1,10 @@
 "use client";
 
-import { type FormEvent, useState } from "react";
+import { type FormEvent, useEffect, useState } from "react";
 
 import { useRouter } from "next/navigation";
 
-import { Eye, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
+import { Eye, MoreHorizontal, Pencil, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 import {
@@ -39,7 +39,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Select, SelectContent, SelectGroup, SelectItem, SelectSeparator, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Spinner } from "@/components/ui/spinner";
 import { Textarea } from "@/components/ui/textarea";
 
@@ -70,6 +70,67 @@ export function PackageActions({ packageData, resorts }: PackageActionsProps) {
   const [status, setStatus] = useState(packageData.is_active ? "active" : "inactive");
   const [billing, setBilling] = useState(packageData.is_chargeable ? "chargeable" : "complimentary");
   const [image, setImage] = useState<PackageImageValue>(undefined);
+  const [packageTypes, setPackageTypes] = useState<Array<{ id: string; name: string; slug: string }>>([
+    { id: "regular", name: "Regular", slug: "regular" },
+    { id: "private", name: "Private", slug: "private" },
+    { id: "kids", name: "Kids", slug: "kids" },
+  ]);
+  const [isAddingType, setIsAddingType] = useState(false);
+  const [newTypeName, setNewTypeName] = useState("");
+  const [addingTypePending, setAddingTypePending] = useState(false);
+
+  useEffect(() => {
+    if (editOpen) {
+      fetch("/api/package-types")
+        .then((res) => res.json())
+        .then((data) => {
+          if (Array.isArray(data.packageTypes) && data.packageTypes.length > 0) {
+            setPackageTypes((prev) => {
+              const combined = [...data.packageTypes];
+              if (!combined.some((item) => item.slug === packageData.package_type)) {
+                combined.push({
+                  id: packageData.package_type,
+                  name: titleCase(packageData.package_type),
+                  slug: packageData.package_type,
+                });
+              }
+              return combined;
+            });
+          }
+        })
+        .catch(() => {});
+    }
+  }, [editOpen, packageData.package_type]);
+
+  async function handleAddNewType() {
+    const trimmed = newTypeName.trim();
+    if (!trimmed) return;
+    setAddingTypePending(true);
+    try {
+      const res = await fetch("/api/package-types", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: trimmed }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Gagal menambahkan package type");
+      const created = data.packageType;
+      if (created) {
+        setPackageTypes((prev) => {
+          if (prev.some((item) => item.slug === created.slug)) return prev;
+          return [...prev, created].sort((a, b) => a.name.localeCompare(b.name));
+        });
+        setPackageType(created.slug);
+        toast.success(`Package type "${created.name}" berhasil ditambahkan.`);
+      }
+      setIsAddingType(false);
+      setNewTypeName("");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Gagal menambahkan package type");
+    } finally {
+      setAddingTypePending(false);
+    }
+  }
 
   function openEditDialog() {
     setPackageType(packageData.package_type);
@@ -93,6 +154,10 @@ export function PackageActions({ packageData, resorts }: PackageActionsProps) {
     payload.set("packageType", packageType);
     payload.set("experienceType", experienceType);
     payload.set("resortId", resortId);
+    if (billing === "complimentary") {
+      payload.set("adultPriceUsd", "0");
+      payload.set("childPriceUsd", "0");
+    }
     payload.set("isChargeable", String(billing === "chargeable"));
     payload.set("isActive", String(status === "active"));
     payload.set("inclusions", JSON.stringify(inclusions));
@@ -276,19 +341,90 @@ export function PackageActions({ packageData, resorts }: PackageActionsProps) {
                 </Select>
               </Field>
               <Field>
-                <FieldLabel>Package type</FieldLabel>
-                <Select value={packageType} onValueChange={(value) => value && setPackageType(value)}>
-                  <SelectTrigger className="w-full">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectGroup>
-                      <SelectItem value="regular">Regular</SelectItem>
-                      <SelectItem value="private">Private</SelectItem>
-                      <SelectItem value="kids">Kids</SelectItem>
-                    </SelectGroup>
-                  </SelectContent>
-                </Select>
+                <div className="flex items-center justify-between">
+                  <FieldLabel>Package type</FieldLabel>
+                  {!isAddingType && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="xs"
+                      className="h-6 text-xs text-primary hover:text-primary/80"
+                      onClick={() => setIsAddingType(true)}
+                    >
+                      <Plus className="mr-1 h-3 w-3" />
+                      Add type
+                    </Button>
+                  )}
+                </div>
+                {isAddingType ? (
+                  <div className="flex items-center gap-1.5">
+                    <Input
+                      autoFocus
+                      placeholder="New type (e.g. VIP, Luxury)"
+                      value={newTypeName}
+                      onChange={(e) => setNewTypeName(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          handleAddNewType();
+                        } else if (e.key === "Escape") {
+                          setIsAddingType(false);
+                          setNewTypeName("");
+                        }
+                      }}
+                      className="h-8 text-sm"
+                    />
+                    <Button
+                      type="button"
+                      size="xs"
+                      className="h-8 px-2.5"
+                      disabled={!newTypeName.trim() || addingTypePending}
+                      onClick={handleAddNewType}
+                    >
+                      {addingTypePending ? "..." : "Save"}
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="xs"
+                      className="h-8 px-2"
+                      onClick={() => {
+                        setIsAddingType(false);
+                        setNewTypeName("");
+                      }}
+                    >
+                      Cancel
+                    </Button>
+                  </div>
+                ) : (
+                  <Select
+                    value={packageType}
+                    onValueChange={(value) => {
+                      if (value === "__add_new__") {
+                        setIsAddingType(true);
+                      } else if (value) {
+                        setPackageType(value);
+                      }
+                    }}
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectGroup>
+                        {packageTypes.map((t) => (
+                          <SelectItem key={t.slug} value={t.slug}>
+                            {t.name}
+                          </SelectItem>
+                        ))}
+                      </SelectGroup>
+                      <SelectSeparator />
+                      <SelectItem value="__add_new__" className="text-primary font-medium">
+                        + Add new package type...
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                )}
               </Field>
               <Field>
                 <FieldLabel>Experience type</FieldLabel>
@@ -369,7 +505,7 @@ export function PackageActions({ packageData, resorts }: PackageActionsProps) {
                 </Select>
               </Field>
               <Field>
-                <FieldLabel>Billing</FieldLabel>
+                <FieldLabel>Billing / Pricing</FieldLabel>
                 <Select value={billing} onValueChange={(value) => value && setBilling(value)}>
                   <SelectTrigger className="w-full">
                     <SelectValue />
@@ -377,7 +513,7 @@ export function PackageActions({ packageData, resorts }: PackageActionsProps) {
                   <SelectContent>
                     <SelectGroup>
                       <SelectItem value="chargeable">Chargeable</SelectItem>
-                      <SelectItem value="complimentary">Complimentary</SelectItem>
+                      <SelectItem value="complimentary">FOC (Free of Charge)</SelectItem>
                     </SelectGroup>
                   </SelectContent>
                 </Select>

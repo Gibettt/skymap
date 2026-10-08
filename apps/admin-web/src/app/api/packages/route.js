@@ -1,6 +1,7 @@
 import { ApiError, assertSameOrigin, jsonError, parseJsonBody, requirePermission, writeAudit } from '@ephemeris/auth';
 import { query, transaction } from '@ephemeris/db';
 import { paginationFromRequest, paginationMeta } from '@ephemeris/db/helpers';
+import { packageIsChargeable } from '@ephemeris/db/package-content';
 import { createPackageSchema } from '@ephemeris/db/validators/package';
 
 const MAX_PACKAGE_IMAGE_SIZE = 2 * 1024 * 1024;
@@ -91,7 +92,7 @@ export async function GET(request) {
   try {
     await requirePermission('admin.packages', ['admin']);
     const pagination = paginationFromRequest(request);
-    const { rows } = await query(`SELECT ${PACKAGE_SELECT} FROM packages ORDER BY name LIMIT $1 OFFSET $2`, [pagination.limit, pagination.offset]);
+    const { rows } = await query(`SELECT ${PACKAGE_SELECT} FROM packages ORDER BY created_at DESC, updated_at DESC LIMIT $1 OFFSET $2`, [pagination.limit, pagination.offset]);
     const { rows: countRows } = await query('SELECT COUNT(*) FROM packages');
     return Response.json({
       packages: rows,
@@ -135,7 +136,7 @@ export async function POST(request) {
           data.adultPriceUsd,
           data.childPriceUsd,
           data.childAgeRange,
-          data.isChargeable,
+          packageIsChargeable(data.adultPriceUsd, data.childPriceUsd),
           data.isActive,
         ]
       );

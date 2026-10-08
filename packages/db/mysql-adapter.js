@@ -11,6 +11,7 @@ const UUID_TABLES = new Set([
   "monthly_invoice_staff_signatures",
   "notifications",
   "package_inclusions",
+  "package_types",
   "packages",
   "payout_requests",
   "resorts",

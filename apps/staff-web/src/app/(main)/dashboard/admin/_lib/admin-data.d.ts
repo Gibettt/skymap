@@ -102,6 +102,12 @@ export interface ResortRow {
   updated_at: string;
 }
 
+export interface PackageTypeOption {
+  id: string;
+  name: string;
+  slug: string;
+}
+
 export interface PackageRow {
   id: string;
   name: string;
@@ -225,6 +231,7 @@ export function getCalendarOptions(): Promise<CalendarOptions>;
 export function getResorts(): Promise<ResortRow[]>;
 export function getPackages(): Promise<PackageRow[]>;
 export function getPackageResortOptions(): Promise<Array<{ id: string; name: string }>>;
+export function getPackageTypes(): Promise<PackageTypeOption[]>;
 export function getUsers(): Promise<{ users: UserRow[]; resorts: UserResortOption[] }>;
 export function getFinance(): Promise<{
   summary: {

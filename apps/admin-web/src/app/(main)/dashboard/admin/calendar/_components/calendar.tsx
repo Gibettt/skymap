@@ -258,6 +258,7 @@ export function Calendar({ options }: { options: CalendarOptions }) {
   const [eventImage, setEventImage] = React.useState<PackageImageValue>(undefined);
   const [deleteOpen, setDeleteOpen] = React.useState(false);
   const [deleting, setDeleting] = React.useState(false);
+  const [customEventTypeName, setCustomEventTypeName] = React.useState("");
 
   React.useEffect(() => {
     if (!isMobile) return;
@@ -325,8 +326,11 @@ export function Calendar({ options }: { options: CalendarOptions }) {
   const availableEventTypes = React.useMemo(() => {
     const types = new Map([
       ["astronomy", "Astronomy"],
+      ["stargazing", "Stargazing"],
       ["meteor", "Meteor"],
+      ["kids-club", "Kids Club Classes"],
       ["resort", "Resort"],
+      ["others", "Others (Custom)"],
     ]);
     for (const record of records) {
       if (record.kind === "sky_event" && record.resortId === form.resortId) {
@@ -374,7 +378,9 @@ export function Calendar({ options }: { options: CalendarOptions }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           title: form.title,
-          eventType: form.eventType,
+          eventType: form.eventType === "others"
+            ? (customEventTypeName.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "") || "others")
+            : form.eventType,
           startsAt: new Date(form.startsAt).toISOString(),
           endsAt: form.endsAt ? new Date(form.endsAt).toISOString() : null,
           resortId: form.resortId,
@@ -582,9 +588,24 @@ export function Calendar({ options }: { options: CalendarOptions }) {
                   <Detail label="End" value={formatDateTime(selectedRecord.endsAt)} />
                   <Detail label="Partner resort" value={selectedRecord.resortName} />
                   <Detail label="Package" value={selectedRecord.packageName} />
-                  <Detail label="Observation spot" value={selectedRecord.observationSpot} />
+                  <Detail label="Observation spot / Location" value={selectedRecord.observationSpot} />
                   <Detail label="Capacity" value={selectedRecord.capacity} />
-                  <Detail label="Price override" value={selectedRecord.priceOverrideUsd == null ? null : formatCurrency(selectedRecord.priceOverrideUsd)} />
+                  <Detail
+                    label="Pricing / Rate"
+                    value={
+                      selectedRecord.priceOverrideUsd === 0 ? (
+                        <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 font-medium text-emerald-600 dark:text-emerald-400 text-xs">
+                          FOC (Free of Charge)
+                        </span>
+                      ) : selectedRecord.priceOverrideUsd != null ? (
+                        formatCurrency(selectedRecord.priceOverrideUsd)
+                      ) : selectedRecord.packageName ? (
+                        "Package default"
+                      ) : (
+                        "—"
+                      )
+                    }
+                  />
                   <Detail label="Source" value={selectedRecord.sourceUrl ? (
                     <a className="inline-flex items-center gap-1 underline underline-offset-4" href={selectedRecord.sourceUrl} target="_blank" rel="noreferrer">
                       {selectedRecord.sourceName || "Open source"}<ExternalLink className="size-3" />
@@ -638,6 +659,14 @@ export function Calendar({ options }: { options: CalendarOptions }) {
                     ))}
                   </SelectGroup></SelectContent>
                 </Select>
+                {form.eventType === "others" ? (
+                  <Input
+                    className="mt-2"
+                    placeholder="Enter custom event type name (e.g. Kids Club Classes)"
+                    value={customEventTypeName}
+                    onChange={(e) => setCustomEventTypeName(e.target.value)}
+                  />
+                ) : null}
               </Field>
               <Field>
                 <FieldLabel htmlFor="event-resort">Partner resort</FieldLabel>
@@ -679,16 +708,85 @@ export function Calendar({ options }: { options: CalendarOptions }) {
                 </Select>
               </Field>
               <Field>
-                <FieldLabel htmlFor="event-spot">Observation spot</FieldLabel>
-                <Input id="event-spot" maxLength={120} value={form.observationSpot} onChange={(event) => setForm({ ...form, observationSpot: event.target.value })} />
+                <FieldLabel htmlFor="event-spot">Observation spot / Location</FieldLabel>
+                <Input
+                  id="event-spot"
+                  maxLength={120}
+                  placeholder="Observation spot or location (e.g. Deck, Beach, Room)"
+                  value={form.observationSpot}
+                  onChange={(event) => setForm({ ...form, observationSpot: event.target.value })}
+                />
               </Field>
               <Field>
                 <FieldLabel htmlFor="event-capacity">Capacity</FieldLabel>
                 <Input id="event-capacity" min={1} step={1} type="number" value={form.capacity} onChange={(event) => setForm({ ...form, capacity: event.target.value })} />
               </Field>
-              <Field>
-                <FieldLabel htmlFor="event-price">Price override (USD)</FieldLabel>
-                <Input id="event-price" min={0} step="0.01" type="number" value={form.priceOverrideUsd} onChange={(event) => setForm({ ...form, priceOverrideUsd: event.target.value })} />
+              <Field className="md:col-span-2">
+                <div className="flex flex-wrap items-center justify-between gap-1.5">
+                  <FieldLabel htmlFor="event-price">Pricing / Price override</FieldLabel>
+                  <div className="flex items-center gap-1.5">
+                    <Button
+                      type="button"
+                      size="xs"
+                      variant={form.priceOverrideUsd === "0" ? "outline" : "default"}
+                      className="h-6 text-xs"
+                      onClick={() => {
+                        if (form.priceOverrideUsd === "0") {
+                          setForm({ ...form, priceOverrideUsd: "" });
+                        }
+                      }}
+                    >
+                      Chargeable
+                    </Button>
+                    <Button
+                      type="button"
+                      size="xs"
+                      variant={form.priceOverrideUsd === "0" ? "default" : "outline"}
+                      className={`h-6 text-xs ${
+                        form.priceOverrideUsd === "0"
+                          ? "border-emerald-600 bg-emerald-600 text-white hover:bg-emerald-700"
+                          : "border-emerald-500/40 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/30"
+                      }`}
+                      onClick={() => {
+                        setForm({ ...form, priceOverrideUsd: "0" });
+                      }}
+                    >
+                      FOC (Free of Charge)
+                    </Button>
+                  </div>
+                </div>
+
+                {form.priceOverrideUsd === "0" ? (
+                  <div className="flex h-9 items-center justify-between rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 font-medium text-emerald-600 text-sm dark:text-emerald-400">
+                    <span className="flex items-center gap-1.5">
+                      ✓ FOC (Free of Charge)
+                    </span>
+                    <span className="text-muted-foreground text-xs">$0.00 — Complimentary activity</span>
+                  </div>
+                ) : (
+                  <div className="relative">
+                    <Input
+                      id="event-price"
+                      min={0}
+                      step="0.01"
+                      type="number"
+                      placeholder={
+                        form.packageId !== "none"
+                          ? "Leave blank to use package price, or enter custom USD price"
+                          : "Enter price in USD (e.g. 50.00)"
+                      }
+                      value={form.priceOverrideUsd}
+                      onChange={(event) => setForm({ ...form, priceOverrideUsd: event.target.value })}
+                    />
+                  </div>
+                )}
+                <FieldDescription>
+                  {form.priceOverrideUsd === "0"
+                    ? "Activity is free of charge (FOC / complimentary) for guests."
+                    : form.packageId !== "none"
+                      ? "Leave blank to use the linked package rate, or set a custom price."
+                      : "Set the price in USD, or select FOC (Free of Charge)."}
+                </FieldDescription>
               </Field>
               <Field className="md:col-span-2">
                 <FieldLabel htmlFor="event-description">Description</FieldLabel>

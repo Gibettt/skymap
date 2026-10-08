@@ -42,7 +42,8 @@ export function calculateBookingTotals({ adultCount, childCount, adultPriceUsd, 
     };
   }
 
-  const baseCents = (adultCount * toCents(adultPriceUsd)) + (childCount * toCents(childPriceUsd));
+  const effectiveChildPrice = childPriceUsd != null ? childPriceUsd : toUsd(Math.round(toCents(adultPriceUsd) * 0.5));
+  const baseCents = (adultCount * toCents(adultPriceUsd)) + (childCount * toCents(effectiveChildPrice));
   const serviceChargeCents = Math.round(baseCents * SERVICE_CHARGE_RATE);
   const gstCents = Math.round(baseCents * GST_RATE);
   const invoiceCents = baseCents + serviceChargeCents + gstCents;

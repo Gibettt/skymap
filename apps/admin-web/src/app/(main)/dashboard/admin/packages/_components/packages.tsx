@@ -30,7 +30,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { dataTableFeatures } from "@/lib/data-table-features";
 
 import { CreatePackageDialog } from "../../_components/create-dialogs";
-import type { PackageRow } from "../../_lib/admin-data";
+import type { PackageRow, PackageTypeOption } from "../../_lib/admin-data";
 import { titleCase } from "../../_lib/format";
 import { getPackagesColumns, type PackageResortOption } from "./packages-columns";
 import { PackagesGrid } from "./packages-grid";
@@ -55,7 +55,15 @@ function uniqueOptions(values: string[]) {
   return ["All", ...Array.from(new Set(values.filter(Boolean))).sort()];
 }
 
-export function Packages({ packages, resorts }: { packages: PackageRow[]; resorts: PackageResortOption[] }) {
+export function Packages({
+  packages,
+  resorts,
+  initialPackageTypes,
+}: {
+  packages: PackageRow[];
+  resorts: PackageResortOption[];
+  initialPackageTypes?: PackageTypeOption[];
+}) {
   const searchInputRef = React.useRef<HTMLInputElement>(null);
   const columns = React.useMemo(() => getPackagesColumns(resorts), [resorts]);
   const [sorting, setSorting] = React.useState<SortingState>([{ id: "updated_at", desc: true }]);
@@ -218,7 +226,7 @@ export function Packages({ packages, resorts }: { packages: PackageRow[]; resort
             <Download data-icon="inline-start" />
             Export
           </Button>
-          <CreatePackageDialog resorts={resorts} />
+          <CreatePackageDialog resorts={resorts} initialPackageTypes={initialPackageTypes} />
         </CardAction>
       </CardHeader>
 
