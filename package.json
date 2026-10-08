@@ -28,8 +28,8 @@
     "lint": "turbo run lint"
   },
   "devDependencies": {
-    "mysql2": "3.24.2",
-    "pg": "8.23.0",
-    "turbo": "^2.5.0"
+    "mysql2": "3.24.5",
+    "pg": "8.23.1",
+    "turbo": "^2.11.7"
   }
 }
