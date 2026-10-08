@@ -98,7 +98,9 @@ export function PackageActions({ packageData, resorts }: PackageActionsProps) {
             });
           }
         })
-        .catch(() => {});
+        .catch(() => {
+          // ignore package types fetch error
+        });
     }
   }, [editOpen, packageData.package_type]);
 

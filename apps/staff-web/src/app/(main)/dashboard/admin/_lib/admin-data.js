@@ -128,7 +128,9 @@ export async function getPackageTypes() {
   try {
     const { rows } = await query("SELECT id, name, slug FROM package_types WHERE is_active = true ORDER BY name");
     if (rows.length) return rows;
-  } catch {}
+  } catch {
+    // Fallback to default package types
+  }
   return [
     { id: "regular", name: "Regular", slug: "regular" },
     { id: "private", name: "Private", slug: "private" },

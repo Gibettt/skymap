@@ -682,7 +682,7 @@ export function InvoicesDashboard({
     updateMonthly();
     window.addEventListener("resize", updateMonthly);
     return () => window.removeEventListener("resize", updateMonthly);
-  }, [selectedMonthlySubmission]);
+  }, []);
   React.useEffect(() => {
     function update() {
       if (!modalPaperRef.current) return;

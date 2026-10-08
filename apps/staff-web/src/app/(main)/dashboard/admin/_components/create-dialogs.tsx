@@ -330,7 +330,9 @@ export function CreatePackageDialog({
             setPackageTypes(data.packageTypes);
           }
         })
-        .catch(() => {});
+        .catch(() => {
+          // ignore fetch error on mount
+        });
     }
   }, [open]);
 
