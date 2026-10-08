@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev --webpack -p 3004",
-    "build": "next build",
+    "build": "next build --webpack",
     "start": "next start -p 3004",
     "lint": "biome lint",
     "format": "biome format --write",
