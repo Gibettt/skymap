@@ -29,9 +29,9 @@ const packageFields = z.object({
   resortId: uuidSchema,
   adultPriceUsd: moneySchema,
   childPriceUsd: nullableMoneySchema,
-  couplePriceUsd: nullableMoneySchema.default(null),
-  groupPriceUsd: nullableMoneySchema.default(null),
-  mealPriceUsd: moneySchema.default(0),
+  couplePriceUsd: nullableMoneySchema,
+  groupPriceUsd: nullableMoneySchema,
+  mealPriceUsd: nullableMoneySchema,
   childAgeRange: cleanTextSchema(80),
   inclusions: z.array(inclusionSchema)
     .max(MAX_PACKAGE_INCLUSIONS, `Maksimal ${MAX_PACKAGE_INCLUSIONS} inclusion`)
@@ -43,6 +43,9 @@ export const createPackageSchema = packageFields.extend({
   schedule: packageFields.shape.schedule.default('Upon request'),
   inclusions: packageFields.shape.inclusions.default([]),
   isActive: packageFields.shape.isActive.default(true),
+  couplePriceUsd: nullableMoneySchema.default(null),
+  groupPriceUsd: nullableMoneySchema.default(null),
+  mealPriceUsd: moneySchema.default(0),
 });
 
 export const updatePackageSchema = packageFields.partial();
