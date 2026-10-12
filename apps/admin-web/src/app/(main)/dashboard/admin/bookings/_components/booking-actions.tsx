@@ -180,7 +180,7 @@ export function BookingActions({ booking, options }: BookingActionsProps) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           guestName: form.get("guestName"),
-          guestPhone: form.get("guestPhone"),
+          guestPhone: String(form.get("guestPhone") ?? "").trim() || null,
           guestEmail: String(form.get("guestEmail") ?? "").trim() || null,
           preferredLanguage: String(form.get("preferredLanguage") ?? "").trim() || null,
           roomNumber: form.get("roomNumber"),
@@ -571,16 +571,15 @@ export function BookingActions({ booking, options }: BookingActionsProps) {
                 <Input id={fieldId("booking-guest-name")} name="guestName" defaultValue={booking.guest_name} required />
               </Field>
               <Field>
-                <FieldLabel htmlFor={fieldId("booking-phone")}>Phone</FieldLabel>
+                <FieldLabel htmlFor={fieldId("booking-phone")}>Phone (optional)</FieldLabel>
                 <Input
                   id={fieldId("booking-phone")}
                   name="guestPhone"
                   defaultValue={booking.guest_phone ?? ""}
-                  required
                 />
               </Field>
               <Field>
-                <FieldLabel htmlFor={fieldId("booking-email")}>Email</FieldLabel>
+                <FieldLabel htmlFor={fieldId("booking-email")}>Email (optional)</FieldLabel>
                 <Input
                   id={fieldId("booking-email")}
                   name="guestEmail"

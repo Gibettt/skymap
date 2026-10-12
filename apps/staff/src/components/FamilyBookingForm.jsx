@@ -486,8 +486,8 @@ export default function FamilyBookingForm({ basePath, fixedSlug = null, staticEx
       showToast('error', t('form_validation_package'));
       return;
     }
-    if (!form.leadGuestName || !form.leadGuestPhone) {
-      showToast('error', t('form_validation_lead'));
+    if (!form.leadGuestName) {
+      showToast('error', t('form_validation_lead_name', 'Nama tamu utama wajib diisi'));
       return;
     }
 
@@ -515,7 +515,7 @@ export default function FamilyBookingForm({ basePath, fixedSlug = null, staticEx
           timeStart: start,
           timeEnd: end,
           guestName: form.leadGuestName,
-          guestPhone: form.leadGuestPhone,
+          guestPhone: form.leadGuestPhone || null,
           guestEmail: form.leadGuestEmail || null,
           preferredLanguage: form.preferredLanguage,
           roomNumber: form.roomNumber,
@@ -525,8 +525,7 @@ export default function FamilyBookingForm({ basePath, fixedSlug = null, staticEx
           childAges: childAgesSummary,
           specialOccasion: form.specialOccasion,
           guardianName: form.leadGuestName,
-          guardianPhone: form.leadGuestPhone,
-          privacyPreference: form.privacyPreference,
+          guardianPhone: form.leadGuestPhone || null,
           dietaryRestrictions: form.dietaryRestrictions,
           rescheduleConsent: form.rescheduleConsent,
           slotStatus: form.slotStatus,
@@ -922,13 +921,12 @@ export default function FamilyBookingForm({ basePath, fixedSlug = null, staticEx
                 />
               </Field>
 
-              <Field label={t('form_label_phone_short')}>
+              <Field label={`${t('form_label_phone_short', 'Phone')} (${t('form_optional', 'optional')})`}>
                 <input
                   className="input"
                   value={form.leadGuestPhone}
                   onChange={(e) => setField('leadGuestPhone', e.target.value)}
                   placeholder="+62... / +960..."
-                  required
                 />
               </Field>
 

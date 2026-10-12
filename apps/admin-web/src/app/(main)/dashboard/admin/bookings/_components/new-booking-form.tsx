@@ -293,12 +293,10 @@ export function NewBookingForm({ portalRole: role, onCreated, onCancel }: NewBoo
     if (step === 1) {
       const form = formRef.current;
       const formData = new FormData(form ?? undefined);
-      const guestPhone = String(formData.get("guestPhone") || "").trim();
       const guestEmail = String(formData.get("guestEmail") || "").trim();
       const roomNumber = String(formData.get("roomNumber") || "").trim();
       const emailInput = form?.elements.namedItem("guestEmail");
-
-      if (!guestPhone || !roomNumber) return "Complete the phone or WhatsApp and room or villa number.";
+      if (!roomNumber) return "Complete the room or villa number.";
       if (guestEmail && emailInput instanceof HTMLInputElement && !emailInput.checkValidity()) {
         return "Enter a valid guest email address.";
       }
@@ -398,8 +396,8 @@ export function NewBookingForm({ portalRole: role, onCreated, onCancel }: NewBoo
       timeStart: primaryExperience.timeStart,
       timeEnd: primaryExperience.timeEnd,
       guestName: primaryParticipant.fullName,
-      guestPhone: String(formData.get("guestPhone") || ""),
-      guestEmail: String(formData.get("guestEmail") || "") || null,
+      guestPhone: String(formData.get("guestPhone") || "").trim() || null,
+      guestEmail: String(formData.get("guestEmail") || "").trim() || null,
       roomNumber: String(formData.get("roomNumber") || ""),
       nationality: primaryParticipant.nationality,
       adultCount,
@@ -535,17 +533,16 @@ export function NewBookingForm({ portalRole: role, onCreated, onCancel }: NewBoo
                         <FieldLegend className="sr-only">Contact and stay information</FieldLegend>
                         <FieldGroup className="grid gap-5 md:grid-cols-2">
                           <Field>
-                            <FieldLabel htmlFor="booking-guest-phone">Phone or WhatsApp</FieldLabel>
+                            <FieldLabel htmlFor="booking-guest-phone">Phone or WhatsApp (optional)</FieldLabel>
                             <Input
                               id="booking-guest-phone"
                               name="guestPhone"
                               maxLength={30}
                               autoComplete="tel"
-                              required
                             />
                           </Field>
                           <Field>
-                            <FieldLabel htmlFor="booking-guest-email">Email</FieldLabel>
+                            <FieldLabel htmlFor="booking-guest-email">Email (optional)</FieldLabel>
                             <Input
                               id="booking-guest-email"
                               name="guestEmail"

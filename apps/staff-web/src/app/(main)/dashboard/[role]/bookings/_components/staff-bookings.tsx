@@ -1236,7 +1236,7 @@ export function StaffBookings({ role, initialNewBooking = false }: { role: Staff
     }
 
     const payload: Record<string, unknown> = {
-      guestPhone: formData.get("guestPhone"),
+      guestPhone: String(formData.get("guestPhone") ?? "").trim() || null,
       guestEmail: String(formData.get("guestEmail") ?? "").trim() || null,
       preferredLanguage: String(formData.get("preferredLanguage") ?? "").trim() || null,
       roomNumber: formData.get("roomNumber"),
@@ -1782,16 +1782,15 @@ export function StaffBookings({ role, initialNewBooking = false }: { role: Staff
                 />
               </Field>
               <Field>
-                <FieldLabel htmlFor="edit-booking-phone">Phone</FieldLabel>
+                <FieldLabel htmlFor="edit-booking-phone">Phone (optional)</FieldLabel>
                 <Input
                   id="edit-booking-phone"
                   name="guestPhone"
                   defaultValue={editBooking?.guest_phone ?? ""}
-                  required
                 />
               </Field>
               <Field>
-                <FieldLabel htmlFor="edit-booking-email">Email</FieldLabel>
+                <FieldLabel htmlFor="edit-booking-email">Email (optional)</FieldLabel>
                 <Input
                   id="edit-booking-email"
                   name="guestEmail"

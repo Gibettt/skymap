@@ -89,7 +89,7 @@ const createShape = {
 	timeStart: timeSchema,
 	timeEnd: timeSchema,
 	guestName: z.string().trim().min(1, "Nama tamu wajib diisi").max(200),
-	guestPhone: z.string().trim().min(1, "Nomor telepon wajib diisi").max(30),
+	guestPhone: cleanTextSchema(30).default(null),
 	guestEmail: optionalEmailSchema,
 	roomNumber: z.string().trim().min(1, "Nomor kamar wajib diisi").max(20),
 	nationality: z.string().trim().min(1, "Kebangsaan wajib diisi").max(80),
