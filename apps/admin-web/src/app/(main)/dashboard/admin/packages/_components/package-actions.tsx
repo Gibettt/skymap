@@ -4,7 +4,7 @@ import { type FormEvent, useEffect, useState } from "react";
 
 import { useRouter } from "next/navigation";
 
-import { Eye, MoreHorizontal, Pencil, Plus, Trash2 } from "lucide-react";
+import { Coins, Eye, MoreHorizontal, Pencil, Plus, Sparkles, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 import {
@@ -41,6 +41,7 @@ import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectSeparator, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Spinner } from "@/components/ui/spinner";
+import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 
 import { PackageImageField, type PackageImageValue } from "../../_components/package-image-field";
@@ -78,14 +79,16 @@ export function PackageActions({ packageData, resorts }: PackageActionsProps) {
   const [isAddingType, setIsAddingType] = useState(false);
   const [newTypeName, setNewTypeName] = useState("");
   const [addingTypePending, setAddingTypePending] = useState(false);
-
+  const [isAddon, setIsAddon] = useState(false);
+  const [adultPrice, setAdultPrice] = useState("");
+  const [childPrice, setChildPrice] = useState("");
   useEffect(() => {
     if (editOpen) {
       fetch("/api/package-types")
         .then((res) => res.json())
         .then((data) => {
           if (Array.isArray(data.packageTypes) && data.packageTypes.length > 0) {
-            setPackageTypes((prev) => {
+            setPackageTypes(() => {
               const combined = [...data.packageTypes];
               if (!combined.some((item) => item.slug === packageData.package_type)) {
                 combined.push({
@@ -140,6 +143,14 @@ export function PackageActions({ packageData, resorts }: PackageActionsProps) {
     setResortId(packageData.resort_id ?? resorts[0]?.id ?? "");
     setStatus(packageData.is_active ? "active" : "inactive");
     setBilling(packageData.is_chargeable ? "chargeable" : "complimentary");
+    const isAddonPkg =
+      (packageData.package_type || "").toLowerCase().includes("addon") ||
+      (packageData.package_type || "").toLowerCase().includes("add-on") ||
+      (packageData.name || "").toLowerCase().includes("add-on") ||
+      (packageData.name || "").toLowerCase().includes("addon");
+    setIsAddon(Boolean(isAddonPkg));
+    setAdultPrice(String(numberValue(packageData.adult_price_usd) ?? ""));
+    setChildPrice(packageData.child_price_usd == null ? "" : String(numberValue(packageData.child_price_usd)));
     setImage(undefined);
     setEditOpen(true);
   }
@@ -153,15 +164,23 @@ export function PackageActions({ packageData, resorts }: PackageActionsProps) {
       .filter(Boolean);
 
     const payload = new FormData(event.currentTarget);
-    payload.set("packageType", packageType);
+    const finalPackageType = isAddon ? "addon" : packageType;
+    payload.set("packageType", finalPackageType);
     payload.set("experienceType", experienceType);
     payload.set("resortId", resortId);
+    let finalAdultPrice = adultPrice;
+    let finalChildPrice = childPrice || null;
     if (billing === "complimentary") {
-      payload.set("adultPriceUsd", "0");
-      payload.set("childPriceUsd", "0");
+      finalAdultPrice = "0";
+      finalChildPrice = "0";
+    } else {
+      if (form.get("adultPriceUsd")) finalAdultPrice = String(form.get("adultPriceUsd"));
+      if (form.get("childPriceUsd")) finalChildPrice = String(form.get("childPriceUsd"));
     }
+    payload.set("adultPriceUsd", finalAdultPrice || "0");
+    if (finalChildPrice) payload.set("childPriceUsd", finalChildPrice);
+    else payload.delete("childPriceUsd");
     payload.set("isChargeable", String(billing === "chargeable"));
-    payload.set("isActive", String(status === "active"));
     payload.set("inclusions", JSON.stringify(inclusions));
     if (image === null) payload.set("image", "");
     else if (image instanceof File) payload.set("image", image);
@@ -368,7 +387,7 @@ export function PackageActions({ packageData, resorts }: PackageActionsProps) {
                       onKeyDown={(e) => {
                         if (e.key === "Enter") {
                           e.preventDefault();
-                          handleAddNewType();
+                          void handleAddNewType();
                         } else if (e.key === "Escape") {
                           setIsAddingType(false);
                           setNewTypeName("");
@@ -381,7 +400,7 @@ export function PackageActions({ packageData, resorts }: PackageActionsProps) {
                       size="xs"
                       className="h-8 px-2.5"
                       disabled={!newTypeName.trim() || addingTypePending}
-                      onClick={handleAddNewType}
+                      onClick={() => void handleAddNewType()}
                     >
                       {addingTypePending ? "..." : "Save"}
                     </Button>
@@ -461,37 +480,191 @@ export function PackageActions({ packageData, resorts }: PackageActionsProps) {
                   required
                 />
               </Field>
-              <Field>
-                <FieldLabel htmlFor={fieldId("edit-package-adult-price")}>Adult price (USD)</FieldLabel>
-                <Input
-                  id={fieldId("edit-package-adult-price")}
-                  name="adultPriceUsd"
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  defaultValue={numberValue(packageData.adult_price_usd)}
-                  required
-                />
-              </Field>
-              <Field>
-                <FieldLabel htmlFor={fieldId("edit-package-child-price")}>Child price (USD)</FieldLabel>
-                <Input
-                  id={fieldId("edit-package-child-price")}
-                  name="childPriceUsd"
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  defaultValue={packageData.child_price_usd == null ? "" : numberValue(packageData.child_price_usd)}
-                />
-              </Field>
-              <Field>
-                <FieldLabel htmlFor={fieldId("edit-package-age-range")}>Child age range</FieldLabel>
-                <Input
-                  id={fieldId("edit-package-age-range")}
-                  name="childAgeRange"
-                  defaultValue={packageData.child_age_range ?? ""}
-                />
-              </Field>
+            <div className="md:col-span-2 rounded-xl border border-border/70 bg-muted/20 p-4 space-y-4">
+              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border/50 pb-3">
+                <div className="flex items-center gap-2">
+                  <Coins className="h-4 w-4 text-emerald-400" />
+                  <span className="font-semibold text-sm text-foreground">Group Pricing & Rates</span>
+                  {isAddon ? (
+                    <Badge variant="outline" className="border-cyan-500/50 bg-cyan-950/30 text-cyan-300 text-[11px]">
+                      ✦ Add-on
+                    </Badge>
+                  ) : null}
+                  {!isAddon && billing === "complimentary" ? (
+                    <Badge variant="outline" className="border-emerald-500/50 bg-emerald-950/30 text-emerald-300 text-[11px]">
+                      FOC
+                    </Badge>
+                  ) : null}
+                  {!isAddon && billing !== "complimentary" ? (
+                    <Badge variant="outline" className="border-slate-600 text-slate-300 text-[11px]">
+                      Chargeable
+                    </Badge>
+                  ) : null}
+                </div>
+
+                <div className="flex items-center gap-1.5">
+                  <Button
+                    type="button"
+                    size="xs"
+                    variant={billing === "chargeable" && !isAddon ? "default" : "outline"}
+                    className="h-6 text-xs"
+                    onClick={() => {
+                      setBilling("chargeable");
+                      setIsAddon(false);
+                      if (adultPrice === "0") setAdultPrice("");
+                      if (childPrice === "0") setChildPrice("");
+                    }}
+                  >
+                    Chargeable
+                  </Button>
+                  <Button
+                    type="button"
+                    size="xs"
+                    variant={billing === "complimentary" ? "default" : "outline"}
+                    className={`h-6 text-xs ${
+                      billing === "complimentary"
+                        ? "border-emerald-600 bg-emerald-600 text-white hover:bg-emerald-700"
+                        : "border-emerald-500/40 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/30"
+                    }`}
+                    onClick={() => {
+                      setBilling("complimentary");
+                      setAdultPrice("0");
+                      setChildPrice("0");
+                      setIsAddon(false);
+                    }}
+                  >
+                    FOC (Free of Charge)
+                  </Button>
+                  <Button
+                    type="button"
+                    size="xs"
+                    variant={isAddon ? "default" : "outline"}
+                    className={`h-6 text-xs ${
+                      isAddon
+                        ? "border-cyan-500 bg-gradient-to-r from-cyan-600 to-blue-600 text-white shadow-xs"
+                        : "border-cyan-500/40 text-cyan-400 hover:bg-cyan-950/30"
+                    }`}
+                    onClick={() => {
+                      setIsAddon((prev) => !prev);
+                      if (!isAddon && billing === "complimentary") {
+                        setBilling("chargeable");
+                        if (adultPrice === "0") setAdultPrice("");
+                      }
+                    }}
+                  >
+                    <Sparkles className="mr-1 h-3 w-3" />
+                    Add-on
+                  </Button>
+                </div>
+              </div>
+
+              {isAddon && (
+                <div className="flex items-center justify-between rounded-lg border border-cyan-300 bg-cyan-50 px-3 py-2 text-xs text-cyan-800 dark:border-cyan-500/30 dark:bg-cyan-950/20 dark:text-cyan-300">
+                  <span className="flex items-center gap-1.5 font-medium">
+                    <Sparkles className="h-3.5 w-3.5 text-cyan-600 dark:text-cyan-400 shrink-0" />
+                    Add-on Active: This package will be displayed exclusively in the booking Add-on dropdown column.
+                  </span>
+                  <Badge variant="outline" className="border-cyan-400/40 text-cyan-800 dark:text-cyan-300 shrink-0">
+                    Add-on
+                  </Badge>
+                </div>
+              )}
+
+              {billing === "complimentary" ? (
+                <div className="flex h-9 items-center justify-between rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 font-medium text-emerald-600 text-sm dark:text-emerald-400">
+                  <span>✓ FOC (Free of Charge)</span>
+                  <span className="text-muted-foreground text-xs">$0.00 — Complimentary experience</span>
+                </div>
+              ) : null}
+
+              {billing === "chargeable" ? (
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                  <Field>
+                    <FieldLabel htmlFor={fieldId("edit-package-adult-price")}>
+                      {isAddon ? "Add-on / Adult price (USD) *" : "Adult price (USD) *"}
+                    </FieldLabel>
+                    <div className="relative">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm font-semibold">
+                        $
+                      </span>
+                      <Input
+                        id={fieldId("edit-package-adult-price")}
+                        name="adultPriceUsd"
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        required
+                        className="pl-7 font-medium"
+                        placeholder="0.00"
+                        value={adultPrice}
+                        onChange={(e) => setAdultPrice(e.target.value)}
+                      />
+                    </div>
+                  </Field>
+
+                  <Field>
+                    <FieldLabel htmlFor={fieldId("edit-package-child-price")}>
+                      Child price (USD)
+                    </FieldLabel>
+                    <div className="relative">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm font-semibold">
+                        $
+                      </span>
+                      <Input
+                        id={fieldId("edit-package-child-price")}
+                        name="childPriceUsd"
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        className="pl-7 font-medium"
+                        placeholder={adultPrice ? (Number(adultPrice) * 0.5).toFixed(2) : "50% of adult rate"}
+                        value={childPrice}
+                        onChange={(e) => setChildPrice(e.target.value)}
+                      />
+                    </div>
+                  </Field>
+
+                  <div className="sm:col-span-2 lg:col-span-1 flex flex-col justify-between rounded-lg border border-border/60 bg-background/50 p-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-semibold text-foreground flex items-center gap-1.5">
+                        <Sparkles className="h-3.5 w-3.5 text-cyan-400" />
+                        Add-on Feature
+                      </span>
+                      <Switch
+                        id={fieldId("edit-package-addon-toggle")}
+                        checked={isAddon}
+                        onCheckedChange={setIsAddon}
+                      />
+                    </div>
+                    <p className="text-[11px] text-muted-foreground mt-1">
+                      {isAddon
+                        ? "Marked as Add-on item for bookings."
+                        : "Enable to make this an optional Add-on."}
+                    </p>
+                  </div>
+
+                  <Field className="sm:col-span-2 lg:col-span-3">
+                    <FieldLabel htmlFor={fieldId("edit-package-age-range")}>Child age range (optional)</FieldLabel>
+                    <Input
+                      id={fieldId("edit-package-age-range")}
+                      name="childAgeRange"
+                      defaultValue={packageData.child_age_range ?? ""}
+                      placeholder="e.g. 4–11 years (under 12y)"
+                    />
+                  </Field>
+                </div>
+              ) : (
+                <Field>
+                  <FieldLabel htmlFor={fieldId("edit-package-age-range")}>Child age range (optional)</FieldLabel>
+                  <Input
+                    id={fieldId("edit-package-age-range")}
+                    name="childAgeRange"
+                    defaultValue={packageData.child_age_range ?? ""}
+                    placeholder="e.g. 4–11 years"
+                  />
+                </Field>
+              )}
+            </div>
               <Field>
                 <FieldLabel>Status</FieldLabel>
                 <Select value={status} onValueChange={(value) => value && setStatus(value)}>
