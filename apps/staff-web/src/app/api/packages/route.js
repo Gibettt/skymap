@@ -9,7 +9,7 @@ const ALLOWED_PACKAGE_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 const ALLOWED_PACKAGE_IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.webp'];
 const PACKAGE_COLUMNS = `
   id, name, package_type, experience_type, location, description, schedule, resort_id,
-  adult_price_usd, child_price_usd, child_age_range, is_chargeable, is_active,
+  adult_price_usd, child_price_usd, couple_price_usd, group_price_usd, meal_price_usd, child_age_range, is_chargeable, is_active,
   image_mime_type, image_file_name, image_data IS NOT NULL AS has_image,
   CASE WHEN image_data IS NULL THEN NULL ELSE CONCAT('/api/packages/', id, '/image') END AS image_url,
   created_at, updated_at
@@ -71,6 +71,9 @@ async function parseCreatePackageRequest(request) {
       schedule: form.get('schedule'),
       adultPriceUsd: form.get('adultPriceUsd'),
       childPriceUsd: form.get('childPriceUsd'),
+      couplePriceUsd: form.get('couplePriceUsd'),
+      groupPriceUsd: form.get('groupPriceUsd'),
+      mealPriceUsd: form.get('mealPriceUsd'),
       childAgeRange: form.get('childAgeRange'),
       inclusions: parseInclusionsField(form.get('inclusions')),
       resortId: form.get('resortId') || null,
@@ -143,8 +146,9 @@ export async function POST(request) {
         `INSERT INTO packages
           (name, package_type, experience_type, location, description, schedule, resort_id,
            image_data, image_mime_type, image_file_name, adult_price_usd, child_price_usd,
+           couple_price_usd, group_price_usd, meal_price_usd,
            child_age_range, is_chargeable, is_active)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
          RETURNING ${PACKAGE_COLUMNS}`,
         [
           data.name,
@@ -159,6 +163,9 @@ export async function POST(request) {
           requestData.image?.fileName || null,
           data.adultPriceUsd,
           data.childPriceUsd,
+          data.couplePriceUsd,
+          data.groupPriceUsd,
+          data.mealPriceUsd,
           data.childAgeRange,
           packageIsChargeable(data.adultPriceUsd, data.childPriceUsd),
           data.isActive,

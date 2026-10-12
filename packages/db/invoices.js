@@ -62,27 +62,74 @@ export function buildCustomerLineItems(booking, experiences = []) {
         },
       ];
 
-  return sourceItems.map((experience, index) => ({
-    id: String(experience.id ?? `experience-${index + 1}`),
-    description: String(experience.package_name ?? booking.package_name ?? "Ephemeris experience"),
-    detail: [
-      participantSummary || null,
-      isoDate(experience.event_date),
-      experience.time_start && experience.time_end
-        ? `${String(experience.time_start).slice(0, 5)}–${String(experience.time_end).slice(0, 5)}`
-        : null,
-      experience.observation_spot || null,
-    ]
-      .filter(Boolean)
-      .join(" · "),
-    quantity: 1,
-    unit_price_usd: roundMoney(experience.base_total_usd),
-    amount_usd: roundMoney(experience.base_total_usd),
-    adult_count: adultCount,
-    child_count: childCount,
-    adult_unit_price_usd: roundMoney(experience.booked_adult_price_usd ?? booking.booked_adult_price_usd),
-    child_unit_price_usd: roundMoney(experience.booked_child_price_usd ?? booking.booked_child_price_usd),
-  }));
+  const items = [];
+  sourceItems.forEach((experience, index) => {
+    const mealPrice = roundMoney(experience.meal_price_usd ?? booking.booked_meal_price_usd ?? booking.package_meal_price_usd ?? 0);
+    const totalExpAmount = roundMoney(experience.base_total_usd);
+
+    if (mealPrice > 0 && totalExpAmount > mealPrice) {
+      const activityAmount = roundMoney(totalExpAmount - mealPrice);
+      items.push({
+        id: String(experience.id ?? `experience-${index + 1}-activity`),
+        description: `${experience.package_name ?? booking.package_name ?? "Experience"} (Activity Component)`,
+        detail: [
+          participantSummary || null,
+          isoDate(experience.event_date),
+          experience.time_start && experience.time_end
+            ? `${String(experience.time_start).slice(0, 5)}–${String(experience.time_end).slice(0, 5)}`
+            : null,
+          experience.observation_spot || null,
+        ]
+          .filter(Boolean)
+          .join(" · "),
+        quantity: 1,
+        unit_price_usd: activityAmount,
+        amount_usd: activityAmount,
+        adult_count: adultCount,
+        child_count: childCount,
+        adult_unit_price_usd: roundMoney(experience.booked_adult_price_usd ?? booking.booked_adult_price_usd),
+        child_unit_price_usd: roundMoney(experience.booked_child_price_usd ?? booking.booked_child_price_usd),
+        item_type: "activity",
+      });
+
+      items.push({
+        id: `${experience.id ?? `experience-${index + 1}`}-meal`,
+        description: "Food & Beverage (F&B / Meal Inclusion)",
+        detail: `F&B allocation for ${experience.package_name ?? booking.package_name ?? "dining experience"}`,
+        quantity: 1,
+        unit_price_usd: mealPrice,
+        amount_usd: mealPrice,
+        adult_count: adultCount,
+        child_count: childCount,
+        item_type: "meal",
+      });
+    } else {
+      items.push({
+        id: String(experience.id ?? `experience-${index + 1}`),
+        description: String(experience.package_name ?? booking.package_name ?? "Ephemeris experience"),
+        detail: [
+          participantSummary || null,
+          isoDate(experience.event_date),
+          experience.time_start && experience.time_end
+            ? `${String(experience.time_start).slice(0, 5)}–${String(experience.time_end).slice(0, 5)}`
+            : null,
+          experience.observation_spot || null,
+        ]
+          .filter(Boolean)
+          .join(" · "),
+        quantity: 1,
+        unit_price_usd: totalExpAmount,
+        amount_usd: totalExpAmount,
+        adult_count: adultCount,
+        child_count: childCount,
+        adult_unit_price_usd: roundMoney(experience.booked_adult_price_usd ?? booking.booked_adult_price_usd),
+        child_unit_price_usd: roundMoney(experience.booked_child_price_usd ?? booking.booked_child_price_usd),
+        item_type: "activity",
+      });
+    }
+  });
+
+  return items;
 }
 
 export function buildPayoutLineItems(payout) {
@@ -276,6 +323,9 @@ export async function issueCustomerInvoice(client, { bookingId, issuedById, reso
   const bookingParams = resortId ? [bookingId, resortId] : [bookingId];
   const { rows } = await client.query(
     `SELECT b.*, p.name AS package_name, p.location AS package_location,
+      COALESCE(p.meal_price_usd, 0) AS package_meal_price_usd,
+      COALESCE(p.couple_price_usd, NULL) AS package_couple_price_usd,
+      COALESCE(p.group_price_usd, NULL) AS package_group_price_usd,
       r.name AS resort_name, staff.name AS staff_name
      FROM bookings b
      JOIN packages p ON p.id = b.package_id
@@ -308,7 +358,10 @@ export async function issueCustomerInvoice(client, { bookingId, issuedById, reso
 
   const experienceResult = await client.query(
     `SELECT be.id, be.event_date, be.time_start, be.time_end, be.observation_spot,
-      be.base_total_usd, be.booked_adult_price_usd, be.booked_child_price_usd, p.name AS package_name
+      be.base_total_usd, be.booked_adult_price_usd, be.booked_child_price_usd, p.name AS package_name,
+      COALESCE(p.meal_price_usd, 0) AS meal_price_usd,
+      COALESCE(p.couple_price_usd, NULL) AS couple_price_usd,
+      COALESCE(p.group_price_usd, NULL) AS group_price_usd
      FROM booking_experiences be
      JOIN packages p ON p.id = be.package_id
      WHERE be.booking_id = $1
@@ -345,8 +398,10 @@ export async function issueCustomerInvoice(client, { bookingId, issuedById, reso
     tax_rate_percent: roundMoney(booking.tax_rate_percent),
     booked_adult_price_usd: roundMoney(booking.booked_adult_price_usd),
     booked_child_price_usd: roundMoney(booking.booked_child_price_usd),
+    booked_couple_price_usd: roundMoney(booking.booked_couple_price_usd ?? booking.package_couple_price_usd),
+    booked_group_price_usd: roundMoney(booking.booked_group_price_usd ?? booking.package_group_price_usd),
+    booked_meal_price_usd: roundMoney(booking.booked_meal_price_usd ?? booking.package_meal_price_usd ?? 0),
   };
-
   await client.query(
     `INSERT INTO invoices (
       id, invoice_number, invoice_type, status, booking_id, payout_request_id,

@@ -29,6 +29,9 @@ const packageFields = z.object({
   resortId: uuidSchema,
   adultPriceUsd: moneySchema,
   childPriceUsd: nullableMoneySchema,
+  couplePriceUsd: nullableMoneySchema.default(null),
+  groupPriceUsd: nullableMoneySchema.default(null),
+  mealPriceUsd: moneySchema.default(0),
   childAgeRange: cleanTextSchema(80),
   inclusions: z.array(inclusionSchema)
     .max(MAX_PACKAGE_INCLUSIONS, `Maksimal ${MAX_PACKAGE_INCLUSIONS} inclusion`)

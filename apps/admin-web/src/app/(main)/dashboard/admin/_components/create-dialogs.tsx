@@ -322,7 +322,10 @@ export function CreatePackageDialog({
   const [billing, setBilling] = useState<"chargeable" | "foc">("chargeable");
   const [isAddon, setIsAddon] = useState(false);
   const [adultPrice, setAdultPrice] = useState("");
+  const [couplePrice, setCouplePrice] = useState("");
   const [childPrice, setChildPrice] = useState("");
+  const [groupPrice, setGroupPrice] = useState("");
+  const [mealPrice, setMealPrice] = useState("");
 
   useEffect(() => {
     if (open) {
@@ -392,6 +395,11 @@ export function CreatePackageDialog({
     payload.set("adultPriceUsd", finalAdultPrice || "0");
     if (finalChildPrice) payload.set("childPriceUsd", finalChildPrice);
     else payload.delete("childPriceUsd");
+    if (couplePrice) payload.set("couplePriceUsd", couplePrice);
+    else payload.delete("couplePriceUsd");
+    if (groupPrice) payload.set("groupPriceUsd", groupPrice);
+    else payload.delete("groupPriceUsd");
+    payload.set("mealPriceUsd", mealPrice || "0");
     payload.set("isChargeable", billing === "foc" ? "false" : "true");
     payload.set("isActive", "true");
     payload.set("inclusions", JSON.stringify(inclusions));
@@ -418,6 +426,11 @@ export function CreatePackageDialog({
         if (next) {
           setImage(undefined);
           setIsAddon(false);
+          setAdultPrice("");
+          setCouplePrice("");
+          setChildPrice("");
+          setGroupPrice("");
+          setMealPrice("");
         }
       }}>
       <DialogTrigger asChild>
@@ -662,6 +675,7 @@ export function CreatePackageDialog({
 
               {billing === "chargeable" ? (
                 <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                  {/* 1. Adult Price */}
                   <Field>
                     <FieldLabel htmlFor="package-adult-price">
                       {isAddon ? "Add-on / Adult price (USD) *" : "Adult price (USD) *"}
@@ -685,6 +699,30 @@ export function CreatePackageDialog({
                     </div>
                   </Field>
 
+                  {/* 2. Couple Price */}
+                  <Field>
+                    <FieldLabel htmlFor="package-couple-price">
+                      Couple price (USD)
+                    </FieldLabel>
+                    <div className="relative">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm font-semibold">
+                        $
+                      </span>
+                      <Input
+                        id="package-couple-price"
+                        name="couplePriceUsd"
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        className="pl-7 font-medium"
+                        placeholder={adultPrice ? (Number(adultPrice) * 2).toFixed(2) : "For 2 adults"}
+                        value={couplePrice}
+                        onChange={(e) => setCouplePrice(e.target.value)}
+                      />
+                    </div>
+                  </Field>
+
+                  {/* 3. Child Price */}
                   <Field>
                     <FieldLabel htmlFor="package-child-price">
                       Child price (USD)
@@ -707,7 +745,62 @@ export function CreatePackageDialog({
                     </div>
                   </Field>
 
-                  <div className="sm:col-span-2 lg:col-span-1 flex flex-col justify-between rounded-lg border border-border/60 bg-background/50 p-3">
+                  {/* 4. Group Price */}
+                  <Field>
+                    <FieldLabel htmlFor="package-group-price">
+                      Group price (USD)
+                    </FieldLabel>
+                    <div className="relative">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm font-semibold">
+                        $
+                      </span>
+                      <Input
+                        id="package-group-price"
+                        name="groupPriceUsd"
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        className="pl-7 font-medium"
+                        placeholder="Private group rate"
+                        value={groupPrice}
+                        onChange={(e) => setGroupPrice(e.target.value)}
+                      />
+                    </div>
+                  </Field>
+
+                  {/* 5. Inclusion / Meal Price (F&B) */}
+                  <Field className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-2 sm:col-span-1">
+                    <div className="flex items-center justify-between">
+                      <FieldLabel htmlFor="package-meal-price" className="text-amber-700 dark:text-amber-400 font-semibold text-xs flex items-center gap-1">
+                        🍽️ Meal / F&B Inclusion (USD)
+                      </FieldLabel>
+                      <Badge variant="outline" className="border-amber-500/40 text-amber-700 dark:text-amber-400 text-[10px]">
+                        F&B Portion
+                      </Badge>
+                    </div>
+                    <div className="relative mt-1">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm font-semibold">
+                        $
+                      </span>
+                      <Input
+                        id="package-meal-price"
+                        name="mealPriceUsd"
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        className="pl-7 font-medium border-amber-500/30 focus-visible:ring-amber-500"
+                        placeholder="0.00 (food component)"
+                        value={mealPrice}
+                        onChange={(e) => setMealPrice(e.target.value)}
+                      />
+                    </div>
+                    <p className="text-[10px] text-muted-foreground mt-1">
+                      Separated on resort invoices for F&B allocation.
+                    </p>
+                  </Field>
+
+                  {/* 6. Add-on Toggle Card */}
+                  <div className="flex flex-col justify-between rounded-lg border border-border/60 bg-background/50 p-3 sm:col-span-2 lg:col-span-1">
                     <div className="flex items-center justify-between">
                       <span className="text-xs font-semibold text-foreground flex items-center gap-1.5">
                         <Sparkles className="h-3.5 w-3.5 text-cyan-400" />
@@ -726,6 +819,7 @@ export function CreatePackageDialog({
                     </p>
                   </div>
 
+                  {/* 7. Child Age Range */}
                   <Field className="sm:col-span-2 lg:col-span-3">
                     <FieldLabel htmlFor="package-age">Child age range (optional)</FieldLabel>
                     <Input id="package-age" name="childAgeRange" placeholder="e.g. 4–11 years (under 12y)" />

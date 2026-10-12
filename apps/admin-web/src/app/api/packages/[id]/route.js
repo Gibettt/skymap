@@ -5,7 +5,7 @@ import { updatePackageSchema } from '@ephemeris/db/validators/package';
 
 const PACKAGE_COLUMNS = `
   id, name, package_type, experience_type, location, description, schedule, resort_id,
-  adult_price_usd, child_price_usd, child_age_range, is_chargeable, is_active,
+  adult_price_usd, child_price_usd, couple_price_usd, group_price_usd, meal_price_usd, child_age_range, is_chargeable, is_active,
   image_mime_type, image_file_name, image_data IS NOT NULL AS has_image,
   CASE WHEN image_data IS NULL THEN NULL ELSE CONCAT('/api/packages/', id, '/image') END AS image_url,
   created_at, updated_at
@@ -78,6 +78,9 @@ async function parseUpdatePackageRequest(request) {
   if (form.has('schedule')) fields.schedule = form.get('schedule');
   if (form.has('adultPriceUsd')) fields.adultPriceUsd = form.get('adultPriceUsd');
   if (form.has('childPriceUsd')) fields.childPriceUsd = form.get('childPriceUsd');
+  if (form.has('couplePriceUsd')) fields.couplePriceUsd = form.get('couplePriceUsd');
+  if (form.has('groupPriceUsd')) fields.groupPriceUsd = form.get('groupPriceUsd');
+  if (form.has('mealPriceUsd')) fields.mealPriceUsd = form.get('mealPriceUsd');
   if (form.has('childAgeRange')) fields.childAgeRange = form.get('childAgeRange');
   if (form.has('inclusions')) fields.inclusions = parseInclusionsField(form.get('inclusions'));
   if (form.has('resortId')) fields.resortId = form.get('resortId') || null;
@@ -132,6 +135,9 @@ export async function PATCH(request, { params }) {
         resort_id: body.resortId === undefined ? before.rows[0].resort_id : body.resortId,
         adult_price_usd: body.adultPriceUsd === undefined ? Number(before.rows[0].adult_price_usd) : Number(body.adultPriceUsd || 0),
         child_price_usd: childPriceUsd,
+        couple_price_usd: body.couplePriceUsd === undefined ? before.rows[0].couple_price_usd : (body.couplePriceUsd === null || body.couplePriceUsd === '' ? null : Number(body.couplePriceUsd)),
+        group_price_usd: body.groupPriceUsd === undefined ? before.rows[0].group_price_usd : (body.groupPriceUsd === null || body.groupPriceUsd === '' ? null : Number(body.groupPriceUsd)),
+        meal_price_usd: body.mealPriceUsd === undefined ? Number(before.rows[0].meal_price_usd || 0) : Number(body.mealPriceUsd || 0),
         child_age_range: body.childAgeRange === undefined ? before.rows[0].child_age_range : String(body.childAgeRange || '').trim() || null,
         is_chargeable: body.isChargeable ?? before.rows[0].is_chargeable,
         is_active: body.isActive ?? before.rows[0].is_active,

@@ -103,7 +103,8 @@ export async function getPackages() {
   await requirePermission("admin.packages", ["admin"]);
   const { rows } = await query(`
     SELECT p.id, p.name, p.package_type, p.experience_type, p.location, p.description, p.schedule,
-      p.resort_id, p.adult_price_usd, p.child_price_usd, p.child_age_range, p.is_chargeable,
+      p.resort_id, p.adult_price_usd, p.child_price_usd, p.couple_price_usd, p.group_price_usd, p.meal_price_usd,
+      p.child_age_range, p.is_chargeable,
       p.is_active, p.image_data IS NOT NULL AS has_image,
       CASE WHEN p.image_data IS NULL THEN NULL ELSE CONCAT('/api/packages/', p.id, '/image') END AS image_url,
       p.created_at, p.updated_at, r.name AS resort_name,
