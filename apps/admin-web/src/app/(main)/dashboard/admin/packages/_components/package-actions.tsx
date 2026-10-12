@@ -41,7 +41,6 @@ import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectSeparator, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Spinner } from "@/components/ui/spinner";
-import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 
 import { PackageImageField, type PackageImageValue } from "../../_components/package-image-field";
@@ -85,6 +84,9 @@ export function PackageActions({ packageData, resorts }: PackageActionsProps) {
   const [childPrice, setChildPrice] = useState("");
   const [groupPrice, setGroupPrice] = useState("");
   const [mealPrice, setMealPrice] = useState("");
+  const [familyPrice, setFamilyPrice] = useState("");
+  const [inclusionItems, setInclusionItems] = useState<Array<{ id: string; name: string; price: string }>>([]);
+
   useEffect(() => {
     if (editOpen) {
       fetch("/api/package-types")
@@ -139,6 +141,22 @@ export function PackageActions({ packageData, resorts }: PackageActionsProps) {
       setAddingTypePending(false);
     }
   }
+  function handleAddInclusionItem() {
+    setInclusionItems((prev) => [
+      ...prev,
+      { id: `inc-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`, name: "", price: "" },
+    ]);
+  }
+
+  function handleRemoveInclusionItem(id: string) {
+    setInclusionItems((prev) => prev.filter((item) => item.id !== id));
+  }
+
+  function handleUpdateInclusionItem(id: string, field: "name" | "price", value: string) {
+    setInclusionItems((prev) =>
+      prev.map((item) => (item.id === id ? { ...item, [field]: value } : item)),
+    );
+  }
 
   function openEditDialog() {
     setPackageType(packageData.package_type);
@@ -157,6 +175,19 @@ export function PackageActions({ packageData, resorts }: PackageActionsProps) {
     setChildPrice(packageData.child_price_usd == null ? "" : String(numberValue(packageData.child_price_usd)));
     setGroupPrice(packageData.group_price_usd == null ? "" : String(numberValue(packageData.group_price_usd)));
     setMealPrice(packageData.meal_price_usd == null ? "" : String(numberValue(packageData.meal_price_usd)));
+    setFamilyPrice(packageData.family_price_usd == null ? "" : String(numberValue(packageData.family_price_usd)));
+    const parsedItems: Array<{ id: string; name: string; price: string }> = [];
+    for (const inc of packageData.inclusions) {
+      const match = String(inc).match(/^(.*?)\s*\(\+\$([0-9.]+)\)$/);
+      if (match) {
+        parsedItems.push({
+          id: `inc-${Math.random().toString(36).slice(2, 6)}`,
+          name: match[1].trim(),
+          price: match[2].trim(),
+        });
+      }
+    }
+    setInclusionItems(parsedItems);
     setImage(undefined);
     setEditOpen(true);
   }
@@ -164,10 +195,18 @@ export function PackageActions({ packageData, resorts }: PackageActionsProps) {
   async function updatePackage(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
-    const inclusions = String(form.get("inclusions") ?? "")
+    const cardInclusions = inclusionItems
+      .filter((item) => item.name.trim())
+      .map((item) => {
+        const trimmedName = item.name.trim();
+        const numPrice = Number(item.price);
+        return numPrice > 0 ? `${trimmedName} (+$${numPrice.toFixed(2)})` : trimmedName;
+      });
+    const textareaInclusions = String(form.get("inclusions") ?? "")
       .split("\n")
       .map((item) => item.trim())
       .filter(Boolean);
+    const combinedInclusions = Array.from(new Set([...cardInclusions, ...textareaInclusions]));
 
     const payload = new FormData(event.currentTarget);
     const finalPackageType = isAddon ? "addon" : packageType;
@@ -190,9 +229,11 @@ export function PackageActions({ packageData, resorts }: PackageActionsProps) {
     else payload.delete("couplePriceUsd");
     if (groupPrice) payload.set("groupPriceUsd", groupPrice);
     else payload.delete("groupPriceUsd");
+    if (familyPrice) payload.set("familyPriceUsd", familyPrice);
+    else payload.delete("familyPriceUsd");
     payload.set("mealPriceUsd", mealPrice || "0");
     payload.set("isChargeable", String(billing === "chargeable"));
-    payload.set("inclusions", JSON.stringify(inclusions));
+    payload.set("inclusions", JSON.stringify(combinedInclusions));
     if (image === null) payload.set("image", "");
     else if (image instanceof File) payload.set("image", image);
 
@@ -714,25 +755,28 @@ export function PackageActions({ packageData, resorts }: PackageActionsProps) {
                     </p>
                   </Field>
 
-                  {/* 6. Add-on Toggle Card */}
-                  <div className="flex flex-col justify-between rounded-lg border border-border/60 bg-background/50 p-3 sm:col-span-2 lg:col-span-1">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-semibold text-foreground flex items-center gap-1.5">
-                        <Sparkles className="h-3.5 w-3.5 text-cyan-400" />
-                        Add-on Feature
+                  {/* 6. Family / Villa Price */}
+                  <Field>
+                    <FieldLabel htmlFor={fieldId("edit-package-family-price")}>
+                      Family / Villa price (USD)
+                    </FieldLabel>
+                    <div className="relative">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm font-semibold">
+                        $
                       </span>
-                      <Switch
-                        id={fieldId("edit-package-addon-toggle")}
-                        checked={isAddon}
-                        onCheckedChange={setIsAddon}
+                      <Input
+                        id={fieldId("edit-package-family-price")}
+                        name="familyPriceUsd"
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        className="pl-7 font-medium"
+                        placeholder="Private villa / family rate"
+                        value={familyPrice}
+                        onChange={(e) => setFamilyPrice(e.target.value)}
                       />
                     </div>
-                    <p className="text-[11px] text-muted-foreground mt-1">
-                      {isAddon
-                        ? "Marked as Add-on item for bookings."
-                        : "Enable to make this an optional Add-on."}
-                    </p>
-                  </div>
+                  </Field>
 
                   {/* 7. Child Age Range */}
                   <Field className="sm:col-span-2 lg:col-span-3">
@@ -794,11 +838,72 @@ export function PackageActions({ packageData, resorts }: PackageActionsProps) {
                 />
               </Field>
               <Field className="md:col-span-2">
-                <FieldLabel htmlFor={fieldId("edit-package-inclusions")}>Inclusions (one per line)</FieldLabel>
+                <div className="flex items-center justify-between mb-1.5">
+                  <FieldLabel htmlFor={fieldId("edit-package-inclusions")}>Inclusions & Add-on items</FieldLabel>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="xs"
+                    className="h-6 text-xs text-primary hover:text-primary/80"
+                    onClick={handleAddInclusionItem}
+                  >
+                    <Plus data-icon="inline-start" className="mr-1 h-3.5 w-3.5" />
+                    Add item
+                  </Button>
+                </div>
+
+                {inclusionItems.length > 0 ? (
+                  <div className="space-y-2 mb-3">
+                    {inclusionItems.map((item, idx) => (
+                      <div
+                        key={item.id}
+                        className="flex items-center gap-2 rounded-lg border border-border/70 bg-muted/30 p-2.5 shadow-2xs"
+                      >
+                        <span className="text-xs font-semibold text-muted-foreground w-6 text-center">
+                          #{idx + 1}
+                        </span>
+                        <Input
+                          value={item.name}
+                          onChange={(e) => handleUpdateInclusionItem(item.id, "name", e.target.value)}
+                          placeholder="Inclusion / Add-on name (e.g. Astro portrait, Champagne)"
+                          className="flex-1 text-sm font-medium"
+                        />
+                        <div className="relative w-36">
+                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-xs font-semibold">
+                            $
+                          </span>
+                          <Input
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            value={item.price}
+                            onChange={(e) => handleUpdateInclusionItem(item.id, "price", e.target.value)}
+                            placeholder="0.00 (optional)"
+                            className="pl-7 text-sm font-medium"
+                          />
+                        </div>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon-sm"
+                          onClick={() => handleRemoveInclusionItem(item.id)}
+                          className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                          title="Remove inclusion"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                ) : null}
+
                 <Textarea
                   id={fieldId("edit-package-inclusions")}
                   name="inclusions"
-                  defaultValue={inclusions.join("\n")}
+                  placeholder="Or type standard free inclusions here (one per line)..."
+                  className="text-xs"
+                  rows={2}
+                  defaultValue={inclusions.filter((inc) => !String(inc).match(/^(.*?)\s*\(\+\$([0-9.]+)\)$/)).join("\n")}
                 />
               </Field>
               <div className="md:col-span-2">

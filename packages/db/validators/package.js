@@ -32,6 +32,7 @@ const packageFields = z.object({
   couplePriceUsd: nullableMoneySchema,
   groupPriceUsd: nullableMoneySchema,
   mealPriceUsd: nullableMoneySchema,
+  familyPriceUsd: nullableMoneySchema,
   childAgeRange: cleanTextSchema(80),
   inclusions: z.array(inclusionSchema)
     .max(MAX_PACKAGE_INCLUSIONS, `Maksimal ${MAX_PACKAGE_INCLUSIONS} inclusion`)
@@ -46,6 +47,7 @@ export const createPackageSchema = packageFields.extend({
   couplePriceUsd: nullableMoneySchema.default(null),
   groupPriceUsd: nullableMoneySchema.default(null),
   mealPriceUsd: moneySchema.default(0),
+  familyPriceUsd: nullableMoneySchema.default(null),
 });
 
 export const updatePackageSchema = packageFields.partial();
