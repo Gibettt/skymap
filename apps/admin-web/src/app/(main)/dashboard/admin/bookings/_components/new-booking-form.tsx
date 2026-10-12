@@ -33,7 +33,7 @@ import {
 } from "@/components/ui/card";
 import { Field, FieldError, FieldGroup, FieldLabel, FieldLegend, FieldSet } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Select, SelectContent, SelectGroup, SelectItem, SelectSeparator, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Spinner } from "@/components/ui/spinner";
@@ -72,6 +72,11 @@ const BOOKING_FIELD_SKELETONS = [
   "end-time",
 ];
 
+function participantAgeLabel(type: "adult" | "child", childQuantity = 1): string {
+  if (type === "adult") return "Age (optional)";
+  if (childQuantity > 1) return "Child age range (optional)";
+  return "Age (under 12y)";
+}
 function tomorrowDate() {
   const date = new Date();
   date.setDate(date.getDate() + 1);
@@ -128,6 +133,7 @@ interface BookingParticipantDraft {
   age: string;
   nationality: string;
   notes: string;
+  childQuantity?: number;
 }
 
 interface BookingExperienceDraft {
@@ -155,6 +161,7 @@ function createParticipant(index: number): BookingParticipantDraft {
     age: "",
     nationality: "",
     notes: "",
+    childQuantity: 1,
   };
 }
 
@@ -244,7 +251,9 @@ export function NewBookingForm({ portalRole: role, onCreated, onCancel }: NewBoo
     role === "admin" &&
     (scheduledPackages.some((item) => item !== null && !item.resort_id) || scheduledResortIds.size > 1);
   const adultCount = participants.filter((participant) => participant.type === "adult").length;
-  const childCount = participants.filter((participant) => participant.type === "child").length;
+  const childCount = participants
+    .filter((participant) => participant.type === "child")
+    .reduce((sum, participant) => sum + (participant.childQuantity || 1), 0);
   const estimatedBase = scheduledPackages.reduce((total, scheduledPackage) => {
     if (!scheduledPackage?.is_chargeable) return total;
     const adultPrice = Number(scheduledPackage.adult_price_usd ?? 0);
@@ -319,7 +328,7 @@ export function NewBookingForm({ portalRole: role, onCreated, onCancel }: NewBoo
           (participant) =>
             !participant.fullName.trim() ||
             !participant.nationality.trim() ||
-            (participant.type === "child" && participant.age === ""),
+            (participant.type === "child" && participant.age === "" && (participant.childQuantity || 1) === 1),
         )
       ) {
         return "Complete the name, nationality, and required child age for every participant.";
@@ -383,13 +392,40 @@ export function NewBookingForm({ portalRole: role, onCreated, onCancel }: NewBoo
     setSubmitting(true);
     setError("");
 
-    const normalizedParticipants = participants.map((participant) => ({
-      fullName: participant.fullName.trim(),
-      type: participant.type,
-      age: participant.age === "" ? null : Number(participant.age),
-      nationality: participant.nationality.trim(),
-      notes: participant.notes.trim() || null,
-    }));
+    const normalizedParticipants: Array<{
+      fullName: string;
+      type: "adult" | "child";
+      age: number | null;
+      nationality: string;
+      notes: string | null;
+    }> = [];
+
+    for (const participant of participants) {
+      if (participant.type === "child") {
+        const qty = Math.min(7, Math.max(1, participant.childQuantity ?? 1));
+        const baseAge = participant.age === "" ? 8 : Number(participant.age);
+        for (let k = 1; k <= qty; k++) {
+          normalizedParticipants.push({
+            fullName:
+              qty === 1
+                ? participant.fullName.trim() || "Child"
+                : `${participant.fullName.trim() || "Child"} ${k}`,
+            type: "child",
+            age: baseAge,
+            nationality: participant.nationality.trim(),
+            notes: participant.notes.trim() || null,
+          });
+        }
+      } else {
+        normalizedParticipants.push({
+          fullName: participant.fullName.trim(),
+          type: "adult",
+          age: participant.age === "" ? null : Number(participant.age),
+          nationality: participant.nationality.trim(),
+          notes: participant.notes.trim() || null,
+        });
+      }
+    }
     const primaryParticipant = normalizedParticipants[0];
     const normalizedExperiences = experiences.map((experience) => ({
       packageId: experience.packageId,
@@ -765,12 +801,27 @@ export function NewBookingForm({ portalRole: role, onCreated, onCancel }: NewBoo
                             <Field>
                               <FieldLabel htmlFor={`${participant.clientId}-type`}>Participant type</FieldLabel>
                               <Select
-                                value={participant.type}
+                                value={
+                                  participant.type === "child"
+                                    ? `child-${participant.childQuantity || 1}`
+                                    : "adult"
+                                }
                                 onValueChange={(value) => {
-                                  if (value === "adult" || value === "child") {
+                                  if (value === "adult") {
                                     updateParticipant(participant.clientId, {
-                                      type: value,
-                                      age: value === "adult" ? "" : participant.age,
+                                      type: "adult",
+                                      childQuantity: 1,
+                                      age: "",
+                                    });
+                                  } else if (value.startsWith("child")) {
+                                    const qty = parseInt(
+                                      value.replace("child-", "").replace("child", "") || "1",
+                                      10,
+                                    );
+                                    updateParticipant(participant.clientId, {
+                                      type: "child",
+                                      childQuantity: Math.min(7, Math.max(1, Number.isNaN(qty) ? 1 : qty)),
+                                      age: participant.age || "8",
                                     });
                                   }
                                 }}
@@ -781,11 +832,61 @@ export function NewBookingForm({ portalRole: role, onCreated, onCancel }: NewBoo
                                 <SelectContent>
                                   <SelectGroup>
                                     <SelectItem value="adult">Adult</SelectItem>
-                                    <SelectItem value="child">Child</SelectItem>
+                                    <SelectSeparator />
+                                    <SelectItem value="child-1">Child (1 child)</SelectItem>
+                                    <SelectItem value="child-2">Child (2 children)</SelectItem>
+                                    <SelectItem value="child-3">Child (3 children)</SelectItem>
+                                    <SelectItem value="child-4">Child (4 children)</SelectItem>
+                                    <SelectItem value="child-5">Child (5 children)</SelectItem>
+                                    <SelectItem value="child-6">Child (6 children)</SelectItem>
+                                    <SelectItem value="child-7">Child (7 children)</SelectItem>
                                   </SelectGroup>
                                 </SelectContent>
                               </Select>
                             </Field>
+
+                            {participant.type === "child" && (
+                              <Field>
+                                <FieldLabel htmlFor={`${participant.clientId}-child-qty`}>
+                                  Number of children (1–7)
+                                </FieldLabel>
+                                <div className="flex items-center gap-2">
+                                  <Select
+                                    value={String(participant.childQuantity || 1)}
+                                    onValueChange={(val) => {
+                                      const qty = parseInt(val, 10) || 1;
+                                      updateParticipant(participant.clientId, { childQuantity: qty });
+                                    }}
+                                  >
+                                    <SelectTrigger id={`${participant.clientId}-child-qty`} className="w-full">
+                                      <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectGroup>
+                                        {[1, 2, 3, 4, 5, 6, 7].map((num) => (
+                                          <SelectItem key={num} value={String(num)}>
+                                            {num} {num === 1 ? "child" : "children"}
+                                          </SelectItem>
+                                        ))}
+                                      </SelectGroup>
+                                    </SelectContent>
+                                  </Select>
+                                  <Input
+                                    type="number"
+                                    min={1}
+                                    max={7}
+                                    className="w-20 text-center font-medium"
+                                    value={participant.childQuantity || 1}
+                                    onChange={(e) => {
+                                      const parsed = parseInt(e.target.value, 10);
+                                      const qty = Math.min(7, Math.max(1, Number.isNaN(parsed) ? 1 : parsed));
+                                      updateParticipant(participant.clientId, { childQuantity: qty });
+                                    }}
+                                  />
+                                </div>
+                              </Field>
+                            )}
+
                             <Field>
                               <FieldLabel htmlFor={`${participant.clientId}-nationality`}>Nationality</FieldLabel>
                               <Input
@@ -800,18 +901,29 @@ export function NewBookingForm({ portalRole: role, onCreated, onCancel }: NewBoo
                             </Field>
                             <Field data-disabled={participant.type === "adult"}>
                               <FieldLabel htmlFor={`${participant.clientId}-age`}>
-                                Age {participant.type === "adult" ? "(optional)" : ""}
+                                {participantAgeLabel(participant.type, participant.childQuantity)}
                               </FieldLabel>
                               <Input
                                 id={`${participant.clientId}-age`}
-                                type="number"
+                                type={
+                                  participant.type === "child" && (participant.childQuantity || 1) > 1
+                                    ? "text"
+                                    : "number"
+                                }
                                 min={0}
                                 max={120}
+                                placeholder={
+                                  participant.type === "child" && (participant.childQuantity || 1) > 1
+                                    ? "e.g. 5, 7, 9"
+                                    : undefined
+                                }
                                 value={participant.age}
                                 onChange={(event) =>
                                   updateParticipant(participant.clientId, { age: event.target.value })
                                 }
-                                required={participant.type === "child"}
+                                required={
+                                  participant.type === "child" && (participant.childQuantity || 1) === 1
+                                }
                               />
                             </Field>
                             <Field className="md:col-span-2">
