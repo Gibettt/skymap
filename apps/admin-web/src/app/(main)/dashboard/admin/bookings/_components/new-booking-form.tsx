@@ -241,10 +241,16 @@ export function NewBookingForm({
     setError("");
 
     // Build participants: 1 lead participant + companions + kids
-    const participantsPayload = [
+    const participantsPayload: Array<{
+      fullName: string;
+      type: "adult" | "child";
+      age: number | null;
+      nationality: string;
+      notes: string | null;
+    }> = [
       {
         fullName: guestName.trim(),
-        type: "adult" as const,
+        type: "adult",
         age: null,
         nationality: "International",
         notes: null,
@@ -461,21 +467,21 @@ export function NewBookingForm({
                       <FieldLabel className="flex items-center gap-1.5">
                         <CalendarDays className="h-3.5 w-3.5 text-muted-foreground" /> Event Date *
                       </FieldLabel>
-                      <DatePicker value={eventDate} onChange={(d) => d && setEventDate(d)} />
+                      <DatePicker value={eventDate} onValueChange={(d) => d && setEventDate(d)} />
                     </Field>
 
                     <Field>
                       <FieldLabel className="flex items-center gap-1.5">
                         <Clock className="h-3.5 w-3.5 text-muted-foreground" /> Start Time *
                       </FieldLabel>
-                      <TimePicker value={timeStart} onChange={setTimeStart} />
+                      <TimePicker value={timeStart} onValueChange={setTimeStart} />
                     </Field>
 
                     <Field>
                       <FieldLabel className="flex items-center gap-1.5">
                         <Clock className="h-3.5 w-3.5 text-muted-foreground" /> End Time *
                       </FieldLabel>
-                      <TimePicker value={timeEnd} onChange={setTimeEnd} />
+                      <TimePicker value={timeEnd} onValueChange={setTimeEnd} />
                     </Field>
                   </div>
                 </CardContent>
