@@ -1,14 +1,18 @@
 "use client";
 
 import * as React from "react";
+
 import {
-  CalendarDays,
-  Clock,
+  ArrowLeft,
+  ArrowRight,
+  CalendarPlus,
+  Check,
+  Dot,
   Info,
   Package,
   ShieldAlert,
-  Sparkles,
-  User,
+  Trash2,
+  UserPlus,
   Users,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -20,24 +24,22 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Card,
+  CardAction,
   CardContent,
   CardDescription,
   CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Field, FieldLabel } from "@/components/ui/field";
+import { Field, FieldError, FieldGroup, FieldLabel, FieldLegend, FieldSet } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Spinner } from "@/components/ui/spinner";
+import { Tabs, TabsContent } from "@/components/ui/tabs";
+import { Textarea } from "@/components/ui/textarea";
+import { cn } from "@/lib/utils";
 
 import {
   type AdminBooking,
@@ -46,6 +48,7 @@ import {
   adminBookingApi,
   type BookingPortalRole,
   formatUsd,
+  packageInclusions,
 } from "../../_lib/admin-booking-api";
 
 interface PackagesResponse {
@@ -55,6 +58,19 @@ interface PackagesResponse {
 interface MeResponse {
   user: AdminUser;
 }
+
+const BOOKING_FIELD_SKELETONS = [
+  "guest-name",
+  "guest-phone",
+  "guest-email",
+  "room",
+  "nationality",
+  "language",
+  "package",
+  "date",
+  "start-time",
+  "end-time",
+];
 
 function tomorrowDate() {
   const date = new Date();
@@ -73,35 +89,23 @@ function normalizePackage(item: AdminBookingPackage): AdminBookingPackage {
   };
 }
 
-function isAddonPackage(pkg: AdminBookingPackage): boolean {
-  const type = String(pkg.package_type).toLowerCase().trim();
-  const name = String(pkg.name).toLowerCase().trim();
-  return (
-    type === "addon" ||
-    type === "add-on" ||
-    name.includes("add-on") ||
-    name.includes("addon")
-  );
-}
-
 function BookingFormLoading() {
   return (
-    <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_340px]">
+    <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_320px]">
       <Card>
         <CardHeader>
-          <Skeleton className="h-6 w-48" />
+          <Skeleton className="h-5 w-40" />
           <Skeleton className="h-4 w-80 max-w-full" />
         </CardHeader>
         <CardContent className="grid gap-5 md:grid-cols-2">
-          {Array.from({ length: 6 }).map((_, i) => (
-            // biome-ignore lint/suspicious/noArrayIndexKey: skeleton items
-            <Skeleton key={i} className="h-16 w-full" />
+          {BOOKING_FIELD_SKELETONS.map((item) => (
+            <Skeleton key={item} className="h-14 w-full" />
           ))}
         </CardContent>
       </Card>
       <Card>
         <CardHeader>
-          <Skeleton className="h-6 w-32" />
+          <Skeleton className="h-5 w-32" />
         </CardHeader>
         <CardContent>
           <Skeleton className="h-48 w-full" />
@@ -117,36 +121,91 @@ interface NewBookingFormProps {
   onCancel: () => void;
 }
 
-export function NewBookingForm({
-  portalRole: _portalRole,
-  onCreated,
-  onCancel,
-}: NewBookingFormProps) {
+interface BookingParticipantDraft {
+  clientId: string;
+  fullName: string;
+  type: "adult" | "child";
+  age: string;
+  nationality: string;
+  notes: string;
+}
+
+interface BookingExperienceDraft {
+  clientId: string;
+  packageId: string;
+  eventDate: string;
+  timeStart: string;
+  timeEnd: string;
+  observationSpot: string;
+}
+
+type BookingStep = 1 | 2 | 3;
+
+const BOOKING_STEPS: Array<{ value: BookingStep; label: string }> = [
+  { value: 1, label: "Contact" },
+  { value: 2, label: "Participants & experiences" },
+  { value: 3, label: "Preferences" },
+];
+
+function createParticipant(index: number): BookingParticipantDraft {
+  return {
+    clientId: `participant-${index}`,
+    fullName: "",
+    type: "adult",
+    age: "",
+    nationality: "",
+    notes: "",
+  };
+}
+
+function computeEndTime(timeStart: string): string {
+  if (!timeStart) return "22:00";
+  const [h = "21", m = "00"] = timeStart.split(":");
+  const hourNum = Number(h);
+  if (hourNum >= 23) {
+    return "23:59";
+  }
+  const nextH = Math.min(23, hourNum + 1);
+  return `${String(nextH).padStart(2, "0")}:${m}`;
+}
+
+function createExperience(index: number, packageId = ""): BookingExperienceDraft {
+  return {
+    clientId: `experience-${index}`,
+    packageId,
+    eventDate: tomorrowDate(),
+    timeStart: "21:00",
+    timeEnd: computeEndTime("21:00"),
+    observationSpot: "",
+  };
+}
+
+function bookingSubmissionDescription(role: BookingPortalRole) {
+  if (role === "external") {
+    return "External bookings start as Pending until internal resort staff approves them.";
+  }
+  if (role === "admin") {
+    return "Admin bookings start as Active and use the resort assigned to the selected package.";
+  }
+  return "Internal bookings start as Active and are assigned to the creating staff member.";
+}
+
+export function NewBookingForm({ portalRole: role, onCreated, onCancel }: NewBookingFormProps) {
+  const formRef = React.useRef<HTMLFormElement>(null);
   const [user, setUser] = React.useState<AdminUser | null>(null);
   const [packages, setPackages] = React.useState<AdminBookingPackage[]>([]);
+  const [preferredLanguage, setPreferredLanguage] = React.useState("English");
+  const [bookingSource, setBookingSource] = React.useState("WhatsApp");
+  const [paymentMethod, setPaymentMethod] = React.useState("Bank transfer");
+  const participantSequence = React.useRef(1);
+  const [participants, setParticipants] = React.useState<BookingParticipantDraft[]>(() => [createParticipant(0)]);
+  const experienceSequence = React.useRef(1);
+  const [experiences, setExperiences] = React.useState<BookingExperienceDraft[]>(() => [createExperience(0)]);
+  const [currentStep, setCurrentStep] = React.useState<BookingStep>(1);
+  const [highestStep, setHighestStep] = React.useState<BookingStep>(1);
   const [loading, setLoading] = React.useState(true);
   const [submitting, setSubmitting] = React.useState(false);
   const [error, setError] = React.useState("");
-
-  // 1. Package & Add-on
-  const [selectedPackageId, setSelectedPackageId] = React.useState<string>("");
-  const [selectedAddonId, setSelectedAddonId] = React.useState<string>("none");
-
-  // Schedule
-  const [eventDate, setEventDate] = React.useState<string>(tomorrowDate());
-  const [timeStart, setTimeStart] = React.useState<string>("21:00");
-  const [timeEnd, setTimeEnd] = React.useState<string>("22:00");
-  const [observationSpot, setObservationSpot] = React.useState<string>("");
-
-  // 2. Guest Information
-  const [guestName, setGuestName] = React.useState<string>("");
-  const [roomNumber, setRoomNumber] = React.useState<string>("");
-  const [adultCount, setAdultCount] = React.useState<number>(2);
-  const [childCount, setChildCount] = React.useState<number>(0);
-  const [guestPhone, setGuestPhone] = React.useState<string>("");
-  const [guestEmail, setGuestEmail] = React.useState<string>("");
-  const [preferredLanguage, setPreferredLanguage] = React.useState<string>("English");
-  const [notes, setNotes] = React.useState<string>("");
 
   React.useEffect(() => {
     let active = true;
@@ -161,15 +220,8 @@ export function NewBookingForm({
         const normalized = packageData.packages.map(normalizePackage).filter((item) => item.is_active);
         setUser(me.user);
         setPackages(normalized);
-
-        // Pre-select first main package if available
-        const mainPkgs = normalized.filter((p) => !isAddonPackage(p));
-        if (mainPkgs.length > 0 && !selectedPackageId) {
-          setSelectedPackageId(mainPkgs[0].id);
-        }
       } catch (loadError) {
-        if (!active) return;
-        setError(loadError instanceof Error ? loadError.message : "Unable to prepare booking form.");
+        if (active) setError(loadError instanceof Error ? loadError.message : "Unable to prepare the booking form.");
       } finally {
         if (active) setLoading(false);
       }
@@ -179,153 +231,204 @@ export function NewBookingForm({
     return () => {
       active = false;
     };
-  }, [selectedPackageId]);
+  }, []);
 
-  // Filter main packages vs add-on packages
-  const addonPackages = React.useMemo(() => packages.filter(isAddonPackage), [packages]);
-  const mainPackages = React.useMemo(() => packages.filter((p) => !isAddonPackage(p)), [packages]);
-
-  // Selected package and add-on objects
-  const selectedPackage = React.useMemo(
-    () => packages.find((p) => p.id === selectedPackageId) || null,
-    [packages, selectedPackageId],
+  const scheduledPackages = experiences.map(
+    (experience) => packages.find((item) => item.id === experience.packageId) || null,
   );
-  const selectedAddon = React.useMemo(
-    () => (selectedAddonId && selectedAddonId !== "none" ? packages.find((p) => p.id === selectedAddonId) || null : null),
-    [packages, selectedAddonId],
+  const selectedPackage = scheduledPackages[0] || null;
+  const scheduledResortIds = new Set(
+    scheduledPackages.map((item) => item?.resort_id).filter((resortId): resortId is string => Boolean(resortId)),
   );
-
-  // Price calculations
-  const adultPrice = Number(selectedPackage?.adult_price_usd ?? 0);
-  const childPrice =
-    selectedPackage?.package_type === "kids" && Number(selectedPackage.adult_price_usd) === 0
-      ? Number(selectedPackage.child_price_usd ?? 0)
-      : adultPrice * 0.5;
-
-  const addonAdultPrice = Number(selectedAddon?.adult_price_usd ?? 0);
-
-  const baseAdultTotal = adultCount * adultPrice;
-  const baseChildTotal = childCount * childPrice;
-  const baseAddonTotal = selectedAddon ? (adultCount * addonAdultPrice) : 0;
-
-  const isChargeable = selectedPackage?.is_chargeable !== false;
-  const baseTotal = isChargeable ? baseAdultTotal + baseChildTotal + baseAddonTotal : 0;
-  const serviceCharge = isChargeable ? Math.round(baseTotal * 0.1 * 100) / 100 : 0;
-  const gst = isChargeable ? Math.round(baseTotal * 0.17 * 100) / 100 : 0;
-  const grandTotal = isChargeable ? baseTotal + serviceCharge + gst : 0;
-
+  const hasInvalidAdminResort =
+    role === "admin" &&
+    (scheduledPackages.some((item) => item !== null && !item.resort_id) || scheduledResortIds.size > 1);
+  const adultCount = participants.filter((participant) => participant.type === "adult").length;
+  const childCount = participants.filter((participant) => participant.type === "child").length;
+  const estimatedBase = scheduledPackages.reduce((total, scheduledPackage) => {
+    if (!scheduledPackage?.is_chargeable) return total;
+    const adultPrice = Number(scheduledPackage.adult_price_usd ?? 0);
+    const childPrice = Number(
+      scheduledPackage.child_price_usd ?? (scheduledPackage.package_type === "kids" ? adultPrice : adultPrice * 0.5),
+    );
+    return total + adultCount * adultPrice + childCount * childPrice;
+  }, 0);
+  const summaryInclusions = Array.from(
+    new Set(scheduledPackages.flatMap((scheduledPackage) => packageInclusions(scheduledPackage?.inclusions ?? null))),
+  );
+  const hasIncompleteExperience = experiences.some(
+    (experience, index) =>
+      !scheduledPackages[index] ||
+      !experience.eventDate ||
+      !experience.timeStart
+  );
   const readOnly = user?.access_role_level === "read_only";
 
-  async function handleFormSubmit(e: React.FormEvent) {
-    e.preventDefault();
+  function addParticipant() {
+    if (participants.length >= 20) return;
+    const nextId = participantSequence.current;
+    participantSequence.current += 1;
+    setParticipants((current) => [...current, createParticipant(nextId)]);
+  }
+
+  function updateParticipant(clientId: string, changes: Partial<BookingParticipantDraft>) {
+    setParticipants((current) =>
+      current.map((participant) => (participant.clientId === clientId ? { ...participant, ...changes } : participant)),
+    );
+  }
+
+  function removeParticipant(clientId: string) {
+    setParticipants((current) => (current.length > 1 ? current.filter((item) => item.clientId !== clientId) : current));
+  }
+
+  function addExperience() {
+    if (experiences.length >= 10) return;
+    const nextId = experienceSequence.current;
+    experienceSequence.current += 1;
+    setExperiences((current) => [...current, createExperience(nextId)]);
+  }
+
+  function updateExperience(clientId: string, changes: Partial<BookingExperienceDraft>) {
+    setExperiences((current) =>
+      current.map((experience) => (experience.clientId === clientId ? { ...experience, ...changes } : experience)),
+    );
+  }
+
+  function removeExperience(clientId: string) {
+    setExperiences((current) => (current.length > 1 ? current.filter((item) => item.clientId !== clientId) : current));
+  }
+
+  function validationErrorForStep(step: BookingStep) {
+    if (step === 1) {
+      const form = formRef.current;
+      const formData = new FormData(form ?? undefined);
+      const guestEmail = String(formData.get("guestEmail") || "").trim();
+      const roomNumber = String(formData.get("roomNumber") || "").trim();
+      const emailInput = form?.elements.namedItem("guestEmail");
+      if (!roomNumber) return "Complete the room or villa number.";
+      if (guestEmail && emailInput instanceof HTMLInputElement && !emailInput.checkValidity()) {
+        return "Enter a valid guest email address.";
+      }
+      return "";
+    }
+
+    if (step === 2) {
+      if (adultCount + childCount <= 0) return "At least one adult or child is required.";
+      if (
+        participants.some(
+          (participant) =>
+            !participant.fullName.trim() ||
+            !participant.nationality.trim() ||
+            (participant.type === "child" && participant.age === ""),
+        )
+      ) {
+        return "Complete the name, nationality, and required child age for every participant.";
+      }
+      if (hasIncompleteExperience) {
+        return "Complete every experience schedule and ensure each end time is after its start time.";
+      }
+      if (hasInvalidAdminResort) {
+        return "All experience packages in one booking must belong to the same resort.";
+      }
+    }
+
+    return "";
+  }
+
+  function goToStep(step: BookingStep) {
+    if (step > highestStep) return;
+    setError("");
+    setCurrentStep(step);
+  }
+
+  function goToNextStep() {
+    const validationError = validationErrorForStep(currentStep);
+    if (validationError) {
+      setError(validationError);
+      return;
+    }
+
+    const nextStep = Math.min(3, currentStep + 1) as BookingStep;
+    setError("");
+    setCurrentStep(nextStep);
+    setHighestStep((previous) => Math.max(previous, nextStep) as BookingStep);
+  }
+
+  function goToPreviousStep() {
+    setError("");
+    setCurrentStep((previous) => Math.max(1, previous - 1) as BookingStep);
+  }
+
+  async function submitBooking(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
     if (readOnly) return;
 
+    const form = event.currentTarget;
+    const formData = new FormData(form);
+
+    for (const step of [1, 2] as const) {
+      const validationError = validationErrorForStep(step);
+      if (validationError) {
+        setCurrentStep(step);
+        setError(validationError);
+        return;
+      }
+    }
     if (!selectedPackage) {
-      setError("Please select a package from the dropdown.");
-      return;
-    }
-    if (!guestName.trim()) {
-      setError("Please enter the guest name.");
-      return;
-    }
-    if (!roomNumber.trim()) {
-      setError("Please enter the room or villa number.");
-      return;
-    }
-    if (timeEnd <= timeStart) {
-      setError("End time must be after start time.");
+      setCurrentStep(2);
+      setError("Select a package for the primary experience schedule.");
       return;
     }
 
     setSubmitting(true);
     setError("");
 
-    // Build participants: 1 lead participant + companions + kids
-    const participantsPayload: Array<{
-      fullName: string;
-      type: "adult" | "child";
-      age: number | null;
-      nationality: string;
-      notes: string | null;
-    }> = [
-      {
-        fullName: guestName.trim(),
-        type: "adult",
-        age: null,
-        nationality: "International",
-        notes: null,
-      },
-    ];
-
-    for (let i = 2; i <= adultCount; i++) {
-      participantsPayload.push({
-        fullName: `${guestName.trim()} - Guest ${i}`,
-        type: "adult" as const,
-        age: null,
-        nationality: "International",
-        notes: null,
-      });
-    }
-
-    for (let i = 1; i <= childCount; i++) {
-      participantsPayload.push({
-        fullName: `${guestName.trim()} - Kid ${i}`,
-        type: "child" as const,
-        age: 8,
-        nationality: "International",
-        notes: null,
-      });
-    }
-
-    // Build experiences
-    const experiencesPayload = [
-      {
-        packageId: selectedPackage.id,
-        eventDate,
-        timeStart,
-        timeEnd,
-        observationSpot: observationSpot.trim() || null,
-      },
-    ];
-
-    if (selectedAddon) {
-      experiencesPayload.push({
-        packageId: selectedAddon.id,
-        eventDate,
-        timeStart,
-        timeEnd,
-        observationSpot: observationSpot.trim() || null,
-      });
-    }
-
+    const normalizedParticipants = participants.map((participant) => ({
+      fullName: participant.fullName.trim(),
+      type: participant.type,
+      age: participant.age === "" ? null : Number(participant.age),
+      nationality: participant.nationality.trim(),
+      notes: participant.notes.trim() || null,
+    }));
+    const primaryParticipant = normalizedParticipants[0];
+    const normalizedExperiences = experiences.map((experience) => ({
+      packageId: experience.packageId,
+      eventDate: experience.eventDate,
+      timeStart: experience.timeStart,
+      timeEnd: experience.timeEnd,
+      observationSpot: experience.observationSpot.trim() || null,
+    }));
+    const primaryExperience = normalizedExperiences[0];
     const payload = {
-      packageId: selectedPackage.id,
-      resortId: selectedPackage.resort_id || user?.resort_id || null,
-      eventDate,
-      timeStart,
-      timeEnd,
-      guestName: guestName.trim(),
-      guestPhone: guestPhone.trim() || null,
-      guestEmail: guestEmail.trim() || null,
-      roomNumber: roomNumber.trim(),
-      nationality: "International",
+      packageId: primaryExperience.packageId,
+      eventDate: primaryExperience.eventDate,
+      timeStart: primaryExperience.timeStart,
+      timeEnd: primaryExperience.timeEnd,
+      guestName: primaryParticipant.fullName,
+      guestPhone: String(formData.get("guestPhone") || "").trim() || null,
+      guestEmail: String(formData.get("guestEmail") || "").trim() || null,
+      roomNumber: String(formData.get("roomNumber") || ""),
+      nationality: primaryParticipant.nationality,
       adultCount,
       childCount,
-      childAges: childCount > 0 ? Array(childCount).fill("8").join(", ") : "",
-      participants: participantsPayload,
-      experiences: experiencesPayload,
+      childAges: normalizedParticipants
+        .filter((participant) => participant.type === "child" && participant.age != null)
+        .map((participant) => participant.age)
+        .join(", "),
+      participants: normalizedParticipants,
+      experiences: normalizedExperiences,
       preferredLanguage,
-      observationSpot: observationSpot.trim() || null,
-      specialOccasion: "",
-      dietaryRestrictions: "",
+      observationSpot: primaryExperience.observationSpot,
+      specialOccasion: String(formData.get("specialOccasion") || ""),
+      dietaryRestrictions: String(formData.get("dietaryRestrictions") || ""),
       privacyPreference: "Standard",
       rescheduleConsent: "Yes",
       slotStatus: "available",
-      bookingSource: "WhatsApp",
-      paymentMethod: "Bank transfer",
-      notes: notes.trim() || "",
-      packageNotes: selectedAddon ? `Add-on: ${selectedAddon.name}` : "",
-      addOns: selectedAddon ? [selectedAddon.name] : [],
+      bookingSource,
+      paymentMethod,
+      notes: String(formData.get("notes") || ""),
+      packageNotes: String(formData.get("packageNotes") || ""),
+      addOns: [],
       fieldTipIncentiveUsd: 0,
       setupStatus: "not_started",
     };
@@ -336,19 +439,7 @@ export function NewBookingForm({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
-
-      try {
-        if (typeof window !== "undefined" && "BroadcastChannel" in window) {
-          const channel = new BroadcastChannel("ephemeris_sync_channel");
-          channel.postMessage({ type: "BOOKING_CREATED", bookingId: response.booking.id });
-          channel.close();
-        }
-      } catch {
-        // ignore
-      }
-
-      window.dispatchEvent(new Event("ephemeris:notifications-changed"));
-      toast.success(`Booking ${response.booking.booking_code} created successfully!`);
+      toast.success(`${response.booking.booking_code} was created successfully.`);
       await onCreated(response.booking);
     } catch (submitError) {
       const message = submitError instanceof Error ? submitError.message : "Unable to create booking.";
@@ -360,13 +451,13 @@ export function NewBookingForm({
   }
 
   return (
-    <div className="flex min-w-0 flex-col gap-6">
+    <div className="flex flex-col gap-6">
       {loading ? <BookingFormLoading /> : null}
 
       {!loading && error ? (
         <Alert variant="destructive">
           <ShieldAlert />
-          <AlertTitle>Notice</AlertTitle>
+          <AlertTitle>Check the booking details</AlertTitle>
           <AlertDescription>{error}</AlertDescription>
         </Alert>
       ) : null}
@@ -380,375 +471,536 @@ export function NewBookingForm({
       ) : null}
 
       {!loading && !packages.length ? (
-        <Alert className="border-amber-500/30 bg-amber-500/10">
-          <Package className="text-amber-500" />
-          <AlertTitle>No active packages available</AlertTitle>
+        <Alert>
+          <Package />
+          <AlertTitle>No active package is available</AlertTitle>
           <AlertDescription>
-            Please create an active package in the Packages menu first before creating a booking.
+            {role === "admin"
+              ? "An active package assigned to a resort is required before a booking can be created."
+              : "An active package for your assigned resort is required before a booking can be created."}
           </AlertDescription>
         </Alert>
       ) : null}
 
       {!loading && packages.length ? (
-        <form onSubmit={handleFormSubmit} noValidate>
-          <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_340px]">
-            {/* LEFT COLUMN: All In One Page */}
-            <div className="space-y-6">
-              {/* SECTION 1: PACKAGE & ADD-ON SELECTION */}
-              <Card className="border-border/60 shadow-sm">
-                <CardHeader className="border-b bg-muted/20 pb-4">
-                  <div className="flex items-center gap-2">
-                    <Sparkles className="h-5 w-5 text-cyan-400" />
-                    <div>
-                      <CardTitle className="text-base font-semibold">1. Experience & Package</CardTitle>
-                      <CardDescription>
-                        Select the stargazing package from the dropdown and add any optional add-ons.
-                      </CardDescription>
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-5 pt-5">
-                  <div className="grid gap-5 md:grid-cols-2">
-                    {/* PACKAGE DROPDOWN */}
-                    <Field>
-                      <FieldLabel htmlFor="admin-booking-package">Package *</FieldLabel>
-                      <Select
-                        value={selectedPackageId}
-                        onValueChange={(val) => {
-                          setSelectedPackageId(val);
-                          setError("");
-                        }}
+        <form ref={formRef} noValidate onSubmit={submitBooking}>
+          <Tabs
+            value={`step-${currentStep}`}
+            onValueChange={(value) => goToStep(Number(value.replace("step-", "")) as BookingStep)}
+            className="gap-5"
+          >
+            <nav aria-label="Booking progress">
+              <ol className="grid grid-cols-3">
+                {BOOKING_STEPS.map((step, index) => {
+                  const completed = step.value < currentStep;
+                  const active = step.value === currentStep;
+
+                  return (
+                    <li key={step.value} className="relative flex min-w-0 flex-col items-center gap-1.5">
+                      {index > 0 ? (
+                        <Separator
+                          className={cn("absolute top-3.5 right-1/2 w-full", step.value <= currentStep && "bg-primary")}
+                        />
+                      ) : null}
+                      <Button
+                        type="button"
+                        size="icon-sm"
+                        variant={completed ? "default" : "outline"}
+                        className="relative rounded-full"
+                        disabled={step.value > highestStep}
+                        aria-label={`Go to ${step.label}`}
+                        aria-current={active ? "step" : undefined}
+                        onClick={() => goToStep(step.value)}
                       >
-                        <SelectTrigger id="admin-booking-package" className="w-full font-medium">
-                          <SelectValue placeholder="Select a package..." />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {mainPackages.map((pkg) => (
-                            <SelectItem key={pkg.id} value={pkg.id}>
-                              {pkg.name} ({formatUsd(pkg.adult_price_usd)}/adult)
-                            </SelectItem>
-                          ))}
-                          {mainPackages.length === 0 && (
-                            <SelectItem value="__none__" disabled>
-                              No main packages found
-                            </SelectItem>
-                          )}
-                        </SelectContent>
-                      </Select>
-                    </Field>
-
-                    {/* ADD-ON COLUMN DROPDOWN */}
-                    <Field>
-                      <FieldLabel htmlFor="admin-booking-addon">Add-on (optional)</FieldLabel>
-                      <Select value={selectedAddonId} onValueChange={setSelectedAddonId}>
-                        <SelectTrigger id="admin-booking-addon" className="w-full">
-                          <SelectValue placeholder="None (No add-on)" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="none">None (No add-on)</SelectItem>
-                          {addonPackages.map((addon) => (
-                            <SelectItem key={addon.id} value={addon.id}>
-                              {addon.name} {addon.adult_price_usd > 0 ? `(+${formatUsd(addon.adult_price_usd)})` : ""}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      {addonPackages.length === 0 ? (
-                        <p className="mt-1 text-muted-foreground text-xs">
-                          No add-ons available for this resort.
-                        </p>
-                      ) : null}
-                    </Field>
-                  </div>
-
-                  {/* SCHEDULE: DATE & TIME */}
-                  <div className="grid gap-5 border-border/50 border-t pt-5 sm:grid-cols-3">
-                    <Field>
-                      <FieldLabel className="flex items-center gap-1.5">
-                        <CalendarDays className="h-3.5 w-3.5 text-muted-foreground" /> Event Date *
-                      </FieldLabel>
-                      <DatePicker value={eventDate} onValueChange={(d) => d && setEventDate(d)} />
-                    </Field>
-
-                    <Field>
-                      <FieldLabel className="flex items-center gap-1.5">
-                        <Clock className="h-3.5 w-3.5 text-muted-foreground" /> Start Time *
-                      </FieldLabel>
-                      <TimePicker value={timeStart} onValueChange={setTimeStart} />
-                    </Field>
-
-                    <Field>
-                      <FieldLabel className="flex items-center gap-1.5">
-                        <Clock className="h-3.5 w-3.5 text-muted-foreground" /> End Time *
-                      </FieldLabel>
-                      <TimePicker value={timeEnd} onValueChange={setTimeEnd} />
-                    </Field>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* SECTION 2: GUEST INFORMATION */}
-              <Card className="border-border/60 shadow-sm">
-                <CardHeader className="border-b bg-muted/20 pb-4">
-                  <div className="flex items-center gap-2">
-                    <User className="h-5 w-5 text-indigo-400" />
-                    <div>
-                      <CardTitle className="text-base font-semibold">2. Guest Information</CardTitle>
-                      <CardDescription>
-                        One name is enough to proceed (e.g. Julian Family). Phone & email are optional.
-                      </CardDescription>
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-5 pt-5">
-                  <div className="grid gap-5 md:grid-cols-2">
-                    {/* GUEST NAME */}
-                    <Field>
-                      <FieldLabel htmlFor="admin-guest-name">Guest Name *</FieldLabel>
-                      <Input
-                        id="admin-guest-name"
-                        placeholder="e.g. Julian Family"
-                        value={guestName}
-                        onChange={(e) => {
-                          setGuestName(e.target.value);
-                          setError("");
-                        }}
-                        required
-                        className="font-medium"
-                      />
-                    </Field>
-
-                    {/* VILLA / ROOM NUMBER */}
-                    <Field>
-                      <FieldLabel htmlFor="admin-room">Villa / Room Number *</FieldLabel>
-                      <Input
-                        id="admin-room"
-                        placeholder="e.g. Villa 102"
-                        value={roomNumber}
-                        onChange={(e) => {
-                          setRoomNumber(e.target.value);
-                          setError("");
-                        }}
-                        required
-                        maxLength={20}
-                      />
-                    </Field>
-                  </div>
-
-                  {/* NUMBER OF PARTICIPANTS (ADULTS & KIDS) */}
-                  <div className="rounded-xl border border-border/60 bg-muted/30 p-4">
-                    <div className="mb-3 flex items-center gap-2">
-                      <Users className="h-4 w-4 text-cyan-400" />
-                      <span className="font-semibold text-foreground text-sm">Number of Participants</span>
-                    </div>
-
-                    <div className="grid gap-5 sm:grid-cols-2">
-                      <Field>
-                        <FieldLabel htmlFor="admin-adults">Number of Adults *</FieldLabel>
-                        <Input
-                          id="admin-adults"
-                          type="number"
-                          min={1}
-                          max={20}
-                          onChange={(e) => setAdultCount(Math.max(1, parseInt(e.target.value, 10) || 1))}
-                          required
-                        />
-                      </Field>
-
-                      <Field>
-                        <FieldLabel htmlFor="admin-kids">Number of Kids (under 12y)</FieldLabel>
-                        <Input
-                          id="admin-kids"
-                          type="number"
-                          min={0}
-                          max={20}
-                          onChange={(e) => setChildCount(Math.max(0, parseInt(e.target.value, 10) || 0))}
-                        />
-                        {childCount > 0 ? (
-                          <p className="mt-1 font-medium text-cyan-400 text-xs">
-                            ✓ {childCount} kid participant{childCount > 1 ? "s" : ""} included (50% package rate)
-                          </p>
-                        ) : (
-                          <p className="mt-1 text-muted-foreground text-xs">
-                            Kids receive 50% discount on regular stargazing packages.
-                          </p>
+                        {completed ? <Check /> : null}
+                        {active ? <Dot /> : null}
+                      </Button>
+                      <span
+                        className={cn(
+                          "max-w-full text-center text-xs",
+                          active ? "text-foreground" : "text-muted-foreground",
                         )}
-                      </Field>
-                    </div>
-                  </div>
+                      >
+                        {step.label}
+                      </span>
+                    </li>
+                  );
+                })}
+              </ol>
+            </nav>
 
-                  {/* WHATSAPP & EMAIL (OPTIONAL) */}
-                  <div className="grid gap-5 md:grid-cols-2">
-                    <Field>
-                      <FieldLabel htmlFor="admin-phone">Phone / WhatsApp (optional)</FieldLabel>
-                      <Input
-                        id="admin-phone"
-                        placeholder="+62... / +960..."
-                        value={guestPhone}
-                        onChange={(e) => setGuestPhone(e.target.value)}
-                        maxLength={30}
-                        autoComplete="tel"
-                      />
-                    </Field>
+            <fieldset disabled={submitting || readOnly} className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_320px]">
+              <div className="min-w-0">
+                <TabsContent value="step-1" forceMount className="data-[state=inactive]:hidden">
+                  <Card>
+                    <CardHeader className="border-b">
+                      <CardTitle>Contact and stay</CardTitle>
+                      <CardDescription>Booking contact and resort stay information.</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <FieldSet>
+                        <FieldLegend className="sr-only">Contact and stay information</FieldLegend>
+                        <FieldGroup className="grid gap-5 md:grid-cols-2">
+                          <Field>
+                            <FieldLabel htmlFor="booking-guest-phone">Phone or WhatsApp (optional)</FieldLabel>
+                            <Input
+                              id="booking-guest-phone"
+                              name="guestPhone"
+                              maxLength={30}
+                              autoComplete="tel"
+                            />
+                          </Field>
+                          <Field>
+                            <FieldLabel htmlFor="booking-guest-email">Email (optional)</FieldLabel>
+                            <Input
+                              id="booking-guest-email"
+                              name="guestEmail"
+                              type="email"
+                              maxLength={254}
+                              autoComplete="email"
+                            />
+                          </Field>
+                          <Field>
+                            <FieldLabel htmlFor="booking-room">Room or villa number</FieldLabel>
+                            <Input id="booking-room" name="roomNumber" maxLength={20} required />
+                          </Field>
+                          <Field>
+                            <FieldLabel htmlFor="booking-language">Preferred language</FieldLabel>
+                            <Select
+                              value={preferredLanguage}
+                              onValueChange={(value) => value && setPreferredLanguage(value)}
+                            >
+                              <SelectTrigger id="booking-language" className="w-full">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectGroup>
+                                  <SelectItem value="English">English</SelectItem>
+                                  <SelectItem value="Bahasa Indonesia">Bahasa Indonesia</SelectItem>
+                                  <SelectItem value="Arabic">Arabic</SelectItem>
+                                  <SelectItem value="Mandarin">Mandarin</SelectItem>
+                                  <SelectItem value="Other">Other</SelectItem>
+                                </SelectGroup>
+                              </SelectContent>
+                            </Select>
+                          </Field>
+                        </FieldGroup>
+                      </FieldSet>
+                    </CardContent>
+                  </Card>
+                </TabsContent>
 
-                    <Field>
-                      <FieldLabel htmlFor="admin-email">Email (optional)</FieldLabel>
-                      <Input
-                        id="admin-email"
-                        type="email"
-                        placeholder="guest@example.com"
-                        value={guestEmail}
-                        onChange={(e) => setGuestEmail(e.target.value)}
-                        maxLength={254}
-                        autoComplete="email"
-                      />
-                    </Field>
-                  </div>
+                <TabsContent value="step-2" forceMount className="flex flex-col gap-6 data-[state=inactive]:hidden">
+                  <Card>
+                    <CardHeader className="border-b">
+                      <CardTitle>Experience schedule</CardTitle>
+                      <CardDescription>
+                        Add one or more experiences. They will be submitted together as one booking.
+                      </CardDescription>
+                      <CardAction>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          disabled={experiences.length >= 10}
+                          onClick={addExperience}
+                        >
+                          <CalendarPlus data-icon="inline-start" />
+                          Add experience
+                        </Button>
+                      </CardAction>
+                    </CardHeader>
+                    <CardContent className="flex flex-col gap-4">
+                      {experiences.map((experience, index) => (
+                        <FieldSet key={experience.clientId} className="rounded-lg border p-4">
+                          <div className="flex items-center justify-between gap-3">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <FieldLegend variant="label">Experience {index + 1}</FieldLegend>
+                              {index === 0 ? <Badge variant="secondary">Primary schedule</Badge> : null}
+                            </div>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon-sm"
+                              disabled={experiences.length === 1}
+                              aria-label={`Remove experience ${index + 1}`}
+                              onClick={() => removeExperience(experience.clientId)}
+                            >
+                              <Trash2 />
+                            </Button>
+                          </div>
+                          <FieldGroup className="grid gap-5 md:grid-cols-2">
+                            <Field className="md:col-span-2">
+                              <FieldLabel htmlFor={`${experience.clientId}-package`}>Package</FieldLabel>
+                              <Select
+                                value={experience.packageId}
+                                onValueChange={(value) => {
+                                  if (value) {
+                                    const selectedPkg = packages.find((item) => item.id === value);
+                                    updateExperience(experience.clientId, {
+                                      packageId: value,
+                                      ...(selectedPkg?.location ? { observationSpot: selectedPkg.location } : {}),
+                                    });
+                                  }
+                                }}
+                              >
+                                <SelectTrigger id={`${experience.clientId}-package`} className="w-full">
+                                  <SelectValue placeholder="Select a package" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectGroup>
+                                    {packages
+                                      .filter(
+                                        (item) =>
+                                          index === 0 ||
+                                          !selectedPackage?.resort_id ||
+                                          item.resort_id === selectedPackage.resort_id,
+                                      )
+                                      .map((item) => (
+                                        <SelectItem key={item.id} value={item.id}>
+                                          {item.name} · {item.location} · {formatUsd(item.adult_price_usd)} adult
+                                        </SelectItem>
+                                      ))}
+                                  </SelectGroup>
+                                </SelectContent>
+                              </Select>
+                            </Field>
+                            <Field>
+                              <FieldLabel htmlFor={`${experience.clientId}-event-date`}>Event date</FieldLabel>
+                              <DatePicker
+                                id={`${experience.clientId}-event-date`}
+                                value={experience.eventDate}
+                                onValueChange={(eventDate) => updateExperience(experience.clientId, { eventDate })}
+                                required
+                              />
+                            </Field>
+                            <Field>
+                              <FieldLabel htmlFor={`${experience.clientId}-observation-spot`}>
+                                Observation spot
+                              </FieldLabel>
+                              <Input
+                                id={`${experience.clientId}-observation-spot`}
+                                value={experience.observationSpot}
+                                maxLength={120}
+                                placeholder="Upon assignment"
+                                onChange={(event) =>
+                                  updateExperience(experience.clientId, { observationSpot: event.target.value })
+                                }
+                              />
+                            </Field>
+                            <Field className="md:col-span-2">
+                              <FieldLabel htmlFor={`${experience.clientId}-start-time`}>Start time</FieldLabel>
+                              <TimePicker
+                                id={`${experience.clientId}-start-time`}
+                                value={experience.timeStart}
+                                onValueChange={(timeStart) =>
+                                  updateExperience(experience.clientId, {
+                                    timeStart,
+                                    timeEnd: computeEndTime(timeStart),
+                                  })
+                                }
+                                required
+                              />
+                            </Field>
+                          </FieldGroup>
+                        </FieldSet>
+                      ))}
+                      <p className="text-muted-foreground text-xs">{experiences.length} of 10 scheduled experiences</p>
+                    </CardContent>
+                  </Card>
 
-                  {/* OPTIONAL EXTRAS */}
-                  <div className="grid gap-5 border-border/50 border-t pt-4 md:grid-cols-3">
-                    <Field>
-                      <FieldLabel htmlFor="admin-language">Preferred Language</FieldLabel>
-                      <Select value={preferredLanguage} onValueChange={setPreferredLanguage}>
-                        <SelectTrigger id="admin-language" className="w-full">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="English">English</SelectItem>
-                          <SelectItem value="Bahasa Indonesia">Bahasa Indonesia</SelectItem>
-                          <SelectItem value="Arabic">Arabic</SelectItem>
-                          <SelectItem value="Mandarin">Mandarin</SelectItem>
-                          <SelectItem value="Russian">Russian</SelectItem>
-                          <SelectItem value="Other">Other</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </Field>
 
-                    <Field>
-                      <FieldLabel htmlFor="admin-spot">Observation Spot (optional)</FieldLabel>
-                      <Input
-                        id="admin-spot"
-                        placeholder="e.g. Sunset Pier"
-                        value={observationSpot}
-                        onChange={(e) => setObservationSpot(e.target.value)}
-                        maxLength={120}
-                      />
-                    </Field>
-
-                    <Field>
-                      <FieldLabel htmlFor="admin-notes">Notes (optional)</FieldLabel>
-                      <Input
-                        id="admin-notes"
-                        placeholder="e.g. Anniversary celebration"
-                        value={notes}
-                        onChange={(e) => setNotes(e.target.value)}
-                        maxLength={500}
-                      />
-                    </Field>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-
-            {/* RIGHT COLUMN: LIVE PRICE SUMMARY & BOOK NOW */}
-            <div className="space-y-4">
-              <Card className="sticky top-6 border-cyan-500/30 bg-card/95 shadow-lg backdrop-blur-sm">
-                <CardHeader className="border-b bg-muted/20 pb-3">
-                  <div className="flex items-center justify-between">
-                    <CardTitle className="font-semibold text-base">Booking Summary</CardTitle>
-                    {selectedPackage ? (
-                      <Badge variant="outline" className="border-cyan-500/40 bg-cyan-950/30 font-medium text-cyan-300">
-                        {selectedPackage.name}
-                      </Badge>
-                    ) : null}
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-3 pt-4 text-sm">
-                  {selectedPackage ? (
-                    <div className="space-y-2.5">
-                      <div className="flex justify-between text-slate-300">
-                        <span>Adults ({adultCount} × {formatUsd(adultPrice)})</span>
-                        <span className="font-semibold text-slate-100">{formatUsd(baseAdultTotal)}</span>
-                      </div>
-
-                      {childCount > 0 ? (
-                        <div className="flex justify-between text-slate-300">
-                          <span>Kids ({childCount} × {formatUsd(childPrice)})</span>
-                          <span className="font-semibold text-slate-100">{formatUsd(baseChildTotal)}</span>
-                        </div>
-                      ) : null}
-
-                      {selectedAddon ? (
-                        <div className="flex justify-between text-cyan-300">
-                          <span className="truncate pr-2">Add-on: {selectedAddon.name}</span>
-                          <span className="font-semibold text-cyan-200">+{formatUsd(baseAddonTotal)}</span>
-                        </div>
-                      ) : null}
-
-                      <Separator className="my-2 border-slate-700/60" />
-
-                      <div className="flex justify-between text-slate-400 text-xs">
-                        <span>Subtotal</span>
-                        <span className="text-slate-200 font-medium">{formatUsd(baseTotal)}</span>
-                      </div>
-                      <div className="flex justify-between text-slate-400 text-xs">
-                        <span>Service Charge (10%)</span>
-                        <span className="text-slate-200 font-medium">{formatUsd(serviceCharge)}</span>
-                      </div>
-                      <div className="flex justify-between text-slate-400 text-xs">
-                        <span>Tourism GST (17%)</span>
-                        <span className="text-slate-200 font-medium">{formatUsd(gst)}</span>
-                      </div>
-
-                      <Separator className="my-2 border-slate-700/60" />
-
-                      <div className="flex items-baseline justify-between pt-1">
-                        <span className="font-bold text-base text-white">Total Price</span>
-                        <span className="font-extrabold text-2xl text-emerald-400 drop-shadow-sm">
-                          {formatUsd(grandTotal)}
-                        </span>
-                      </div>
-
-                      <p className="text-[11px] text-muted-foreground">
-                        Automatically calculated for {adultCount + childCount} participant{adultCount + childCount > 1 ? "s" : ""}.
+                                    <Card>
+                    <CardHeader className="border-b">
+                      <CardTitle>Participants</CardTitle>
+                      <CardDescription>
+                        Add every guest to this booking. All participants are submitted as one booking.
+                      </CardDescription>
+                      <CardAction>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          disabled={participants.length >= 20}
+                          onClick={addParticipant}
+                        >
+                          <UserPlus data-icon="inline-start" />
+                          Add participant
+                        </Button>
+                      </CardAction>
+                    </CardHeader>
+                    <CardContent className="flex flex-col gap-4">
+                      {participants.map((participant, index) => (
+                        <FieldSet key={participant.clientId} className="rounded-lg border p-4">
+                          <div className="flex items-center justify-between gap-3">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <FieldLegend variant="label">Participant {index + 1}</FieldLegend>
+                              {index === 0 ? <Badge variant="secondary">Primary guest</Badge> : null}
+                            </div>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon-sm"
+                              disabled={participants.length === 1}
+                              aria-label={`Remove participant ${index + 1}`}
+                              onClick={() => removeParticipant(participant.clientId)}
+                            >
+                              <Trash2 />
+                            </Button>
+                          </div>
+                          <FieldGroup className="grid gap-4 md:grid-cols-2">
+                            <Field>
+                              <FieldLabel htmlFor={`${participant.clientId}-name`}>Full name</FieldLabel>
+                              <Input
+                                id={`${participant.clientId}-name`}
+                                value={participant.fullName}
+                                maxLength={200}
+                                autoComplete={index === 0 ? "name" : "off"}
+                                onChange={(event) =>
+                                  updateParticipant(participant.clientId, { fullName: event.target.value })
+                                }
+                                required
+                              />
+                            </Field>
+                            <Field>
+                              <FieldLabel htmlFor={`${participant.clientId}-type`}>Participant type</FieldLabel>
+                              <Select
+                                value={participant.type}
+                                onValueChange={(value) => {
+                                  if (value === "adult" || value === "child") {
+                                    updateParticipant(participant.clientId, {
+                                      type: value,
+                                      age: value === "adult" ? "" : participant.age,
+                                    });
+                                  }
+                                }}
+                              >
+                                <SelectTrigger id={`${participant.clientId}-type`} className="w-full">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectGroup>
+                                    <SelectItem value="adult">Adult</SelectItem>
+                                    <SelectItem value="child">Child</SelectItem>
+                                  </SelectGroup>
+                                </SelectContent>
+                              </Select>
+                            </Field>
+                            <Field>
+                              <FieldLabel htmlFor={`${participant.clientId}-nationality`}>Nationality</FieldLabel>
+                              <Input
+                                id={`${participant.clientId}-nationality`}
+                                value={participant.nationality}
+                                maxLength={80}
+                                onChange={(event) =>
+                                  updateParticipant(participant.clientId, { nationality: event.target.value })
+                                }
+                                required
+                              />
+                            </Field>
+                            <Field data-disabled={participant.type === "adult"}>
+                              <FieldLabel htmlFor={`${participant.clientId}-age`}>
+                                Age {participant.type === "adult" ? "(optional)" : ""}
+                              </FieldLabel>
+                              <Input
+                                id={`${participant.clientId}-age`}
+                                type="number"
+                                min={0}
+                                max={120}
+                                value={participant.age}
+                                onChange={(event) =>
+                                  updateParticipant(participant.clientId, { age: event.target.value })
+                                }
+                                required={participant.type === "child"}
+                              />
+                            </Field>
+                            <Field className="md:col-span-2">
+                              <FieldLabel htmlFor={`${participant.clientId}-notes`}>Participant notes</FieldLabel>
+                              <Input
+                                id={`${participant.clientId}-notes`}
+                                value={participant.notes}
+                                maxLength={500}
+                                placeholder="Accessibility, assistance, or other participant-specific notes"
+                                onChange={(event) =>
+                                  updateParticipant(participant.clientId, { notes: event.target.value })
+                                }
+                              />
+                            </Field>
+                          </FieldGroup>
+                        </FieldSet>
+                      ))}
+                      <p className="text-muted-foreground text-xs">
+                        {participants.length} of 20 participants · {adultCount} adults · {childCount} children
                       </p>
-                    </div>
-                  ) : (
-                    <div className="py-6 text-center text-muted-foreground text-sm">
-                      Select a package to see price breakdown.
-                    </div>
-                  )}
-                </CardContent>
+                    </CardContent>
+                  </Card>
+                </TabsContent>
 
-                <CardFooter className="flex flex-col gap-2 border-t pt-4">
-                  <Button
-                    type="submit"
-                    className="h-12 w-full border-0 bg-gradient-to-r from-cyan-500 to-blue-600 font-bold text-base text-white shadow-md hover:from-cyan-400 hover:to-blue-500 disabled:opacity-50"
-                    disabled={submitting || readOnly || !selectedPackage || !guestName.trim() || !roomNumber.trim()}
-                  >
-                    {submitting ? (
-                      <>
-                        <Spinner className="mr-2 h-4 w-4" /> Creating Booking...
-                      </>
+                <TabsContent value="step-3" forceMount className="data-[state=inactive]:hidden">
+                  <Card>
+                    <CardHeader className="border-b">
+                      <CardTitle>Service preferences</CardTitle>
+                      <CardDescription>Optional details used by resort and field operations.</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <FieldSet>
+                        <FieldLegend className="sr-only">Service preferences</FieldLegend>
+                        <FieldGroup className="grid gap-5 md:grid-cols-2">
+                          <Field>
+                            <FieldLabel htmlFor="booking-source">Booking source</FieldLabel>
+                            <Select value={bookingSource} onValueChange={(value) => value && setBookingSource(value)}>
+                              <SelectTrigger id="booking-source" className="w-full">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectGroup>
+                                  <SelectItem value="WhatsApp">WhatsApp</SelectItem>
+                                  <SelectItem value="Front desk">Front desk</SelectItem>
+                                  <SelectItem value="Butler">Butler</SelectItem>
+                                  <SelectItem value="Phone">Phone</SelectItem>
+                                  <SelectItem value="Walk-in">Walk-in</SelectItem>
+                                </SelectGroup>
+                              </SelectContent>
+                            </Select>
+                          </Field>
+                          <Field>
+                            <FieldLabel htmlFor="booking-payment">Payment method</FieldLabel>
+                            <Select value={paymentMethod} onValueChange={(value) => value && setPaymentMethod(value)}>
+                              <SelectTrigger id="booking-payment" className="w-full">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectGroup>
+                                  <SelectItem value="Bank transfer">Bank transfer</SelectItem>
+                                  <SelectItem value="Cash">Cash</SelectItem>
+                                </SelectGroup>
+                              </SelectContent>
+                            </Select>
+                          </Field>
+                          <Field>
+                            <FieldLabel htmlFor="booking-special-occasion">Special occasion</FieldLabel>
+                            <Input
+                              id="booking-special-occasion"
+                              name="specialOccasion"
+                              maxLength={500}
+                              placeholder="Birthday, anniversary..."
+                            />
+                          </Field>
+                          <Field>
+                            <FieldLabel htmlFor="booking-dietary">Dietary restrictions</FieldLabel>
+                            <Input id="booking-dietary" name="dietaryRestrictions" maxLength={500} />
+                          </Field>
+                          <Field className="md:col-span-2">
+                            <FieldLabel htmlFor="booking-package-notes">Package notes</FieldLabel>
+                            <Textarea
+                              id="booking-package-notes"
+                              name="packageNotes"
+                              maxLength={4000}
+                              placeholder="Guest-specific package preparation details."
+                            />
+                          </Field>
+                          <Field className="md:col-span-2">
+                            <FieldLabel htmlFor="booking-notes">Internal notes</FieldLabel>
+                            <Textarea
+                              id="booking-notes"
+                              name="notes"
+                              maxLength={2000}
+                              placeholder="Visible to authorized operations staff."
+                            />
+                          </Field>
+                        </FieldGroup>
+                      </FieldSet>
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+              </div>
+
+              <div className="flex flex-col gap-6 xl:sticky xl:top-18 xl:self-start">
+                <Card>
+                  <CardHeader className="border-b">
+                    <CardTitle>Booking summary</CardTitle>
+                    <CardDescription>Pricing is recalculated by the backend when submitted.</CardDescription>
+                  </CardHeader>
+                  <CardContent className="flex flex-col gap-4">
+                    <div className="flex items-start gap-3">
+                      <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-muted">
+                        <Package />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="truncate font-medium">
+                          {selectedPackage?.name || "No package selected"}
+                          {experiences.length > 1 ? ` +${experiences.length - 1} more` : ""}
+                        </p>
+                        <p className="text-muted-foreground text-sm">
+                          {experiences.length} scheduled {experiences.length === 1 ? "experience" : "experiences"}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-start gap-3">
+                      <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-muted">
+                        <Users />
+                      </div>
+                      <div>
+                        <p className="font-medium">{adultCount + childCount} guests</p>
+                        <p className="text-muted-foreground text-sm">
+                          {adultCount} adults · {childCount} children
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {summaryInclusions.slice(0, 4).map((item) => (
+                        <Badge key={item} variant="secondary">
+                          {item}
+                        </Badge>
+                      ))}
+                    </div>
+                    <div className="flex items-center justify-between border-t pt-4">
+                      <span className="text-muted-foreground text-sm">Estimated base</span>
+                      <strong className="text-lg tabular-nums">{formatUsd(estimatedBase)}</strong>
+                    </div>
+                    <p className="text-muted-foreground text-xs">
+                      Service charge, tax, rewards, and commission are calculated securely after submission.
+                    </p>
+                  </CardContent>
+                  <CardFooter className="flex-col items-stretch gap-2">
+                    {currentStep > 1 ? (
+                      <Button type="button" variant="outline" onClick={goToPreviousStep}>
+                        <ArrowLeft data-icon="inline-start" />
+                        Back
+                      </Button>
+                    ) : null}
+                    {currentStep < 3 ? (
+                      <Button type="button" onClick={goToNextStep}>
+                        Continue
+                        <ArrowRight data-icon="inline-end" />
+                      </Button>
                     ) : (
-                      "Book Now"
+                      <Button type="submit" disabled={submitting || readOnly}>
+                        {submitting ? <Spinner data-icon="inline-start" /> : <CalendarPlus data-icon="inline-start" />}
+                        {submitting ? "Creating booking..." : "Create booking"}
+                      </Button>
                     )}
-                  </Button>
+                    <Button type="button" variant="outline" onClick={onCancel}>
+                      Cancel
+                    </Button>
+                  </CardFooter>
+                </Card>
 
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    className="w-full text-muted-foreground hover:text-foreground"
-                    onClick={onCancel}
-                  >
-                    Cancel
-                  </Button>
-                </CardFooter>
-              </Card>
-            </div>
-          </div>
+                <Alert>
+                  <Check />
+                  <AlertTitle>
+                    {role === "external" ? "Internal approval required" : "Immediately operational"}
+                  </AlertTitle>
+                  <AlertDescription>{bookingSubmissionDescription(role)}</AlertDescription>
+                </Alert>
+              </div>
+            </fieldset>
+          </Tabs>
         </form>
+      ) : null}
+
+      {!loading && !error && packages.length && adultCount + childCount <= 0 ? (
+        <FieldError>At least one adult or child is required.</FieldError>
       ) : null}
     </div>
   );
