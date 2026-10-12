@@ -20,6 +20,7 @@ export async function GET() {
         { id: 'regular', name: 'Regular', slug: 'regular', is_active: true },
         { id: 'private', name: 'Private', slug: 'private', is_active: true },
         { id: 'kids', name: 'Kids', slug: 'kids', is_active: true },
+        { id: 'addon', name: 'Add-on', slug: 'addon', is_active: true },
       ],
     });
   } catch (error) {
