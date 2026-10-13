@@ -93,6 +93,6 @@ export function getStaffSidebarItems({ role, permissions }: StaffNavigationOptio
   }
 
   items.push({ id: "staff-settings", title: "Settings", url: `${basePath}/settings`, icon: "settings" });
-
-  return [{ id: 1, label: "SpaceCat ASTROTOURISM Staff", items }];
+  const label = role === "external" ? "Star Portal" : "SpaceCat ASTROTOURISM Staff";
+  return [{ id: 1, label, items }];
 }

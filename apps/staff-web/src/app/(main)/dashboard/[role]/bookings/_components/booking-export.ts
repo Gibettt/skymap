@@ -8,16 +8,15 @@ function bookingTime(start: string | null, end: string | null) {
 }
 
 function titleCase(value: string) {
-  return value
-    .replaceAll("_", " ")
-    .replace(/\b\w/g, (character) => character.toUpperCase());
+  return value.replaceAll("_", " ").replace(/\b\w/g, (character) => character.toUpperCase());
 }
 
 export async function exportBookingsToExcel(bookings: StaffBooking[], role: StaffRole) {
   const roleLabel = role === "external" ? "External Staff" : "Internal Staff";
 
   await downloadExcelReport({
-    title: `SpaceCat ASTROTOURISM — ${roleLabel} Bookings`,
+    title:
+      role === "external" ? "Star Portal — External Staff Bookings" : `SpaceCat ASTROTOURISM — ${roleLabel} Bookings`,
     subtitle: "Filtered booking records",
     filename: `ephemeris-${role}-bookings-${new Date().toISOString().slice(0, 10)}.xlsx`,
     sheetName: "Bookings",

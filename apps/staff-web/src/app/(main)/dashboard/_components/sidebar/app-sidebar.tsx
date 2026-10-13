@@ -52,6 +52,7 @@ export function AppSidebar({ user, items, canViewNotifications, canViewPayouts, 
   const variant = isSynced ? sidebarVariant : props.variant;
   const collapsible = isSynced ? sidebarCollapsible : props.collapsible;
   const dashboardUrl = `/dashboard/${user.role}`;
+  const brandName = user.role === "external" ? "Star Portal" : APP_CONFIG.name;
   const closeMobileSidebar = () => {
     if (isMobile) setOpenMobile(false);
   };
@@ -64,20 +65,25 @@ export function AppSidebar({ user, items, canViewNotifications, canViewPayouts, 
             <SidebarMenuButton
               size="lg"
               asChild
-              tooltip={APP_CONFIG.name}
+              tooltip={brandName}
               className="group-data-[collapsible=icon]:size-9! group-data-[collapsible=icon]:p-0! group-data-[collapsible=icon]:justify-center"
             >
-              <Link prefetch={false} href={dashboardUrl} onClick={closeMobileSidebar} className="flex items-center gap-2.5">
+              <Link
+                prefetch={false}
+                href={dashboardUrl}
+                onClick={closeMobileSidebar}
+                className="flex items-center gap-2.5"
+              >
                 <Image
                   src="/spacecat-astrotourism-logo.jpg"
-                  alt="SpaceCat ASTROTOURISM"
+                  alt={brandName}
                   width={36}
                   height={36}
                   priority
                   className="size-9 shrink-0 aspect-square rounded-lg object-cover"
                 />
                 <span className="font-semibold text-base truncate group-data-[collapsible=icon]:hidden">
-                  {APP_CONFIG.name}
+                  {brandName}
                 </span>
               </Link>
             </SidebarMenuButton>

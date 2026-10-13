@@ -14,10 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 
-import {
-  ResortProfileImageField,
-  type ResortProfileImageValue,
-} from "./resort-profile-image-field";
+import { ResortProfileImageField, type ResortProfileImageValue } from "./resort-profile-image-field";
 
 type Account = {
   name: string;
@@ -52,10 +49,7 @@ type PublicProfile = {
   imageUrl: string | null;
 };
 
-type PublicProfileForm = Pick<
-  PublicProfile,
-  "location" | "publicDescription" | "contactEmail" | "whatsappNumber"
->;
+type PublicProfileForm = Pick<PublicProfile, "location" | "publicDescription" | "contactEmail" | "whatsappNumber">;
 
 const emptyPublicProfileForm: PublicProfileForm = {
   location: "",
@@ -330,7 +324,10 @@ export function SettingsPanel({
             onChange={(event) => updatePublicProfileField("publicDescription", event.target.value)}
             placeholder="Describe the island observatory and guest experience."
           />
-          <FieldDescription>{publicProfileForm.publicDescription.length}/600 characters. Shown on the landing resort card and resort page.</FieldDescription>
+          <FieldDescription>
+            {publicProfileForm.publicDescription.length}/600 characters. Shown on the landing resort card and resort
+            page.
+          </FieldDescription>
         </Field>
         <div className="grid gap-4 sm:grid-cols-2">
           <Field>
@@ -401,7 +398,11 @@ export function SettingsPanel({
             <CardTitle className="flex items-center gap-2">
               <UserRound className="size-4" /> Account
             </CardTitle>
-            <CardDescription>Your identity is managed by the SpaceCat ASTROTOURISM administrator.</CardDescription>
+            <CardDescription>
+              {account.role === "external"
+                ? "Your identity is managed by the Star Portal administrator."
+                : "Your identity is managed by the SpaceCat ASTROTOURISM administrator."}
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <FieldGroup>
@@ -467,7 +468,8 @@ export function SettingsPanel({
               <Globe2 className="size-4" /> Public resort profile
             </CardTitle>
             <CardDescription>
-              Control the location, introduction, contact details, and cover image shown to guests on the public website.
+              Control the location, introduction, contact details, and cover image shown to guests on the public
+              website.
             </CardDescription>
           </CardHeader>
           <CardContent>{publicProfileContent}</CardContent>
