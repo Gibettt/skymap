@@ -62,6 +62,7 @@ export function Packages({
   addButtonClassName,
   cardTitle = "Packages",
   cardDescription = "Manage experience packages, pricing, availability, and resort assignments.",
+  showAddPackage = true,
 }: {
   packages: PackageRow[];
   resorts: PackageResortOption[];
@@ -69,6 +70,7 @@ export function Packages({
   addButtonClassName?: string;
   cardTitle?: string;
   cardDescription?: string;
+  showAddPackage?: boolean;
 }) {
   const searchInputRef = React.useRef<HTMLInputElement>(null);
   const columns = React.useMemo(() => getPackagesColumns(resorts), [resorts]);
@@ -230,7 +232,13 @@ export function Packages({
             <Download data-icon="inline-start" />
             Export
           </Button>
-          <CreatePackageDialog resorts={resorts} initialPackageTypes={initialPackageTypes} triggerClassName={addButtonClassName} />
+          {showAddPackage && (
+            <CreatePackageDialog
+              resorts={resorts}
+              initialPackageTypes={initialPackageTypes}
+              triggerClassName={addButtonClassName}
+            />
+          )}
         </CardAction>
       </CardHeader>
 

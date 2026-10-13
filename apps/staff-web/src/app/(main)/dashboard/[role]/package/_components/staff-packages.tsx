@@ -1,6 +1,5 @@
 "use client";
 
-import * as React from "react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
@@ -17,13 +16,7 @@ interface StaffPackagesProps {
   packageTypes?: PackageTypeOption[];
 }
 
-export function StaffPackages({
-  role,
-  user,
-  packages,
-  resorts,
-  packageTypes,
-}: StaffPackagesProps) {
+export function StaffPackages({ role, user, packages, resorts, packageTypes }: StaffPackagesProps) {
   const activeCount = packages.filter((pkg) => pkg.is_active).length;
   const privateCount = packages.filter((pkg) => pkg.experience_type === "private").length;
   const complimentaryCount = packages.filter((pkg) => !pkg.is_chargeable).length;
@@ -84,6 +77,7 @@ export function StaffPackages({
         cardTitle="Experience catalogue"
         cardDescription="Manage experience packages, pricing, availability, and resort assignments."
         addButtonClassName="bg-gradient-to-r from-fuchsia-500 to-violet-600 text-white shadow-[0_10px_30px_rgba(168,85,247,0.24)] hover:from-fuchsia-400 hover:to-violet-500 border-0"
+        showAddPackage={role !== "external"}
       />
     </div>
   );

@@ -10,13 +10,7 @@ export default function AdminLoginLayout({ children }: Readonly<{ children: Reac
       <div className="grid min-h-dvh min-w-0 xl:grid-cols-2 xl:p-2">
         <div className="relative order-2 hidden overflow-hidden rounded-3xl xl:sticky xl:top-2 xl:flex xl:h-[calc(100dvh-1rem)]">
           {/* Background image */}
-          <Image
-            src="/login-bg.png"
-            alt="Space background"
-            fill
-            className="object-cover"
-            priority
-          />
+          <Image src="/login-bg.png" alt="Space background" fill className="object-cover" priority />
           {/* Dark overlay so text stays readable */}
           <div className="absolute inset-0 bg-black/50" />
 
@@ -28,7 +22,7 @@ export default function AdminLoginLayout({ children }: Readonly<{ children: Reac
               height={48}
               className="size-12 rounded-lg object-cover"
             />
-            <h1 className="font-medium text-2xl">SpaceCat ASTROTOURISM Admin</h1>
+            <h1 className="font-medium text-2xl">Star Portal Admin</h1>
             <p className="text-sm">Observe. Operate. Deliver.</p>
           </div>
 
@@ -42,7 +36,7 @@ export default function AdminLoginLayout({ children }: Readonly<{ children: Reac
             <Separator orientation="vertical" className="mx-3 h-auto! bg-white/30" />
             <div className="flex flex-1 flex-col gap-1 text-white">
               <h2 className="font-medium">Secure access</h2>
-              <p className="text-sm">This portal is restricted to authorized SpaceCat ASTROTOURISM administrators.</p>
+              <p className="text-sm">This portal is restricted to authorized Star Portal administrators.</p>
             </div>
           </div>
         </div>

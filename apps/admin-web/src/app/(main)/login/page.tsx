@@ -5,7 +5,7 @@ import { Globe } from "lucide-react";
 import { AdminLoginForm } from "./_components/admin-login-form";
 
 export const metadata = {
-  title: "Login Admin | SpaceCat ASTROTOURISM",
+  title: "Login Admin | Star Portal",
 };
 
 export default function AdminLoginPage() {
@@ -20,7 +20,7 @@ export default function AdminLoginPage() {
             height={36}
             className="size-9 shrink-0 rounded-lg object-cover"
           />
-          <span className="truncate font-medium text-sm sm:text-base">SpaceCat ASTROTOURISM</span>
+          <span className="truncate font-medium text-sm sm:text-base">Star Portal</span>
         </div>
         <p className="shrink-0 text-muted-foreground text-xs sm:text-sm">Administrator access only</p>
       </header>
@@ -38,7 +38,7 @@ export default function AdminLoginPage() {
       </div>
 
       <footer className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-center sm:justify-between sm:text-left">
-        <p className="text-xs sm:text-sm">&copy; {new Date().getFullYear()}, SpaceCat ASTROTOURISM.</p>
+        <p className="text-xs sm:text-sm">&copy; {new Date().getFullYear()}, Star Portal.</p>
         <div className="flex items-center gap-1 text-xs sm:text-sm">
           <Globe className="size-4 text-muted-foreground" />
           ENG

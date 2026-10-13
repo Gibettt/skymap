@@ -59,7 +59,7 @@ export function AppSidebar({ user = rootUser, permissions, ...props }: AppSideba
   const collapsible = isSynced ? sidebarCollapsible : props.collapsible;
   const visibleItems = permissions
     ? sidebarItems.map((group) =>
-        group.label === "SpaceCat ASTROTOURISM Admin"
+        group.label === "Star Portal Admin"
           ? {
               ...group,
               items: group.items.filter((item) =>

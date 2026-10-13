@@ -1,12 +1,12 @@
-import { ApiError, assertSameOrigin, jsonError, parseJsonBody, requireUser, writeAudit } from '@ephemeris/auth';
-import { query, transaction } from '@ephemeris/db';
-import { paginationFromRequest, paginationMeta } from '@ephemeris/db/helpers';
-import { packageIsChargeable } from '@ephemeris/db/package-content';
-import { createPackageSchema } from '@ephemeris/db/validators/package';
+import { ApiError, assertSameOrigin, jsonError, parseJsonBody, requireUser, writeAudit } from "@ephemeris/auth";
+import { query, transaction } from "@ephemeris/db";
+import { paginationFromRequest, paginationMeta } from "@ephemeris/db/helpers";
+import { packageIsChargeable } from "@ephemeris/db/package-content";
+import { createPackageSchema } from "@ephemeris/db/validators/package";
 
 const MAX_PACKAGE_IMAGE_SIZE = 2 * 1024 * 1024;
-const ALLOWED_PACKAGE_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
-const ALLOWED_PACKAGE_IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.webp'];
+const ALLOWED_PACKAGE_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"];
+const ALLOWED_PACKAGE_IMAGE_EXTENSIONS = [".jpg", ".jpeg", ".png", ".webp"];
 const PACKAGE_COLUMNS = `
   id, name, package_type, experience_type, location, description, schedule, resort_id,
   adult_price_usd, child_price_usd, couple_price_usd, group_price_usd, family_price_usd, meal_price_usd, child_age_range, is_chargeable, is_active,
@@ -15,13 +15,15 @@ const PACKAGE_COLUMNS = `
 `;
 
 function getFileExtension(fileName) {
-  const match = String(fileName || '').toLowerCase().match(/\.[^.]+$/);
-  return match?.[0] || '';
+  const match = String(fileName || "")
+    .toLowerCase()
+    .match(/\.[^.]+$/);
+  return match?.[0] || "";
 }
 
 function parseInclusionsField(value) {
   if (Array.isArray(value)) return value;
-  if (value === null || value === undefined || value === '') return [];
+  if (value === null || value === undefined || value === "") return [];
   try {
     return JSON.parse(value);
   } catch {
@@ -40,64 +42,67 @@ async function insertPackageInclusions(client, packageId, inclusions) {
 }
 
 async function validatePackageImage(file) {
-  if (!file || typeof file !== 'object' || file.size === 0) return null;
-  if (file.size > MAX_PACKAGE_IMAGE_SIZE) throw new ApiError(400, 'Gambar maksimal 2MB.');
-  if (!ALLOWED_PACKAGE_IMAGE_TYPES.includes(file.type)) throw new ApiError(400, 'Format gambar harus JPG, PNG, atau WEBP.');
-  if (!ALLOWED_PACKAGE_IMAGE_EXTENSIONS.includes(getFileExtension(file.name))) throw new ApiError(400, 'Ekstensi gambar harus .jpg, .jpeg, .png, atau .webp.');
+  if (!file || typeof file !== "object" || file.size === 0) return null;
+  if (file.size > MAX_PACKAGE_IMAGE_SIZE) throw new ApiError(400, "Gambar maksimal 2MB.");
+  if (!ALLOWED_PACKAGE_IMAGE_TYPES.includes(file.type))
+    throw new ApiError(400, "Format gambar harus JPG, PNG, atau WEBP.");
+  if (!ALLOWED_PACKAGE_IMAGE_EXTENSIONS.includes(getFileExtension(file.name)))
+    throw new ApiError(400, "Ekstensi gambar harus .jpg, .jpeg, .png, atau .webp.");
 
   return {
     data: Buffer.from(await file.arrayBuffer()),
     mimeType: file.type,
-    fileName: String(file.name || 'package-image').slice(0, 180),
+    fileName: String(file.name || "package-image").slice(0, 180),
   };
 }
 
 async function parseCreatePackageRequest(request) {
-  if (!String(request.headers.get('content-type') || '').includes('multipart/form-data')) {
+  if (!String(request.headers.get("content-type") || "").includes("multipart/form-data")) {
     return { fields: await parseJsonBody(request), image: null };
   }
 
   const form = await request.formData();
-  const rawIsActive = form.get('isActive');
-  const rawIsChargeable = form.get('isChargeable');
+  const rawIsActive = form.get("isActive");
+  const rawIsChargeable = form.get("isChargeable");
   return {
     fields: {
-      name: form.get('name'),
-      packageType: form.get('packageType'),
-      experienceType: form.get('experienceType'),
-      location: form.get('location'),
-      description: form.get('description'),
-      schedule: form.get('schedule'),
-      adultPriceUsd: form.get('adultPriceUsd'),
-      childPriceUsd: form.get('childPriceUsd'),
-      couplePriceUsd: form.get('couplePriceUsd'),
-      groupPriceUsd: form.get('groupPriceUsd'),
-      familyPriceUsd: form.get('familyPriceUsd'),
-      mealPriceUsd: form.get('mealPriceUsd'),
-      childAgeRange: form.get('childAgeRange'),
-      inclusions: parseInclusionsField(form.get('inclusions')),
-      resortId: form.get('resortId') || null,
-      isChargeable: rawIsChargeable === null ? true : rawIsChargeable === 'true',
-      isActive: rawIsActive === null ? true : rawIsActive === 'true',
+      name: form.get("name"),
+      packageType: form.get("packageType"),
+      experienceType: form.get("experienceType"),
+      location: form.get("location"),
+      description: form.get("description"),
+      schedule: form.get("schedule"),
+      adultPriceUsd: form.get("adultPriceUsd"),
+      childPriceUsd: form.get("childPriceUsd"),
+      couplePriceUsd: form.get("couplePriceUsd"),
+      groupPriceUsd: form.get("groupPriceUsd"),
+      familyPriceUsd: form.get("familyPriceUsd"),
+      mealPriceUsd: form.get("mealPriceUsd"),
+      childAgeRange: form.get("childAgeRange"),
+      inclusions: parseInclusionsField(form.get("inclusions")),
+      resortId: form.get("resortId") || null,
+      isChargeable: rawIsChargeable === null ? true : rawIsChargeable === "true",
+      isActive: rawIsActive === null ? true : rawIsActive === "true",
     },
-    image: await validatePackageImage(form.get('image')),
+    image: await validatePackageImage(form.get("image")),
   };
 }
 
 export async function GET(request) {
   try {
-    const user = await requireUser(['admin', 'internal', 'external']);
+    const user = await requireUser(["admin", "internal", "external"]);
 
-    let whereClause = '';
+    let whereClause = "";
     const params = [];
 
-    if (user.role === 'external') {
-      if (!user.resort_id) return Response.json({ error: 'Staff resort profile is not configured' }, { status: 403 });
-      whereClause = 'WHERE p.is_active = true AND p.resort_id = $1';
+    if (user.role === "external") {
+      if (!user.resort_id) return Response.json({ error: "Staff resort profile is not configured" }, { status: 403 });
+      whereClause = "WHERE p.is_active = true AND p.resort_id = $1";
       params.push(user.resort_id);
     }
 
-    const { rows } = await query(`
+    const { rows } = await query(
+      `
       SELECT
         p.id, p.name, p.package_type, p.experience_type, p.location, p.description, p.schedule,
         p.resort_id, r.name AS resort_name,
@@ -114,7 +119,9 @@ export async function GET(request) {
       LEFT JOIN resorts r ON r.id = p.resort_id
       ${whereClause}
       ORDER BY p.created_at DESC, p.updated_at DESC
-    `, params);
+    `,
+      params,
+    );
 
     return Response.json({ packages: rows });
   } catch (error) {
@@ -125,19 +132,19 @@ export async function GET(request) {
 export async function POST(request) {
   try {
     await assertSameOrigin(request);
-    const user = await requireUser(['admin', 'internal', 'external']);
-    if (user.access_role_level === 'read_only') {
-      throw new ApiError(403, 'This role has read-only access');
+    const user = await requireUser(["admin", "internal"]);
+    if (user.access_role_level === "read_only") {
+      throw new ApiError(403, "This role has read-only access");
     }
 
     const requestData = await parseCreatePackageRequest(request);
-    if ((user.role === 'internal' || user.role === 'external') && !requestData.fields.resortId) {
+    if (user.role === "internal" && !requestData.fields.resortId) {
       requestData.fields.resortId = user.resort_id;
     }
 
     const parsed = createPackageSchema.safeParse(requestData.fields);
     if (!parsed.success) {
-      return Response.json({ error: 'Data package tidak valid', details: parsed.error.flatten() }, { status: 400 });
+      return Response.json({ error: "Data package tidak valid", details: parsed.error.flatten() }, { status: 400 });
     }
     const data = parsed.data;
 
@@ -170,14 +177,14 @@ export async function POST(request) {
           data.childAgeRange,
           packageIsChargeable(data.adultPriceUsd, data.childPriceUsd),
           data.isActive,
-        ]
+        ],
       );
       await insertPackageInclusions(client, rows[0].id, data.inclusions);
       rows[0].inclusions = data.inclusions;
       await writeAudit(client, {
         actorId: user.id,
-        action: 'package.create',
-        entityType: 'package',
+        action: "package.create",
+        entityType: "package",
         entityId: rows[0].id,
         afterData: rows[0],
         request,
