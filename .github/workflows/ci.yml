@@ -61,7 +61,7 @@ jobs:
       # 2. Setup pnpm (must come before setup-node so caching works)
       # -----------------------------------------------------------------------
       - name: Setup pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@v6
         with:
           version: 11.21.0
 
@@ -124,7 +124,7 @@ jobs:
       # 2. Setup pnpm
       # -----------------------------------------------------------------------
       - name: Setup pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@v6
         with:
           version: 11.21.0
 
