@@ -104,7 +104,7 @@ export async function getPackages() {
   const { rows } = await query(`
     SELECT p.id, p.name, p.package_type, p.experience_type, p.location, p.description, p.schedule,
       p.resort_id, p.adult_price_usd, p.child_price_usd, p.couple_price_usd, p.group_price_usd, p.family_price_usd, p.meal_price_usd,
-      p.child_age_range, p.is_chargeable,
+      p.primary_price_type, p.child_age_range, p.is_chargeable,
       p.is_active, p.image_data IS NOT NULL AS has_image,
       CASE WHEN p.image_data IS NULL THEN NULL ELSE CONCAT('/api/packages/', p.id, '/image') END AS image_url,
       p.created_at, p.updated_at, r.name AS resort_name,
@@ -323,4 +323,28 @@ export async function getNotifications(userId) {
     await syncAdminNotifications(client);
     return selectAdminNotifications(client, userId);
   });
+}
+
+export async function getInventoryData() {
+  await requirePermission("admin.resorts", ["admin"]);
+  const [inventoryRes, resortsRes] = await Promise.all([
+    query(
+      `SELECT
+        i.id, i.resort_id, r.name AS resort_name,
+        i.item_name, i.category, i.quantity, i.unit,
+        i.status, i.condition, i.location_details, i.notes,
+        i.last_inspected_at, i.updated_by_id, u.name AS updated_by_name,
+        i.created_at, i.updated_at
+      FROM resort_inventory i
+      LEFT JOIN resorts r ON r.id = i.resort_id
+      LEFT JOIN users u ON u.id = i.updated_by_id
+      ORDER BY r.name ASC, i.category ASC, i.item_name ASC`
+    ),
+    query("SELECT id, name, code FROM resorts WHERE status = 'active' ORDER BY name ASC"),
+  ]);
+
+  return {
+    items: inventoryRes.rows,
+    resorts: resortsRes.rows,
+  };
 }

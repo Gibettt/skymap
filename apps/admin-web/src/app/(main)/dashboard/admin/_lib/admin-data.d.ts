@@ -136,12 +136,13 @@ export interface PackageRow {
   resort_name: string | null;
   schedule: string;
   inclusions: string[];
-  adult_price_usd: string | number;
+  adult_price_usd: string | number | null;
   child_price_usd: string | number | null;
   couple_price_usd?: string | number | null;
   group_price_usd?: string | number | null;
   family_price_usd?: string | number | null;
   meal_price_usd?: string | number | null;
+  primary_price_type?: 'adult' | 'couple' | 'group' | 'family' | string;
   child_age_range: string | null;
   is_chargeable: boolean;
   is_active: boolean;
@@ -439,3 +440,28 @@ export function getInvoiceDashboard(): Promise<{
 export function getAuditLogs(): Promise<AuditLogRow[]>;
 export function getRewardSettings(): Promise<RewardSettingsRow | null>;
 export function getNotifications(userId: string): Promise<NotificationRow[]>;
+export function getInventoryData(): Promise<{
+  items: Array<{
+    id: string;
+    resort_id: string;
+    resort_name: string | null;
+    item_name: string;
+    category: string;
+    quantity: number;
+    unit: string;
+    status: string;
+    condition: string;
+    location_details: string | null;
+    notes: string | null;
+    last_inspected_at: string | null;
+    updated_by_id: string | null;
+    updated_by_name: string | null;
+    created_at: string;
+    updated_at: string;
+  }>;
+  resorts: Array<{
+    id: string;
+    name: string;
+    code: string;
+  }>;
+}>;

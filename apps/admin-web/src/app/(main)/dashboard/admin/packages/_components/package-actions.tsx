@@ -85,6 +85,7 @@ export function PackageActions({ packageData, resorts }: PackageActionsProps) {
   const [groupPrice, setGroupPrice] = useState("");
   const [mealPrice, setMealPrice] = useState("");
   const [familyPrice, setFamilyPrice] = useState("");
+  const [primaryPriceType, setPrimaryPriceType] = useState<"adult" | "couple" | "group" | "family">((packageData.primary_price_type as "adult" | "couple" | "group" | "family") || "adult");
   const [inclusionItems, setInclusionItems] = useState<Array<{ id: string; name: string; price: string }>>([]);
 
   useEffect(() => {
@@ -170,12 +171,13 @@ export function PackageActions({ packageData, resorts }: PackageActionsProps) {
       (packageData.name || "").toLowerCase().includes("add-on") ||
       (packageData.name || "").toLowerCase().includes("addon");
     setIsAddon(Boolean(isAddonPkg));
-    setAdultPrice(String(numberValue(packageData.adult_price_usd) ?? ""));
+    setAdultPrice(packageData.adult_price_usd == null ? "" : String(numberValue(packageData.adult_price_usd)));
     setCouplePrice(packageData.couple_price_usd == null ? "" : String(numberValue(packageData.couple_price_usd)));
     setChildPrice(packageData.child_price_usd == null ? "" : String(numberValue(packageData.child_price_usd)));
     setGroupPrice(packageData.group_price_usd == null ? "" : String(numberValue(packageData.group_price_usd)));
     setMealPrice(packageData.meal_price_usd == null ? "" : String(numberValue(packageData.meal_price_usd)));
     setFamilyPrice(packageData.family_price_usd == null ? "" : String(numberValue(packageData.family_price_usd)));
+    setPrimaryPriceType((packageData.primary_price_type as "adult" | "couple" | "group" | "family") || "adult");
     const parsedItems: Array<{ id: string; name: string; price: string }> = [];
     for (const inc of packageData.inclusions) {
       const match = String(inc).match(/^(.*?)\s*\(\+\$([0-9.]+)\)$/);
@@ -222,7 +224,8 @@ export function PackageActions({ packageData, resorts }: PackageActionsProps) {
       if (form.get("adultPriceUsd")) finalAdultPrice = String(form.get("adultPriceUsd"));
       if (form.get("childPriceUsd")) finalChildPrice = String(form.get("childPriceUsd"));
     }
-    payload.set("adultPriceUsd", finalAdultPrice || "0");
+    if (finalAdultPrice) payload.set("adultPriceUsd", finalAdultPrice);
+    else payload.delete("adultPriceUsd");
     if (finalChildPrice) payload.set("childPriceUsd", finalChildPrice);
     else payload.delete("childPriceUsd");
     if (couplePrice) payload.set("couplePriceUsd", couplePrice);
@@ -232,6 +235,7 @@ export function PackageActions({ packageData, resorts }: PackageActionsProps) {
     if (familyPrice) payload.set("familyPriceUsd", familyPrice);
     else payload.delete("familyPriceUsd");
     payload.set("mealPriceUsd", mealPrice || "0");
+    payload.set("primaryPriceType", primaryPriceType);
     payload.set("isChargeable", String(billing === "chargeable"));
     payload.set("inclusions", JSON.stringify(combinedInclusions));
     if (image === null) payload.set("image", "");
@@ -646,7 +650,6 @@ export function PackageActions({ packageData, resorts }: PackageActionsProps) {
                         type="number"
                         min="0"
                         step="0.01"
-                        required
                         className="pl-7 font-medium"
                         placeholder="0.00"
                         value={adultPrice}
@@ -671,7 +674,7 @@ export function PackageActions({ packageData, resorts }: PackageActionsProps) {
                         min="0"
                         step="0.01"
                         className="pl-7 font-medium"
-                        placeholder={adultPrice ? (Number(adultPrice) * 2).toFixed(2) : "For 2 adults"}
+                        placeholder="For 2 adults (optional)"
                         value={couplePrice}
                         onChange={(e) => setCouplePrice(e.target.value)}
                       />
@@ -694,7 +697,7 @@ export function PackageActions({ packageData, resorts }: PackageActionsProps) {
                         min="0"
                         step="0.01"
                         className="pl-7 font-medium"
-                        placeholder={adultPrice ? (Number(adultPrice) * 0.5).toFixed(2) : "50% of adult rate"}
+                        placeholder="0.00 (optional)"
                         value={childPrice}
                         onChange={(e) => setChildPrice(e.target.value)}
                       />
@@ -776,6 +779,38 @@ export function PackageActions({ packageData, resorts }: PackageActionsProps) {
                         onChange={(e) => setFamilyPrice(e.target.value)}
                       />
                     </div>
+                  </Field>
+
+                  {/* Primary Price Display Selector */}
+                  <Field className="sm:col-span-2 lg:col-span-3 rounded-lg border border-primary/20 bg-primary/5 p-3">
+                    <div className="flex items-center justify-between gap-2 mb-1.5">
+                      <FieldLabel htmlFor={fieldId("edit-package-primary-price")} className="font-semibold text-sm">
+                        Primary Price Display
+                      </FieldLabel>
+                      <Badge variant="outline" className="text-xs">Featured rate</Badge>
+                    </div>
+                    <Select value={primaryPriceType} onValueChange={(val) => val && setPrimaryPriceType(val as "adult" | "couple" | "group" | "family")}>
+                      <SelectTrigger id={fieldId("edit-package-primary-price")} className="w-full bg-background">
+                        <SelectValue placeholder="Select primary pricing" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="adult">
+                          Per Adult / Pax rate {adultPrice ? `($${Number(adultPrice).toFixed(2)})` : ""}
+                        </SelectItem>
+                        <SelectItem value="couple">
+                          Couple price {couplePrice ? `($${Number(couplePrice).toFixed(2)})` : ""}
+                        </SelectItem>
+                        <SelectItem value="group">
+                          Group price {groupPrice ? `($${Number(groupPrice).toFixed(2)})` : ""}
+                        </SelectItem>
+                        <SelectItem value="family">
+                          Family / Villa price {familyPrice ? `($${Number(familyPrice).toFixed(2)})` : ""}
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <p className="text-muted-foreground text-[11px] mt-1.5">
+                      This price will be prominently displayed as the headline rate across internal & external staff portals.
+                    </p>
                   </Field>
 
                   {/* 7. Child Age Range */}

@@ -2,6 +2,7 @@
 
 import {
   Bell,
+  Boxes,
   CalendarDays,
   CircleDollarSign,
   ClipboardList,
@@ -20,6 +21,7 @@ export const NAV_ICONS: Record<NavIconName, LucideIcon> = {
   bookings: ClipboardList,
   packages: Package,
   calendar: CalendarDays,
+  inventory: Boxes,
   invoices: ReceiptText,
   payouts: CircleDollarSign,
   "sky-guide": Sparkles,

@@ -18,6 +18,7 @@ import { NotificationCenter } from "./_components/header/notification-center";
 import { SearchDialog } from "./_components/header/search-dialog";
 import { StaffPresence } from "./_components/staff-presence";
 import { StaffRoleTheme } from "./_components/staff-role-theme";
+import { SplashScreen } from "./_components/splash-screen";
 
 function isStaffRole(role: string): role is StaffRole {
   return role === "internal" || role === "external";
@@ -65,6 +66,7 @@ export default async function Layout({ children }: Readonly<{ children: ReactNod
         } as React.CSSProperties
       }
     >
+      <SplashScreen brandName={sessionUser.role === "external" ? "Star Portal" : "SpaceCat ASTROTOURISM"} />
       <StaffRoleTheme role={sessionUser.role} />
       <StaffPresence />
       <AppSidebar

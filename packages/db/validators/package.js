@@ -8,6 +8,7 @@ import {
 
 export const packageTypeSchema = z.string().trim().min(1, 'Package type wajib diisi').max(80);
 export const experienceTypeSchema = z.enum(['communal', 'private', 'kids']);
+export const primaryPriceTypeSchema = z.enum(['adult', 'couple', 'group', 'family']);
 
 const nullableMoneySchema = z.preprocess(
   (value) => (value === '' ? null : value),
@@ -27,12 +28,13 @@ const packageFields = z.object({
   description: cleanTextSchema(240),
   schedule: z.string().trim().min(1, 'Schedule wajib diisi').max(120, 'Schedule maksimal 120 karakter'),
   resortId: uuidSchema,
-  adultPriceUsd: moneySchema,
+  adultPriceUsd: nullableMoneySchema,
   childPriceUsd: nullableMoneySchema,
   couplePriceUsd: nullableMoneySchema,
   groupPriceUsd: nullableMoneySchema,
   mealPriceUsd: nullableMoneySchema,
   familyPriceUsd: nullableMoneySchema,
+  primaryPriceType: primaryPriceTypeSchema,
   childAgeRange: cleanTextSchema(80),
   inclusions: z.array(inclusionSchema)
     .max(MAX_PACKAGE_INCLUSIONS, `Maksimal ${MAX_PACKAGE_INCLUSIONS} inclusion`)
@@ -44,10 +46,12 @@ export const createPackageSchema = packageFields.extend({
   schedule: packageFields.shape.schedule.default('Upon request'),
   inclusions: packageFields.shape.inclusions.default([]),
   isActive: packageFields.shape.isActive.default(true),
+  adultPriceUsd: nullableMoneySchema.default(null),
   couplePriceUsd: nullableMoneySchema.default(null),
   groupPriceUsd: nullableMoneySchema.default(null),
   mealPriceUsd: moneySchema.default(0),
   familyPriceUsd: nullableMoneySchema.default(null),
+  primaryPriceType: primaryPriceTypeSchema.default('adult'),
 });
 
 export const updatePackageSchema = packageFields.partial();

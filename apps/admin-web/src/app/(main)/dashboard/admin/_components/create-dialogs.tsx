@@ -331,6 +331,7 @@ export function CreatePackageDialog({
   const [groupPrice, setGroupPrice] = useState("");
   const [mealPrice, setMealPrice] = useState("");
   const [familyPrice, setFamilyPrice] = useState("");
+  const [primaryPriceType, setPrimaryPriceType] = useState<"adult" | "couple" | "group" | "family">("adult");
   const [inclusionItems, setInclusionItems] = useState<InclusionCardItem[]>([]);
   useEffect(() => {
     if (open) {
@@ -423,7 +424,8 @@ export function CreatePackageDialog({
     payload.set("packageType", finalPackageType);
     payload.set("experienceType", experienceType);
     payload.set("resortId", resortId);
-    payload.set("adultPriceUsd", finalAdultPrice || "0");
+    if (finalAdultPrice) payload.set("adultPriceUsd", finalAdultPrice);
+    else payload.delete("adultPriceUsd");
     if (finalChildPrice) payload.set("childPriceUsd", finalChildPrice);
     else payload.delete("childPriceUsd");
     if (couplePrice) payload.set("couplePriceUsd", couplePrice);
@@ -433,6 +435,7 @@ export function CreatePackageDialog({
     if (familyPrice) payload.set("familyPriceUsd", familyPrice);
     else payload.delete("familyPriceUsd");
     payload.set("mealPriceUsd", mealPrice || "0");
+    payload.set("primaryPriceType", primaryPriceType);
     payload.set("isChargeable", billing === "foc" ? "false" : "true");
     payload.set("isActive", "true");
     payload.set("inclusions", JSON.stringify(combinedInclusions));
@@ -713,7 +716,7 @@ export function CreatePackageDialog({
                   {/* 1. Adult Price */}
                   <Field>
                     <FieldLabel htmlFor="package-adult-price">
-                      {isAddon ? "Add-on / Adult price (USD) *" : "Adult price (USD) *"}
+                      {isAddon ? "Add-on / Adult price (USD)" : "Adult price (USD)"}
                     </FieldLabel>
                     <div className="relative">
                       <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm font-semibold">
@@ -725,7 +728,6 @@ export function CreatePackageDialog({
                         type="number"
                         min="0"
                         step="0.01"
-                        required
                         className="pl-7 font-medium"
                         placeholder="0.00"
                         value={adultPrice}
@@ -750,7 +752,7 @@ export function CreatePackageDialog({
                         min="0"
                         step="0.01"
                         className="pl-7 font-medium"
-                        placeholder={adultPrice ? (Number(adultPrice) * 2).toFixed(2) : "For 2 adults"}
+                        placeholder="For 2 adults (optional)"
                         value={couplePrice}
                         onChange={(e) => setCouplePrice(e.target.value)}
                       />
@@ -773,7 +775,7 @@ export function CreatePackageDialog({
                         min="0"
                         step="0.01"
                         className="pl-7 font-medium"
-                        placeholder={adultPrice ? (Number(adultPrice) * 0.5).toFixed(2) : "50% of adult rate"}
+                        placeholder="0.00 (optional)"
                         value={childPrice}
                         onChange={(e) => setChildPrice(e.target.value)}
                       />
@@ -858,6 +860,39 @@ export function CreatePackageDialog({
                   </Field>
 
                   {/* 7. Child Age Range */}
+                  {/* Primary Price Display Selector */}
+                  <Field className="sm:col-span-2 lg:col-span-3 rounded-lg border border-primary/20 bg-primary/5 p-3">
+                    <div className="flex items-center justify-between gap-2 mb-1.5">
+                      <FieldLabel htmlFor="package-primary-price" className="font-semibold text-sm">
+                        Primary Price Display
+                      </FieldLabel>
+                      <Badge variant="outline" className="text-xs">Featured rate</Badge>
+                    </div>
+                    <Select value={primaryPriceType} onValueChange={(val) => val && setPrimaryPriceType(val as "adult" | "couple" | "group" | "family")}>
+                      <SelectTrigger id="package-primary-price" className="w-full bg-background">
+                        <SelectValue placeholder="Select primary pricing" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="adult">
+                          Per Adult / Pax rate {adultPrice ? `($${Number(adultPrice).toFixed(2)})` : ""}
+                        </SelectItem>
+                        <SelectItem value="couple">
+                          Couple price {couplePrice ? `($${Number(couplePrice).toFixed(2)})` : ""}
+                        </SelectItem>
+                        <SelectItem value="group">
+                          Group price {groupPrice ? `($${Number(groupPrice).toFixed(2)})` : ""}
+                        </SelectItem>
+                        <SelectItem value="family">
+                          Family / Villa price {familyPrice ? `($${Number(familyPrice).toFixed(2)})` : ""}
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <p className="text-muted-foreground text-[11px] mt-1.5">
+                      This price will be prominently displayed as the headline rate across internal & external staff portals.
+                    </p>
+                  </Field>
+
+                  {/* Child Age Range */}
                   <Field className="sm:col-span-2 lg:col-span-3">
                     <FieldLabel htmlFor="package-age">Child age range (optional)</FieldLabel>
                     <Input id="package-age" name="childAgeRange" placeholder="e.g. 4–11 years (under 12y)" />

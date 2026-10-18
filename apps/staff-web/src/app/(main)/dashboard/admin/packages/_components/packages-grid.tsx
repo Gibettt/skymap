@@ -80,8 +80,18 @@ export function PackagesGrid({ table, resorts }: PackagesGridProps) {
                       <dd className="truncate font-medium">{pkg.schedule}</dd>
                     </div>
                     <div className="flex min-w-0 flex-col gap-0.5">
-                      <dt className="text-muted-foreground text-xs">Adult price</dt>
-                      <dd className="truncate font-medium tabular-nums">{formatUsd(pkg.adult_price_usd)}</dd>
+                      <dt className="text-muted-foreground text-xs">Primary rate</dt>
+                      <dd className="truncate font-medium tabular-nums">
+                        {(() => {
+                          const pType = pkg.primary_price_type || "adult";
+                          if (pType === "couple" && pkg.couple_price_usd) return `${formatUsd(pkg.couple_price_usd)} /couple`;
+                          if (pType === "group" && pkg.group_price_usd) return `${formatUsd(pkg.group_price_usd)} /group`;
+                          if (pType === "family" && pkg.family_price_usd) return `${formatUsd(pkg.family_price_usd)} /family`;
+                          if (pkg.adult_price_usd != null && Number(pkg.adult_price_usd) > 0) return `${formatUsd(pkg.adult_price_usd)} /pax`;
+                          if (pkg.couple_price_usd) return `${formatUsd(pkg.couple_price_usd)} /couple`;
+                          return formatUsd(pkg.adult_price_usd || 0);
+                        })()}
+                      </dd>
                     </div>
                     <div className="flex min-w-0 flex-col gap-0.5">
                       <dt className="text-muted-foreground text-xs">Child price</dt>

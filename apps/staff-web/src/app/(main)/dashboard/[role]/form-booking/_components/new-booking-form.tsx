@@ -13,7 +13,6 @@ import {
   Plus,
   ShieldAlert,
   Trash2,
-  UserPlus,
   Users,
 } from "lucide-react";
 import {
@@ -42,7 +41,15 @@ import {
 } from "@/components/ui/card";
 import { Field, FieldError, FieldGroup, FieldLabel, FieldLegend, FieldSet } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectGroup, SelectItem, SelectSeparator, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectSeparator,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Spinner } from "@/components/ui/spinner";
@@ -69,34 +76,73 @@ interface MeResponse {
 }
 
 const BOOKING_FIELD_SKELETONS = [
-  "guest-name",
-  "guest-phone",
-  "guest-email",
-  "room",
-  "nationality",
-  "language",
   "package",
   "date",
   "start-time",
   "end-time",
+  "guests",
+  "guest-name",
+  "room",
+  "guest-phone",
+  "guest-email",
+  "language",
 ];
 
-function participantAgeLabel(type: "adult" | "child", childQuantity = 1): string {
-  if (type === "adult") return "Age (optional)";
-  if (childQuantity > 1) return "Child age range (optional)";
-  return "Age (under 12y)";
-}
 function tomorrowDate() {
   const date = new Date();
   date.setDate(date.getDate() + 1);
   return date.toISOString().slice(0, 10);
 }
+function resolvePrimaryPriceType(pkg: {
+  primary_price_type?: string | null;
+  adult_price_usd?: number | string | null;
+  couple_price_usd?: number | string | null;
+  group_price_usd?: number | string | null;
+  family_price_usd?: number | string | null;
+}): string {
+  if (pkg.primary_price_type) return pkg.primary_price_type;
+  if (Number(pkg.adult_price_usd ?? 0) > 0) return "adult";
+  if (Number(pkg.couple_price_usd ?? 0) > 0) return "couple";
+  if (Number(pkg.group_price_usd ?? 0) > 0) return "group";
+  if (Number(pkg.family_price_usd ?? 0) > 0) return "family";
+  return "adult";
+}
 
+function getPackageHeadlinePrice(pkg: {
+  primary_price_type?: string | null;
+  adult_price_usd?: number | string | null;
+  couple_price_usd?: number | string | null;
+  group_price_usd?: number | string | null;
+  family_price_usd?: number | string | null;
+}): string {
+  const pType = resolvePrimaryPriceType(pkg);
+  if (pType === "couple" && pkg.couple_price_usd) {
+    return `${formatUsd(pkg.couple_price_usd)} /couple`;
+  }
+  if (pType === "group" && pkg.group_price_usd) {
+    return `${formatUsd(pkg.group_price_usd)} /group`;
+  }
+  if (pType === "family" && pkg.family_price_usd) {
+    return `${formatUsd(pkg.family_price_usd)} /family`;
+  }
+  if (pkg.adult_price_usd != null && Number(pkg.adult_price_usd) > 0) {
+    return `${formatUsd(pkg.adult_price_usd)} /adult`;
+  }
+  if (pkg.couple_price_usd) {
+    return `${formatUsd(pkg.couple_price_usd)} /couple`;
+  }
+  return formatUsd(pkg.adult_price_usd ?? 0);
+}
 function normalizePackage(item: StaffPackage): StaffPackage {
   return {
     ...item,
-    adult_price_usd: Number(item.adult_price_usd),
+    adult_price_usd: item.adult_price_usd == null ? 0 : Number(item.adult_price_usd),
     child_price_usd: item.child_price_usd == null ? null : Number(item.child_price_usd),
+    couple_price_usd: item.couple_price_usd == null ? null : Number(item.couple_price_usd),
+    group_price_usd: item.group_price_usd == null ? null : Number(item.group_price_usd),
+    family_price_usd: item.family_price_usd == null ? null : Number(item.family_price_usd),
+    meal_price_usd: item.meal_price_usd == null ? null : Number(item.meal_price_usd),
+    primary_price_type: item.primary_price_type || "adult",
     is_chargeable: Boolean(item.is_chargeable),
     is_active: Boolean(item.is_active),
     has_image: Boolean(item.has_image),
@@ -112,17 +158,21 @@ function BookingFormLoading() {
           <Skeleton className="h-4 w-80 max-w-full" />
         </CardHeader>
         <CardContent className="grid gap-5 md:grid-cols-2">
-          {BOOKING_FIELD_SKELETONS.map((item) => (
-            <Skeleton key={item} className="h-14 w-full" />
+          {BOOKING_FIELD_SKELETONS.map((id) => (
+            <div key={id} className="flex flex-col gap-2">
+              <Skeleton className="h-4 w-28" />
+              <Skeleton className="h-9 w-full" />
+            </div>
           ))}
         </CardContent>
       </Card>
-      <Card>
+      <Card className="h-fit">
         <CardHeader>
           <Skeleton className="h-5 w-32" />
         </CardHeader>
-        <CardContent>
-          <Skeleton className="h-48 w-full" />
+        <CardContent className="flex flex-col gap-3">
+          <Skeleton className="h-10 w-full" />
+          <Skeleton className="h-10 w-full" />
         </CardContent>
       </Card>
     </div>
@@ -142,7 +192,6 @@ interface BookingParticipantDraft {
   age: string;
   nationality: string;
   notes: string;
-  childQuantity?: number;
 }
 
 interface BookingExperienceDraft {
@@ -157,20 +206,19 @@ interface BookingExperienceDraft {
 type BookingStep = 1 | 2 | 3;
 
 const BOOKING_STEPS: Array<{ value: BookingStep; label: string }> = [
-  { value: 1, label: "Contact" },
-  { value: 2, label: "Participants & experiences" },
-  { value: 3, label: "Preferences" },
+  { value: 1, label: "Package & schedule" },
+  { value: 2, label: "Guests & participants" },
+  { value: 3, label: "Contact & stay" },
 ];
 
-function createParticipant(index: number): BookingParticipantDraft {
+function createParticipant(index: number, type: "adult" | "child" = "adult"): BookingParticipantDraft {
   return {
-    clientId: `participant-${index}`,
+    clientId: `participant-${type}-${index}-${Date.now()}`,
     fullName: "",
-    type: "adult",
-    age: "",
+    type,
+    age: type === "child" ? "8" : "",
     nationality: "",
     notes: "",
-    childQuantity: 1,
   };
 }
 
@@ -203,8 +251,14 @@ export function NewBookingForm({ role, onCreated, onCancel }: NewBookingFormProp
   const [preferredLanguage, setPreferredLanguage] = React.useState("English");
   const [bookingSource, setBookingSource] = React.useState("WhatsApp");
   const [paymentMethod, setPaymentMethod] = React.useState("Bank transfer");
-  const participantSequence = React.useRef(1);
-  const [participants, setParticipants] = React.useState<BookingParticipantDraft[]>(() => [createParticipant(0)]);
+
+  // Guest counters (Adults & Kids)
+  const [numAdults, setNumAdults] = React.useState(1);
+  const [numChildren, setNumChildren] = React.useState(0);
+
+  const [participants, setParticipants] = React.useState<BookingParticipantDraft[]>(() => [
+    createParticipant(0, "adult"),
+  ]);
   const experienceSequence = React.useRef(1);
   const [experiences, setExperiences] = React.useState<BookingExperienceDraft[]>(() => [createExperience(0)]);
   const [currentStep, setCurrentStep] = React.useState<BookingStep>(1);
@@ -212,6 +266,8 @@ export function NewBookingForm({ role, onCreated, onCancel }: NewBookingFormProp
   const [loading, setLoading] = React.useState(true);
   const [submitting, setSubmitting] = React.useState(false);
   const [error, setError] = React.useState("");
+
+  // Quick package dialog
   const [quickPackageOpen, setQuickPackageOpen] = React.useState(false);
   const [quickPkgName, setQuickPkgName] = React.useState("Stargazing with Astronomer");
   const [quickPkgAdultPrice, setQuickPkgAdultPrice] = React.useState("65");
@@ -240,14 +296,20 @@ export function NewBookingForm({ role, onCreated, onCancel }: NewBookingFormProp
         }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Gagal membuat package.");
-      const newPkg = normalizePackage(data.package);
-      setPackages((prev) => [newPkg, ...prev]);
-      setExperiences((prev) =>
-        prev.map((exp, idx) => (idx === 0 ? { ...exp, packageId: newPkg.id } : exp))
-      );
-      setQuickPackageOpen(false);
-      toast.success(`Package "${newPkg.name}" berhasil dibuat dan dipilih!`);
+      if (!res.ok) throw new Error(data.error || "Gagal membuat package");
+      if (data.package) {
+        const normalized = normalizePackage(data.package);
+        setPackages((prev) => [normalized, ...prev]);
+        setExperiences((prev) =>
+          prev.map((exp, idx) =>
+            idx === 0
+              ? { ...exp, packageId: normalized.id, observationSpot: normalized.location || exp.observationSpot }
+              : exp,
+          ),
+        );
+        toast.success(`Package "${normalized.name}" berhasil dibuat`);
+        setQuickPackageOpen(false);
+      }
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Gagal membuat package");
     } finally {
@@ -258,24 +320,28 @@ export function NewBookingForm({ role, onCreated, onCancel }: NewBookingFormProp
   React.useEffect(() => {
     let active = true;
 
-    async function loadForm() {
+    async function loadData() {
       try {
-        const [me, packageData] = await Promise.all([
-          staffApi<MeResponse>("/api/me", { cache: "no-store" }),
-          staffApi<PackagesResponse>("/api/packages", { cache: "no-store" }),
+        const [meRes, pkgsRes] = await Promise.all([
+          staffApi<MeResponse>("/api/me"),
+          staffApi<PackagesResponse>("/api/packages"),
         ]);
         if (!active) return;
-        const normalized = packageData.packages.map(normalizePackage);
-        setUser(me.user);
-        setPackages(normalized);
-      } catch (loadError) {
-        if (active) setError(loadError instanceof Error ? loadError.message : "Unable to prepare the booking form.");
+        setUser(meRes.user);
+        const normalizedPackages = (pkgsRes.packages || []).map(normalizePackage);
+        setPackages(normalizedPackages);
+        if (normalizedPackages[0]) {
+          setExperiences([createExperience(0, normalizedPackages[0].id)]);
+        }
+      } catch (err) {
+        if (active) setError(err instanceof Error ? err.message : "Failed to load booking form.");
       } finally {
         if (active) setLoading(false);
       }
     }
 
-    void loadForm();
+    void loadData();
+
     return () => {
       active = false;
     };
@@ -285,38 +351,107 @@ export function NewBookingForm({ role, onCreated, onCancel }: NewBookingFormProp
     (experience) => packages.find((item) => item.id === experience.packageId) || null,
   );
   const selectedPackage = scheduledPackages[0] || null;
-  const adultCount = participants.filter(
-    (p) => p.type === "adult" || (p.age !== "" && Number(p.age) >= 12),
-  ).length;
-  const childCount = participants
-    .filter((p) => p.type === "child" && (p.age === "" || Number(p.age) < 12))
-    .reduce((sum, p) => sum + (p.childQuantity || 1), 0);
+
+  // Determine if couple booking
+  const isCoupleBooking = Boolean(
+    selectedPackage &&
+      (selectedPackage.primary_price_type === "couple" ||
+        selectedPackage.name.toLowerCase().includes("couple") ||
+        selectedPackage.name.toLowerCase().includes("dine under the moon") ||
+        selectedPackage.name.toLowerCase().includes("sip under the stars")),
+  );
+
+  // Sync participants based on adult and kid count dropdowns
+  function syncGuestCounts(adults: number, children: number) {
+    setParticipants((prev) => {
+      const existingAdults = prev.filter((p) => p.type === "adult");
+      const existingChildren = prev.filter((p) => p.type === "child");
+
+      const newAdults: BookingParticipantDraft[] = [];
+      for (let i = 0; i < adults; i++) {
+        newAdults.push(
+          existingAdults[i] || {
+            clientId: `participant-adult-${i}-${Date.now()}`,
+            fullName: "",
+            type: "adult",
+            age: "",
+            nationality: prev[0]?.nationality || "",
+            notes: "",
+          },
+        );
+      }
+
+      const newChildren: BookingParticipantDraft[] = [];
+      for (let i = 0; i < children; i++) {
+        newChildren.push(
+          existingChildren[i] || {
+            clientId: `participant-child-${i}-${Date.now()}`,
+            fullName: "",
+            type: "child",
+            age: "8",
+            nationality: prev[0]?.nationality || "",
+            notes: "",
+          },
+        );
+      }
+
+      return [...newAdults, ...newChildren];
+    });
+  }
+
+  const adultCount = participants.filter((p) => p.type === "adult").length || numAdults;
+  const childCount = participants.filter((p) => p.type === "child").length || numChildren;
+
+  // Accurately compute estimated base based on package's primary price type
   const estimatedBase = scheduledPackages.reduce((total, scheduledPackage) => {
     if (!scheduledPackage?.is_chargeable) return total;
-    const adultPrice = Number(scheduledPackage.adult_price_usd ?? 0);
-    const childPrice =
-      scheduledPackage.package_type === "kids" && Number(scheduledPackage.adult_price_usd) === 0
-        ? Number(scheduledPackage.child_price_usd ?? 0)
-        : adultPrice * 0.5;
-    return total + adultCount * adultPrice + childCount * childPrice;
+    const pType = resolvePrimaryPriceType(scheduledPackage);
+
+    const childRate = scheduledPackage.child_price_usd != null ? Number(scheduledPackage.child_price_usd) : 0;
+    const childrenTotal = childCount * childRate;
+
+    if (
+      pType === "couple" &&
+      scheduledPackage.couple_price_usd != null &&
+      Number(scheduledPackage.couple_price_usd) > 0
+    ) {
+      const coupleCount = Math.max(1, Math.ceil(adultCount / 2));
+      const extraAdultRate =
+        Number(scheduledPackage.adult_price_usd || 0) || Number(scheduledPackage.couple_price_usd) / 2;
+      const extraAdultTotal = adultCount > 2 ? (adultCount - 2) * extraAdultRate : 0;
+      return (
+        total +
+        (coupleCount === 1
+          ? Number(scheduledPackage.couple_price_usd)
+          : coupleCount * Number(scheduledPackage.couple_price_usd)) +
+        extraAdultTotal +
+        childrenTotal
+      );
+    }
+
+    if (pType === "group" && scheduledPackage.group_price_usd != null && Number(scheduledPackage.group_price_usd) > 0) {
+      return total + Number(scheduledPackage.group_price_usd) + childrenTotal;
+    }
+
+    if (
+      pType === "family" &&
+      scheduledPackage.family_price_usd != null &&
+      Number(scheduledPackage.family_price_usd) > 0
+    ) {
+      return total + Number(scheduledPackage.family_price_usd) + childrenTotal;
+    }
+
+    const adultRate = Number(scheduledPackage.adult_price_usd || 0);
+    return total + adultCount * adultRate + childrenTotal;
   }, 0);
+
   const summaryInclusions = Array.from(
     new Set(scheduledPackages.flatMap((scheduledPackage) => packageInclusions(scheduledPackage?.inclusions ?? null))),
   );
   const hasIncompleteExperience = experiences.some(
-    (experience, index) =>
-      !scheduledPackages[index] ||
-      !experience.eventDate ||
-      !experience.timeStart
+    (experience, index) => !scheduledPackages[index] || !experience.eventDate || !experience.timeStart,
   );
   const readOnly = user?.access_role_level === "read_only";
-
-  function addParticipant() {
-    if (participants.length >= 20) return;
-    const nextId = participantSequence.current;
-    participantSequence.current += 1;
-    setParticipants((current) => [...current, createParticipant(nextId)]);
-  }
 
   function updateParticipant(clientId: string, changes: Partial<BookingParticipantDraft>) {
     setParticipants((current) =>
@@ -324,15 +459,11 @@ export function NewBookingForm({ role, onCreated, onCancel }: NewBookingFormProp
     );
   }
 
-  function removeParticipant(clientId: string) {
-    setParticipants((current) => (current.length > 1 ? current.filter((item) => item.clientId !== clientId) : current));
-  }
-
   function addExperience() {
     if (experiences.length >= 10) return;
     const nextId = experienceSequence.current;
     experienceSequence.current += 1;
-    setExperiences((current) => [...current, createExperience(nextId)]);
+    setExperiences((current) => [...current, createExperience(nextId, packages[0]?.id || "")]);
   }
 
   function updateExperience(clientId: string, changes: Partial<BookingExperienceDraft>) {
@@ -346,7 +477,61 @@ export function NewBookingForm({ role, onCreated, onCancel }: NewBookingFormProp
   }
 
   function validationErrorForStep(step: BookingStep) {
+    // Step 1: Package & Schedule
     if (step === 1) {
+      if (!selectedPackage) {
+        return "Select an experience package to continue.";
+      }
+      if (hasIncompleteExperience) {
+        return "Complete every experience schedule and ensure each end time is after its start time.";
+      }
+      return "";
+    }
+
+    // Step 2: Guests & Participants
+    if (step === 2) {
+      if (adultCount + childCount <= 0) {
+        return "At least one adult or child is required.";
+      }
+
+      const adultParticipants = participants.filter((p) => p.type === "adult");
+      if (!adultParticipants[0]?.fullName.trim()) {
+        return "Primary guest full name is required.";
+      }
+      if (!adultParticipants[0]?.nationality.trim()) {
+        return "Primary guest nationality is required.";
+      }
+
+      // Check remaining adult participants
+      for (let i = 1; i < adultParticipants.length; i++) {
+        // If it's a couple booking, 2nd guest details are completely optional!
+        if (isCoupleBooking && i === 1) {
+          continue;
+        }
+        if (!adultParticipants[i].fullName.trim()) {
+          return `Complete the full name for Adult ${i + 1}.`;
+        }
+        if (!adultParticipants[i].nationality.trim()) {
+          return `Complete the nationality for Adult ${i + 1}.`;
+        }
+      }
+
+      // Check child participants
+      const childParticipants = participants.filter((p) => p.type === "child");
+      for (let i = 0; i < childParticipants.length; i++) {
+        if (
+          childParticipants[i].age === "" ||
+          Number(childParticipants[i].age) < 0 ||
+          Number(childParticipants[i].age) >= 18
+        ) {
+          return `Enter a valid age (under 18y) for Child ${i + 1}.`;
+        }
+      }
+      return "";
+    }
+
+    // Step 3: Contact & Stay
+    if (step === 3) {
       const form = formRef.current;
       const formData = new FormData(form ?? undefined);
       const guestEmail = String(formData.get("guestEmail") || "").trim();
@@ -357,23 +542,6 @@ export function NewBookingForm({ role, onCreated, onCancel }: NewBookingFormProp
         return "Enter a valid guest email address.";
       }
       return "";
-    }
-
-    if (step === 2) {
-      if (adultCount + childCount <= 0) return "At least one adult or child is required.";
-      if (
-        participants.some(
-          (participant) =>
-            !participant.fullName.trim() ||
-            !participant.nationality.trim() ||
-            (participant.type === "child" && participant.age === "" && (participant.childQuantity || 1) === 1),
-        )
-      ) {
-        return "Complete the name, nationality, and required child age for every participant.";
-      }
-      if (hasIncompleteExperience) {
-        return "Complete every experience schedule and ensure each end time is after its start time.";
-      }
     }
 
     return "";
@@ -410,7 +578,7 @@ export function NewBookingForm({ role, onCreated, onCancel }: NewBookingFormProp
     const form = event.currentTarget;
     const formData = new FormData(form);
 
-    for (const step of [1, 2] as const) {
+    for (const step of [1, 2, 3] as const) {
       const validationError = validationErrorForStep(step);
       if (validationError) {
         setCurrentStep(step);
@@ -418,8 +586,9 @@ export function NewBookingForm({ role, onCreated, onCancel }: NewBookingFormProp
         return;
       }
     }
+
     if (!selectedPackage) {
-      setCurrentStep(2);
+      setCurrentStep(1);
       setError("Select a package for the primary experience schedule.");
       return;
     }
@@ -435,32 +604,36 @@ export function NewBookingForm({ role, onCreated, onCancel }: NewBookingFormProp
       notes: string | null;
     }> = [];
 
-    for (const participant of participants) {
-      if (participant.type === "child") {
-        const qty = Math.min(7, Math.max(1, participant.childQuantity ?? 1));
-        const baseAge = participant.age === "" ? 8 : Number(participant.age);
-        for (let k = 1; k <= qty; k++) {
-          normalizedParticipants.push({
-            fullName:
-              qty === 1
-                ? participant.fullName.trim() || "Child"
-                : `${participant.fullName.trim() || "Child"} ${k}`,
-            type: "child",
-            age: baseAge,
-            nationality: participant.nationality.trim(),
-            notes: participant.notes.trim() || null,
-          });
-        }
-      } else {
-        normalizedParticipants.push({
-          fullName: participant.fullName.trim(),
-          type: "adult",
-          age: participant.age === "" ? null : Number(participant.age),
-          nationality: participant.nationality.trim(),
-          notes: participant.notes.trim() || null,
-        });
-      }
-    }
+    const adultParticipants = participants.filter((p) => p.type === "adult");
+    const childParticipants = participants.filter((p) => p.type === "child");
+
+    adultParticipants.forEach((adult, index) => {
+      const isSecondCoupleGuest = isCoupleBooking && index === 1;
+      const name =
+        adult.fullName.trim() ||
+        (isSecondCoupleGuest ? `${adultParticipants[0].fullName.trim()} (Guest 2)` : `Adult ${index + 1}`);
+      const nationality = adult.nationality.trim() || adultParticipants[0]?.nationality.trim() || "Unspecified";
+      normalizedParticipants.push({
+        fullName: name,
+        type: "adult",
+        age: adult.age === "" ? null : Number(adult.age),
+        nationality,
+        notes: adult.notes.trim() || null,
+      });
+    });
+
+    childParticipants.forEach((child, index) => {
+      const name = child.fullName.trim() || `Child ${index + 1}`;
+      const nationality = child.nationality.trim() || adultParticipants[0]?.nationality.trim() || "Unspecified";
+      normalizedParticipants.push({
+        fullName: name,
+        type: "child",
+        age: child.age === "" ? 8 : Number(child.age),
+        nationality,
+        notes: child.notes.trim() || null,
+      });
+    });
+
     const primaryParticipant = normalizedParticipants[0];
     const normalizedExperiences = experiences.map((experience) => ({
       packageId: experience.packageId,
@@ -497,48 +670,38 @@ export function NewBookingForm({ role, onCreated, onCancel }: NewBookingFormProp
       slotStatus: "available",
       bookingSource,
       paymentMethod,
-      notes: String(formData.get("notes") || ""),
       packageNotes: String(formData.get("packageNotes") || ""),
-      addOns: [],
-      fieldTipIncentiveUsd: 0,
-      setupStatus: "not_started",
+      notes: String(formData.get("notes") || ""),
     };
 
     try {
-      const response = await staffApi<{ booking: StaffBooking }>("/api/bookings", {
+      const createdBooking = await staffApi<StaffBooking>("/api/bookings", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
-      try {
-        if (typeof window !== "undefined" && "BroadcastChannel" in window) {
-          const channel = new BroadcastChannel("ephemeris_sync_channel");
-          channel.postMessage({ type: "BOOKING_CREATED", bookingId: response.booking.id });
-          channel.close();
-        }
-      } catch {
-        // ignore
-      }
-      window.dispatchEvent(new Event("ephemeris:notifications-changed"));
-      toast.success(`${response.booking.booking_code} was created successfully.`);
-      await onCreated(response.booking);
-    } catch (submitError) {
-      const message = submitError instanceof Error ? submitError.message : "Unable to create booking.";
-      setError(message);
-      toast.error(message);
+
+      toast.success(
+        role === "external"
+          ? "Booking submitted. An internal guide will review it shortly."
+          : `Booking ${createdBooking.booking_code} created successfully.`,
+      );
+      await onCreated(createdBooking);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to create booking.");
     } finally {
       setSubmitting(false);
     }
   }
 
   return (
-    <div data-staff-booking-form={role} className="flex min-w-0 flex-col gap-6">
+    <div className="flex flex-col gap-6">
       {loading ? <BookingFormLoading /> : null}
 
       {!loading && error ? (
         <Alert variant="destructive">
           <ShieldAlert />
-          <AlertTitle>Check the booking details</AlertTitle>
+          <AlertTitle>Cannot continue</AlertTitle>
           <AlertDescription>{error}</AlertDescription>
         </Alert>
       ) : null}
@@ -604,7 +767,7 @@ export function NewBookingForm({ role, onCreated, onCancel }: NewBookingFormProp
                       </Button>
                       <span
                         className={cn(
-                          "max-w-full text-center text-xs",
+                          "max-w-full text-center text-xs font-medium",
                           active ? "text-foreground" : "text-muted-foreground",
                         )}
                       >
@@ -618,38 +781,416 @@ export function NewBookingForm({ role, onCreated, onCancel }: NewBookingFormProp
 
             <fieldset disabled={submitting || readOnly} className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_320px]">
               <div className="min-w-0">
-                <TabsContent value="step-1" forceMount className="data-[state=inactive]:hidden">
+                {/* STEP 1: Package & Experience Schedule (FIRST SELECT PACKAGE) */}
+                <TabsContent value="step-1" forceMount className="flex flex-col gap-6 data-[state=inactive]:hidden">
                   <Card>
                     <CardHeader className="border-b">
-                      <CardTitle>Contact and stay</CardTitle>
-                      <CardDescription>Booking contact and resort stay information.</CardDescription>
+                      <div className="flex flex-col gap-1">
+                        <CardTitle>Experience package & schedule</CardTitle>
+                        <CardDescription>
+                          Select the package first, then choose the date, time, and observation spot.
+                        </CardDescription>
+                      </div>
+                      <CardAction>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          disabled={experiences.length >= 10}
+                          onClick={addExperience}
+                        >
+                          <CalendarPlus data-icon="inline-start" />
+                          Add another experience
+                        </Button>
+                      </CardAction>
                     </CardHeader>
-                    <CardContent>
+                    <CardContent className="flex flex-col gap-5 pt-5">
+                      {experiences.map((experience, index) => (
+                        <FieldSet key={experience.clientId} className="rounded-xl border p-4.5 bg-card/40">
+                          <div className="flex items-center justify-between gap-3 mb-3">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <FieldLegend variant="label" className="font-semibold text-sm">
+                                Experience {index + 1}
+                              </FieldLegend>
+                              {index === 0 ? <Badge variant="secondary">Primary experience</Badge> : null}
+                            </div>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon-sm"
+                              disabled={experiences.length === 1}
+                              aria-label={`Remove experience ${index + 1}`}
+                              onClick={() => removeExperience(experience.clientId)}
+                            >
+                              <Trash2 />
+                            </Button>
+                          </div>
+                          <FieldGroup className="grid gap-5 md:grid-cols-2">
+                            <Field className="md:col-span-2">
+                              <FieldLabel htmlFor={`${experience.clientId}-package`} className="font-semibold">
+                                Select package *
+                              </FieldLabel>
+                              <Select
+                                value={experience.packageId}
+                                onValueChange={(value) => {
+                                  if (value === "__new_package__") {
+                                    setQuickPackageOpen(true);
+                                  } else if (value) {
+                                    const selectedPkg = packages.find((item) => item.id === value);
+                                    updateExperience(experience.clientId, {
+                                      packageId: value,
+                                      ...(selectedPkg?.location ? { observationSpot: selectedPkg.location } : {}),
+                                    });
+                                    if (index === 0 && selectedPkg) {
+                                      const isPkgCouple =
+                                        selectedPkg.primary_price_type === "couple" ||
+                                        selectedPkg.name.toLowerCase().includes("couple") ||
+                                        selectedPkg.name.toLowerCase().includes("dine under the moon") ||
+                                        selectedPkg.name.toLowerCase().includes("sip under the stars");
+                                      if (isPkgCouple && numAdults < 2) {
+                                        setNumAdults(2);
+                                        syncGuestCounts(2, numChildren);
+                                      }
+                                    }
+                                  }
+                                }}
+                              >
+                                <SelectTrigger
+                                  id={`${experience.clientId}-package`}
+                                  className="w-full bg-background font-medium"
+                                >
+                                  <SelectValue placeholder="Choose experience package..." />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectGroup>
+                                    {packages.map((item) => {
+                                      const priceDisplay = getPackageHeadlinePrice(item);
+                                      return (
+                                        <SelectItem key={item.id} value={item.id}>
+                                          {item.name} · {priceDisplay}
+                                        </SelectItem>
+                                      );
+                                    })}
+                                  </SelectGroup>
+                                  <SelectSeparator />
+                                  <SelectItem value="__new_package__" className="text-primary font-medium">
+                                    + Quick create package
+                                  </SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </Field>
+
+                            <Field>
+                              <FieldLabel htmlFor={`${experience.clientId}-event-date`} className="font-medium">
+                                Event date *
+                              </FieldLabel>
+                              <DatePicker
+                                id={`${experience.clientId}-event-date`}
+                                value={experience.eventDate}
+                                onValueChange={(eventDate) => updateExperience(experience.clientId, { eventDate })}
+                                required
+                              />
+                            </Field>
+
+                            <Field>
+                              <FieldLabel htmlFor={`${experience.clientId}-observation-spot`} className="font-medium">
+                                Observation spot
+                              </FieldLabel>
+                              <Input
+                                id={`${experience.clientId}-observation-spot`}
+                                placeholder="e.g. Observatory Deck / Beach"
+                                value={experience.observationSpot}
+                                maxLength={120}
+                                onChange={(event) =>
+                                  updateExperience(experience.clientId, { observationSpot: event.target.value })
+                                }
+                              />
+                            </Field>
+
+                            <Field>
+                              <FieldLabel htmlFor={`${experience.clientId}-start-time`} className="font-medium">
+                                Start time *
+                              </FieldLabel>
+                              <TimePicker
+                                id={`${experience.clientId}-start-time`}
+                                value={experience.timeStart}
+                                onValueChange={(timeStart) => {
+                                  updateExperience(experience.clientId, {
+                                    timeStart,
+                                    timeEnd: computeEndTime(timeStart),
+                                  });
+                                }}
+                                required
+                              />
+                            </Field>
+
+                            <Field>
+                              <FieldLabel htmlFor={`${experience.clientId}-end-time`} className="font-medium">
+                                End time *
+                              </FieldLabel>
+                              <TimePicker
+                                id={`${experience.clientId}-end-time`}
+                                value={experience.timeEnd}
+                                onValueChange={(timeEnd) => updateExperience(experience.clientId, { timeEnd })}
+                                required
+                              />
+                            </Field>
+                          </FieldGroup>
+                        </FieldSet>
+                      ))}
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+
+                {/* STEP 2: Guests & Participants (SEPARATE BARS FOR ADULTS & KIDS) */}
+                <TabsContent value="step-2" forceMount className="flex flex-col gap-6 data-[state=inactive]:hidden">
+                  <Card>
+                    <CardHeader className="border-b">
+                      <div className="flex flex-col gap-1">
+                        <CardTitle>Guests & participants</CardTitle>
+                        <CardDescription>Select how many adults and kids, then complete guest details.</CardDescription>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="flex flex-col gap-5 pt-5">
+                      {/* Separate Bars for Adults and Kids (as requested by client) */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 rounded-xl border border-border/70 bg-muted/20 p-4">
+                        <Field>
+                          <div className="flex items-center justify-between mb-1.5">
+                            <FieldLabel htmlFor="booking-num-adults" className="font-semibold text-sm">
+                              Adults
+                            </FieldLabel>
+                            <span className="text-xs text-muted-foreground">12y and older</span>
+                          </div>
+                          <Select
+                            value={String(numAdults)}
+                            onValueChange={(val) => {
+                              const count = parseInt(val, 10) || 1;
+                              setNumAdults(count);
+                              syncGuestCounts(count, numChildren);
+                            }}
+                          >
+                            <SelectTrigger id="booking-num-adults" className="w-full bg-background font-medium">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectGroup>
+                                {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 15, 20].map((n) => (
+                                  <SelectItem key={n} value={String(n)}>
+                                    {n} {n === 1 ? "Adult" : "Adults"}
+                                  </SelectItem>
+                                ))}
+                              </SelectGroup>
+                            </SelectContent>
+                          </Select>
+                        </Field>
+
+                        <Field>
+                          <div className="flex items-center justify-between mb-1.5">
+                            <FieldLabel htmlFor="booking-num-kids" className="font-semibold text-sm">
+                              Kids / Children
+                            </FieldLabel>
+                            <span className="text-xs text-muted-foreground">Under 12y</span>
+                          </div>
+                          <Select
+                            value={String(numChildren)}
+                            onValueChange={(val) => {
+                              const count = parseInt(val, 10) || 0;
+                              setNumChildren(count);
+                              syncGuestCounts(numAdults, count);
+                            }}
+                          >
+                            <SelectTrigger id="booking-num-kids" className="w-full bg-background font-medium">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectGroup>
+                                {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((n) => (
+                                  <SelectItem key={n} value={String(n)}>
+                                    {n === 0 ? "0 Kids (No children)" : `${n} ${n === 1 ? "Kid" : "Kids"}`}
+                                  </SelectItem>
+                                ))}
+                              </SelectGroup>
+                            </SelectContent>
+                          </Select>
+                        </Field>
+                      </div>
+
+                      {/* Adult Guests List */}
+                      <div className="flex flex-col gap-4">
+                        <div className="flex items-center justify-between">
+                          <h3 className="font-semibold text-sm text-foreground">Adult Guests ({numAdults})</h3>
+                          {isCoupleBooking && (
+                            <Badge
+                              variant="outline"
+                              className="border-pink-500/30 bg-pink-500/10 text-pink-300 text-xs"
+                            >
+                              Couple package — 2nd guest details optional
+                            </Badge>
+                          )}
+                        </div>
+
+                        {participants
+                          .filter((p) => p.type === "adult")
+                          .map((participant, index) => {
+                            const isSecondCoupleGuest = isCoupleBooking && index === 1;
+
+                            return (
+                              <FieldSet key={participant.clientId} className="rounded-lg border p-4 bg-card/40">
+                                <div className="flex items-center justify-between gap-3 mb-3">
+                                  <div className="flex items-center gap-2">
+                                    <FieldLegend variant="label" className="font-medium">
+                                      Adult {index + 1}
+                                    </FieldLegend>
+                                    {index === 0 && <Badge variant="secondary">Primary guest</Badge>}
+                                    {isSecondCoupleGuest && (
+                                      <Badge variant="outline" className="text-xs">
+                                        Optional
+                                      </Badge>
+                                    )}
+                                  </div>
+                                </div>
+
+                                <FieldGroup className="grid gap-4 md:grid-cols-2">
+                                  <Field>
+                                    <FieldLabel htmlFor={`${participant.clientId}-name`}>
+                                      Full name {isSecondCoupleGuest ? "(optional)" : "*"}
+                                    </FieldLabel>
+                                    <Input
+                                      id={`${participant.clientId}-name`}
+                                      value={participant.fullName}
+                                      maxLength={200}
+                                      placeholder={
+                                        isSecondCoupleGuest ? "Partner name (optional for couple)" : "Guest full name"
+                                      }
+                                      onChange={(e) =>
+                                        updateParticipant(participant.clientId, { fullName: e.target.value })
+                                      }
+                                      required={!isSecondCoupleGuest}
+                                    />
+                                  </Field>
+
+                                  <Field>
+                                    <FieldLabel htmlFor={`${participant.clientId}-nationality`}>
+                                      Nationality {isSecondCoupleGuest ? "(optional)" : "*"}
+                                    </FieldLabel>
+                                    <Input
+                                      id={`${participant.clientId}-nationality`}
+                                      value={participant.nationality}
+                                      maxLength={80}
+                                      placeholder={
+                                        isSecondCoupleGuest
+                                          ? participants[0]?.nationality || "Optional"
+                                          : "e.g. Maldivian, French, British"
+                                      }
+                                      onChange={(e) =>
+                                        updateParticipant(participant.clientId, { nationality: e.target.value })
+                                      }
+                                      required={!isSecondCoupleGuest}
+                                    />
+                                  </Field>
+
+                                  <Field className="md:col-span-2">
+                                    <FieldLabel htmlFor={`${participant.clientId}-notes`}>Notes (optional)</FieldLabel>
+                                    <Input
+                                      id={`${participant.clientId}-notes`}
+                                      value={participant.notes}
+                                      maxLength={500}
+                                      placeholder="Accessibility or special requests"
+                                      onChange={(e) =>
+                                        updateParticipant(participant.clientId, { notes: e.target.value })
+                                      }
+                                    />
+                                  </Field>
+                                </FieldGroup>
+                              </FieldSet>
+                            );
+                          })}
+                      </div>
+
+                      {/* Children Guests List */}
+                      {numChildren > 0 && (
+                        <div className="flex flex-col gap-4 mt-2">
+                          <h3 className="font-semibold text-sm text-foreground">Children Guests ({numChildren})</h3>
+                          {participants
+                            .filter((p) => p.type === "child")
+                            .map((child, index) => (
+                              <FieldSet key={child.clientId} className="rounded-lg border p-4 bg-card/40">
+                                <FieldLegend variant="label" className="font-medium mb-3">
+                                  Child {index + 1}
+                                </FieldLegend>
+                                <FieldGroup className="grid gap-4 md:grid-cols-3">
+                                  <Field>
+                                    <FieldLabel htmlFor={`${child.clientId}-name`}>Name (optional)</FieldLabel>
+                                    <Input
+                                      id={`${child.clientId}-name`}
+                                      value={child.fullName}
+                                      maxLength={200}
+                                      placeholder={`Child ${index + 1}`}
+                                      onChange={(e) => updateParticipant(child.clientId, { fullName: e.target.value })}
+                                    />
+                                  </Field>
+
+                                  <Field>
+                                    <FieldLabel htmlFor={`${child.clientId}-age`}>Age (under 12y) *</FieldLabel>
+                                    <Input
+                                      id={`${child.clientId}-age`}
+                                      type="number"
+                                      min="0"
+                                      max="17"
+                                      value={child.age}
+                                      placeholder="8"
+                                      required
+                                      onChange={(e) => updateParticipant(child.clientId, { age: e.target.value })}
+                                    />
+                                  </Field>
+
+                                  <Field>
+                                    <FieldLabel htmlFor={`${child.clientId}-nationality`}>
+                                      Nationality (optional)
+                                    </FieldLabel>
+                                    <Input
+                                      id={`${child.clientId}-nationality`}
+                                      value={child.nationality}
+                                      maxLength={80}
+                                      placeholder={participants[0]?.nationality || "Optional"}
+                                      onChange={(e) =>
+                                        updateParticipant(child.clientId, { nationality: e.target.value })
+                                      }
+                                    />
+                                  </Field>
+                                </FieldGroup>
+                              </FieldSet>
+                            ))}
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+
+                {/* STEP 3: Contact, Stay & Preferences */}
+                <TabsContent value="step-3" forceMount className="flex flex-col gap-6 data-[state=inactive]:hidden">
+                  <Card>
+                    <CardHeader className="border-b">
+                      <div className="flex flex-col gap-1">
+                        <CardTitle>Contact and stay information</CardTitle>
+                        <CardDescription>Resort room assignment and guest contact details.</CardDescription>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="pt-5">
                       <FieldSet>
                         <FieldLegend className="sr-only">Contact and stay information</FieldLegend>
                         <FieldGroup className="grid gap-5 md:grid-cols-2">
                           <Field>
-                            <FieldLabel htmlFor="booking-guest-phone">Phone or WhatsApp (optional)</FieldLabel>
+                            <FieldLabel htmlFor="booking-room" className="font-semibold">
+                              Room or villa number *
+                            </FieldLabel>
                             <Input
-                              id="booking-guest-phone"
-                              name="guestPhone"
-                              maxLength={30}
-                              autoComplete="tel"
+                              id="booking-room"
+                              name="roomNumber"
+                              maxLength={20}
+                              placeholder="e.g. Villa 102"
+                              required
                             />
-                          </Field>
-                          <Field>
-                            <FieldLabel htmlFor="booking-guest-email">Email (optional)</FieldLabel>
-                            <Input
-                              id="booking-guest-email"
-                              name="guestEmail"
-                              type="email"
-                              maxLength={254}
-                              autoComplete="email"
-                            />
-                          </Field>
-                          <Field>
-                            <FieldLabel htmlFor="booking-room">Room or villa number</FieldLabel>
-                            <Input id="booking-room" name="roomNumber" maxLength={20} required />
                           </Field>
                           <Field>
                             <FieldLabel htmlFor="booking-language">Preferred language</FieldLabel>
@@ -671,340 +1212,40 @@ export function NewBookingForm({ role, onCreated, onCancel }: NewBookingFormProp
                               </SelectContent>
                             </Select>
                           </Field>
+                          <Field>
+                            <FieldLabel htmlFor="booking-guest-phone">Phone or WhatsApp (optional)</FieldLabel>
+                            <Input
+                              id="booking-guest-phone"
+                              name="guestPhone"
+                              maxLength={30}
+                              autoComplete="tel"
+                              placeholder="+960 ..."
+                            />
+                          </Field>
+                          <Field>
+                            <FieldLabel htmlFor="booking-guest-email">Email (optional)</FieldLabel>
+                            <Input
+                              id="booking-guest-email"
+                              name="guestEmail"
+                              type="email"
+                              maxLength={254}
+                              autoComplete="email"
+                              placeholder="guest@example.com"
+                            />
+                          </Field>
                         </FieldGroup>
                       </FieldSet>
                     </CardContent>
                   </Card>
-                </TabsContent>
 
-                <TabsContent value="step-2" forceMount className="flex flex-col gap-6 data-[state=inactive]:hidden">
                   <Card>
                     <CardHeader className="border-b">
-                      <CardTitle>Experience schedule</CardTitle>
-                      <CardDescription>
-                        Add one or more experiences. They will be submitted together as one booking.
-                      </CardDescription>
-                      <CardAction>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          disabled={experiences.length >= 10}
-                          onClick={addExperience}
-                        >
-                          <CalendarPlus data-icon="inline-start" />
-                          Add experience
-                        </Button>
-                      </CardAction>
+                      <div className="flex flex-col gap-1">
+                        <CardTitle>Service preferences</CardTitle>
+                        <CardDescription>Optional details used by resort and field operations.</CardDescription>
+                      </div>
                     </CardHeader>
-                    <CardContent className="flex flex-col gap-4">
-                      {experiences.map((experience, index) => (
-                        <FieldSet key={experience.clientId} className="rounded-lg border p-4">
-                          <div className="flex items-center justify-between gap-3">
-                            <div className="flex flex-wrap items-center gap-2">
-                              <FieldLegend variant="label">Experience {index + 1}</FieldLegend>
-                              {index === 0 ? <Badge variant="secondary">Primary schedule</Badge> : null}
-                            </div>
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="icon-sm"
-                              disabled={experiences.length === 1}
-                              aria-label={`Remove experience ${index + 1}`}
-                              onClick={() => removeExperience(experience.clientId)}
-                            >
-                              <Trash2 />
-                            </Button>
-                          </div>
-                          <FieldGroup className="grid gap-5 md:grid-cols-2">
-                            <Field className="md:col-span-2">
-                              <FieldLabel htmlFor={`${experience.clientId}-package`}>Package</FieldLabel>
-                              <Select
-                                value={experience.packageId}
-                                onValueChange={(value) => {
-                                  if (value === "__new_package__") {
-                                    setQuickPackageOpen(true);
-                                  } else if (value) {
-                                    const selectedPkg = packages.find((item) => item.id === value);
-                                    updateExperience(experience.clientId, {
-                                      packageId: value,
-                                      ...(selectedPkg?.location ? { observationSpot: selectedPkg.location } : {}),
-                                    });
-                                  }
-                                }}
-                              >
-                                <SelectTrigger id={`${experience.clientId}-package`} className="w-full">
-                                  <SelectValue placeholder="Select a package" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectGroup>
-                                    {packages.map((item) => (
-                                      <SelectItem key={item.id} value={item.id}>
-                                        {item.name} · {formatUsd(item.adult_price_usd)} adult
-                                      </SelectItem>
-                                    ))}
-                                  </SelectGroup>
-                                  <SelectSeparator />
-                                  <SelectItem value="__new_package__" className="text-primary font-medium">
-                                    + Quick create package (e.g. Stargazing with Astronomer - $65)
-                                  </SelectItem>
-                                </SelectContent>
-                              </Select>
-                            </Field>
-                            <Field>
-                              <FieldLabel htmlFor={`${experience.clientId}-event-date`}>Event date</FieldLabel>
-                              <DatePicker
-                                id={`${experience.clientId}-event-date`}
-                                value={experience.eventDate}
-                                onValueChange={(eventDate) => updateExperience(experience.clientId, { eventDate })}
-                                required
-                              />
-                            </Field>
-                            <Field>
-                              <FieldLabel htmlFor={`${experience.clientId}-observation-spot`}>
-                                Location
-                              </FieldLabel>
-                              <Input
-                                id={`${experience.clientId}-observation-spot`}
-                                value={experience.observationSpot}
-                                maxLength={120}
-                                placeholder="e.g. Observatory Deck, Beach, Kids Club, Room"
-                                onChange={(event) =>
-                                  updateExperience(experience.clientId, { observationSpot: event.target.value })
-                                }
-                              />
-                            </Field>
-                            <Field className="md:col-span-2">
-                              <FieldLabel htmlFor={`${experience.clientId}-start-time`}>Start time</FieldLabel>
-                              <TimePicker
-                                id={`${experience.clientId}-start-time`}
-                                value={experience.timeStart}
-                                onValueChange={(timeStart) =>
-                                  updateExperience(experience.clientId, {
-                                    timeStart,
-                                    timeEnd: computeEndTime(timeStart),
-                                  })
-                                }
-                                required
-                              />
-                            </Field>
-                          </FieldGroup>
-                        </FieldSet>
-                      ))}
-                      <p className="text-muted-foreground text-xs">{experiences.length} of 10 scheduled experiences</p>
-                    </CardContent>
-                  </Card>
-
-
-                                    <Card>
-                    <CardHeader className="border-b">
-                      <CardTitle>Participants</CardTitle>
-                      <CardDescription>
-                        Add every guest to this booking. All participants are submitted as one booking.
-                      </CardDescription>
-                      <CardAction>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          disabled={participants.length >= 20}
-                          onClick={addParticipant}
-                        >
-                          <UserPlus data-icon="inline-start" />
-                          Add participant
-                        </Button>
-                      </CardAction>
-                    </CardHeader>
-                    <CardContent className="flex flex-col gap-4">
-                      {participants.map((participant, index) => (
-                        <FieldSet key={participant.clientId} className="rounded-lg border p-4">
-                          <div className="flex items-center justify-between gap-3">
-                            <div className="flex flex-wrap items-center gap-2">
-                              <FieldLegend variant="label">Participant {index + 1}</FieldLegend>
-                              {index === 0 ? <Badge variant="secondary">Primary guest</Badge> : null}
-                            </div>
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="icon-sm"
-                              disabled={participants.length === 1}
-                              aria-label={`Remove participant ${index + 1}`}
-                              onClick={() => removeParticipant(participant.clientId)}
-                            >
-                              <Trash2 />
-                            </Button>
-                          </div>
-                          <FieldGroup className="grid gap-4 md:grid-cols-2">
-                            <Field>
-                              <FieldLabel htmlFor={`${participant.clientId}-name`}>Full name</FieldLabel>
-                              <Input
-                                id={`${participant.clientId}-name`}
-                                value={participant.fullName}
-                                maxLength={200}
-                                autoComplete={index === 0 ? "name" : "off"}
-                                onChange={(event) =>
-                                  updateParticipant(participant.clientId, { fullName: event.target.value })
-                                }
-                                required
-                              />
-                            </Field>
-                            <Field>
-                              <FieldLabel htmlFor={`${participant.clientId}-type`}>Participant type</FieldLabel>
-                              <Select
-                                value={
-                                  participant.type === "child"
-                                    ? `child-${participant.childQuantity || 1}`
-                                    : "adult"
-                                }
-                                onValueChange={(value) => {
-                                  if (value === "adult") {
-                                    updateParticipant(participant.clientId, {
-                                      type: "adult",
-                                      childQuantity: 1,
-                                      age: "",
-                                    });
-                                  } else if (value.startsWith("child")) {
-                                    const qty = parseInt(
-                                      value.replace("child-", "").replace("child", "") || "1",
-                                      10,
-                                    );
-                                    updateParticipant(participant.clientId, {
-                                      type: "child",
-                                      childQuantity: Math.min(7, Math.max(1, Number.isNaN(qty) ? 1 : qty)),
-                                      age: participant.age || "8",
-                                    });
-                                  }
-                                }}
-                              >
-                                <SelectTrigger id={`${participant.clientId}-type`} className="w-full">
-                                  <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectGroup>
-                                    <SelectItem value="adult">Adult</SelectItem>
-                                    <SelectSeparator />
-                                    <SelectItem value="child-1">Child (1 child)</SelectItem>
-                                    <SelectItem value="child-2">Child (2 children)</SelectItem>
-                                    <SelectItem value="child-3">Child (3 children)</SelectItem>
-                                    <SelectItem value="child-4">Child (4 children)</SelectItem>
-                                    <SelectItem value="child-5">Child (5 children)</SelectItem>
-                                    <SelectItem value="child-6">Child (6 children)</SelectItem>
-                                    <SelectItem value="child-7">Child (7 children)</SelectItem>
-                                  </SelectGroup>
-                                </SelectContent>
-                              </Select>
-                            </Field>
-
-                            {participant.type === "child" && (
-                              <Field>
-                                <FieldLabel htmlFor={`${participant.clientId}-child-qty`}>
-                                  Number of children (1–7)
-                                </FieldLabel>
-                                <div className="flex items-center gap-2">
-                                  <Select
-                                    value={String(participant.childQuantity || 1)}
-                                    onValueChange={(val) => {
-                                      const qty = parseInt(val, 10) || 1;
-                                      updateParticipant(participant.clientId, { childQuantity: qty });
-                                    }}
-                                  >
-                                    <SelectTrigger id={`${participant.clientId}-child-qty`} className="w-full">
-                                      <SelectValue />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      <SelectGroup>
-                                        {[1, 2, 3, 4, 5, 6, 7].map((num) => (
-                                          <SelectItem key={num} value={String(num)}>
-                                            {num} {num === 1 ? "child" : "children"}
-                                          </SelectItem>
-                                        ))}
-                                      </SelectGroup>
-                                    </SelectContent>
-                                  </Select>
-                                  <Input
-                                    type="number"
-                                    min={1}
-                                    max={7}
-                                    className="w-20 text-center font-medium"
-                                    value={participant.childQuantity || 1}
-                                    onChange={(e) => {
-                                      const parsed = parseInt(e.target.value, 10);
-                                      const qty = Math.min(7, Math.max(1, Number.isNaN(parsed) ? 1 : parsed));
-                                      updateParticipant(participant.clientId, { childQuantity: qty });
-                                    }}
-                                  />
-                                </div>
-                              </Field>
-                            )}
-
-                            <Field>
-                              <FieldLabel htmlFor={`${participant.clientId}-nationality`}>Nationality</FieldLabel>
-                              <Input
-                                id={`${participant.clientId}-nationality`}
-                                value={participant.nationality}
-                                maxLength={80}
-                                onChange={(event) =>
-                                  updateParticipant(participant.clientId, { nationality: event.target.value })
-                                }
-                                required
-                              />
-                            </Field>
-                            <Field data-disabled={participant.type === "adult"}>
-                              <FieldLabel htmlFor={`${participant.clientId}-age`}>
-                                {participantAgeLabel(participant.type, participant.childQuantity)}
-                              </FieldLabel>
-                              <Input
-                                id={`${participant.clientId}-age`}
-                                type={
-                                  participant.type === "child" && (participant.childQuantity || 1) > 1
-                                    ? "text"
-                                    : "number"
-                                }
-                                min={0}
-                                max={120}
-                                placeholder={
-                                  participant.type === "child" && (participant.childQuantity || 1) > 1
-                                    ? "e.g. 5, 7, 9"
-                                    : undefined
-                                }
-                                value={participant.age}
-                                onChange={(event) =>
-                                  updateParticipant(participant.clientId, { age: event.target.value })
-                                }
-                                required={
-                                  participant.type === "child" && (participant.childQuantity || 1) === 1
-                                }
-                              />
-                            </Field>
-                            <Field className="md:col-span-2">
-                              <FieldLabel htmlFor={`${participant.clientId}-notes`}>Participant notes</FieldLabel>
-                              <Input
-                                id={`${participant.clientId}-notes`}
-                                value={participant.notes}
-                                maxLength={500}
-                                placeholder="Accessibility, assistance, or other participant-specific notes"
-                                onChange={(event) =>
-                                  updateParticipant(participant.clientId, { notes: event.target.value })
-                                }
-                              />
-                            </Field>
-                          </FieldGroup>
-                        </FieldSet>
-                      ))}
-                      <p className="text-muted-foreground text-xs">
-                        {participants.length} of 20 participants · {adultCount} adults (100%) · {childCount} children (under 12y · 50% off)
-                      </p>
-                    </CardContent>
-                  </Card>
-                </TabsContent>
-
-                <TabsContent value="step-3" forceMount className="data-[state=inactive]:hidden">
-                  <Card>
-                    <CardHeader className="border-b">
-                      <CardTitle>Service preferences</CardTitle>
-                      <CardDescription>Optional details used by resort and field operations.</CardDescription>
-                    </CardHeader>
-                    <CardContent>
+                    <CardContent className="pt-5">
                       <FieldSet>
                         <FieldLegend className="sr-only">Service preferences</FieldLegend>
                         <FieldGroup className="grid gap-5 md:grid-cols-2">
@@ -1050,7 +1291,12 @@ export function NewBookingForm({ role, onCreated, onCancel }: NewBookingFormProp
                           </Field>
                           <Field>
                             <FieldLabel htmlFor="booking-dietary">Dietary restrictions</FieldLabel>
-                            <Input id="booking-dietary" name="dietaryRestrictions" maxLength={500} />
+                            <Input
+                              id="booking-dietary"
+                              name="dietaryRestrictions"
+                              maxLength={500}
+                              placeholder="Vegetarian, allergies, halal..."
+                            />
                           </Field>
                           <Field className="md:col-span-2">
                             <FieldLabel htmlFor="booking-package-notes">Package notes</FieldLabel>
@@ -1077,11 +1323,12 @@ export function NewBookingForm({ role, onCreated, onCancel }: NewBookingFormProp
                 </TabsContent>
               </div>
 
+              {/* Sidebar Summary */}
               <div className="flex flex-col gap-6 xl:sticky xl:top-18 xl:self-start">
                 <Card>
-                  <CardHeader className="border-b">
+                  <CardHeader>
                     <CardTitle>Booking summary</CardTitle>
-                    <CardDescription>Pricing is recalculated by the backend when submitted.</CardDescription>
+                    <CardDescription>Pricing is recalculated securely when submitted.</CardDescription>
                   </CardHeader>
                   <CardContent className="flex flex-col gap-4">
                     <div className="flex items-start gap-3">
@@ -1089,10 +1336,7 @@ export function NewBookingForm({ role, onCreated, onCancel }: NewBookingFormProp
                         <Package />
                       </div>
                       <div className="min-w-0">
-                        <p className="truncate font-medium">
-                          {selectedPackage?.name || "No package selected"}
-                          {experiences.length > 1 ? ` +${experiences.length - 1} more` : ""}
-                        </p>
+                        <p className="font-medium truncate">{selectedPackage?.name || "No package selected"}</p>
                         <p className="text-muted-foreground text-sm">
                           {experiences.length} scheduled {experiences.length === 1 ? "experience" : "experiences"}
                         </p>
@@ -1105,20 +1349,23 @@ export function NewBookingForm({ role, onCreated, onCancel }: NewBookingFormProp
                       <div>
                         <p className="font-medium">{adultCount + childCount} guests</p>
                         <p className="text-muted-foreground text-sm">
-                          {adultCount} adults · {childCount} children
+                          {adultCount} {adultCount === 1 ? "adult" : "adults"} · {childCount}{" "}
+                          {childCount === 1 ? "child" : "children"}
                         </p>
                       </div>
                     </div>
-                    <div className="flex flex-wrap gap-2">
-                      {summaryInclusions.slice(0, 4).map((item) => (
-                        <Badge key={item} variant="secondary">
-                          {item}
-                        </Badge>
-                      ))}
-                    </div>
+                    {summaryInclusions.length > 0 && (
+                      <div className="flex flex-wrap gap-1.5">
+                        {summaryInclusions.slice(0, 4).map((item) => (
+                          <Badge key={item} variant="secondary" className="text-xs">
+                            {item}
+                          </Badge>
+                        ))}
+                      </div>
+                    )}
                     <div className="flex items-center justify-between border-t pt-4">
                       <span className="text-muted-foreground text-sm">Estimated base</span>
-                      <strong className="text-lg tabular-nums">{formatUsd(estimatedBase)}</strong>
+                      <strong className="text-lg tabular-nums text-foreground">{formatUsd(estimatedBase)}</strong>
                     </div>
                     <p className="text-muted-foreground text-xs">
                       Service charge, tax, rewards, and commission are calculated securely after submission.
@@ -1168,6 +1415,7 @@ export function NewBookingForm({ role, onCreated, onCancel }: NewBookingFormProp
       {!loading && !error && packages.length && adultCount + childCount <= 0 ? (
         <FieldError>At least one adult or child is required.</FieldError>
       ) : null}
+
       <Dialog open={quickPackageOpen} onOpenChange={setQuickPackageOpen}>
         <DialogContent className="sm:max-w-lg">
           <DialogHeader>
@@ -1234,7 +1482,7 @@ export function NewBookingForm({ role, onCreated, onCancel }: NewBookingFormProp
               onClick={handleSaveQuickPackage}
             >
               {quickPkgPending ? <Spinner data-icon="inline-start" /> : <Plus data-icon="inline-start" />}
-              Save &amp; use package
+              {quickPkgPending ? "Saving..." : "Create and select"}
             </Button>
           </DialogFooter>
         </DialogContent>

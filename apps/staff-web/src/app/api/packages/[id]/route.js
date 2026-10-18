@@ -5,7 +5,7 @@ import { uuidSchema } from '@ephemeris/db/validators/common';
 import { updatePackageSchema } from '@ephemeris/db/validators/package';
 const PACKAGE_COLUMNS = `
   id, name, package_type, experience_type, location, description, schedule, resort_id,
-  adult_price_usd, child_price_usd, couple_price_usd, group_price_usd, family_price_usd, meal_price_usd, child_age_range, is_chargeable, is_active,
+  adult_price_usd, child_price_usd, couple_price_usd, group_price_usd, family_price_usd, meal_price_usd, primary_price_type, child_age_range, is_chargeable, is_active,
   image_mime_type, image_file_name, image_data IS NOT NULL AS has_image,
   CASE WHEN image_data IS NULL THEN NULL ELSE CONCAT('/api/packages/', id, '/image') END AS image_url,
   created_at, updated_at
@@ -82,6 +82,7 @@ async function parseUpdatePackageRequest(request) {
   if (form.has('groupPriceUsd')) fields.groupPriceUsd = form.get('groupPriceUsd');
   if (form.has('familyPriceUsd')) fields.familyPriceUsd = form.get('familyPriceUsd');
   if (form.has('mealPriceUsd')) fields.mealPriceUsd = form.get('mealPriceUsd');
+  if (form.has('primaryPriceType')) fields.primaryPriceType = form.get('primaryPriceType');
   if (form.has('childAgeRange')) fields.childAgeRange = form.get('childAgeRange');
   if (form.has('inclusions')) fields.inclusions = parseInclusionsField(form.get('inclusions'));
   if (form.has('resortId')) fields.resortId = form.get('resortId') || null;
@@ -140,15 +141,19 @@ export async function PATCH(request, { params }) {
         description: body.description === undefined ? before.rows[0].description : String(body.description || '').trim() || null,
         schedule: body.schedule === undefined ? before.rows[0].schedule : String(body.schedule || '').trim(),
         resort_id: body.resortId === undefined ? before.rows[0].resort_id : body.resortId,
-        adult_price_usd: body.adultPriceUsd === undefined ? Number(before.rows[0].adult_price_usd) : Number(body.adultPriceUsd || 0),
+        adult_price_usd: body.adultPriceUsd === undefined ? before.rows[0].adult_price_usd : (body.adultPriceUsd === null || body.adultPriceUsd === '' ? null : Number(body.adultPriceUsd)),
         child_price_usd: childPriceUsd,
         couple_price_usd: body.couplePriceUsd === undefined ? before.rows[0].couple_price_usd : (body.couplePriceUsd === null || body.couplePriceUsd === '' ? null : Number(body.couplePriceUsd)),
         group_price_usd: body.groupPriceUsd === undefined ? before.rows[0].group_price_usd : (body.groupPriceUsd === null || body.groupPriceUsd === '' ? null : Number(body.groupPriceUsd)),
         family_price_usd: body.familyPriceUsd === undefined ? before.rows[0].family_price_usd : (body.familyPriceUsd === null || body.familyPriceUsd === '' ? null : Number(body.familyPriceUsd)),
         meal_price_usd: body.mealPriceUsd === undefined ? Number(before.rows[0].meal_price_usd || 0) : Number(body.mealPriceUsd || 0),
+        primary_price_type: body.primaryPriceType === undefined ? (before.rows[0].primary_price_type || 'adult') : String(body.primaryPriceType || 'adult').trim(),
         is_chargeable: packageIsChargeable(
           body.adultPriceUsd === undefined ? before.rows[0].adult_price_usd : body.adultPriceUsd,
-          childPriceUsd
+          childPriceUsd,
+          body.couplePriceUsd === undefined ? before.rows[0].couple_price_usd : body.couplePriceUsd,
+          body.groupPriceUsd === undefined ? before.rows[0].group_price_usd : body.groupPriceUsd,
+          body.familyPriceUsd === undefined ? before.rows[0].family_price_usd : body.familyPriceUsd
         ),
         is_active: body.isActive ?? before.rows[0].is_active,
       };
@@ -159,7 +164,7 @@ export async function PATCH(request, { params }) {
         if (requestData.image === null) {
           imageFields = `, image_data = NULL, image_mime_type = NULL, image_file_name = NULL`;
         } else {
-          imageFields = `, image_data = $14, image_mime_type = $15, image_file_name = $16`;
+          imageFields = `, image_data = $19, image_mime_type = $20, image_file_name = $21`;
           imageValues = [requestData.image.data, requestData.image.mimeType, requestData.image.fileName];
         }
       }
@@ -175,13 +180,18 @@ export async function PATCH(request, { params }) {
           resort_id = $8,
           adult_price_usd = $9,
           child_price_usd = $10,
-          child_age_range = $11,
-          is_chargeable = $12,
-          is_active = $13
+          couple_price_usd = $11,
+          group_price_usd = $12,
+          family_price_usd = $13,
+          meal_price_usd = $14,
+          primary_price_type = $15,
+          child_age_range = $16,
+          is_chargeable = $17,
+          is_active = $18
           ${imageFields}
          WHERE id = $1
          RETURNING id`,
-        [id, patch.name, patch.package_type, patch.experience_type, patch.location, patch.description, patch.schedule, patch.resort_id, patch.adult_price_usd, patch.child_price_usd, patch.child_age_range, patch.is_chargeable, patch.is_active, ...imageValues]
+        [id, patch.name, patch.package_type, patch.experience_type, patch.location, patch.description, patch.schedule, patch.resort_id, patch.adult_price_usd, patch.child_price_usd, patch.couple_price_usd, patch.group_price_usd, patch.family_price_usd, patch.meal_price_usd, patch.primary_price_type, patch.child_age_range, patch.is_chargeable, patch.is_active, ...imageValues]
       );
       if (body.inclusions !== undefined) {
         await replacePackageInclusions(client, id, body.inclusions);

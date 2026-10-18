@@ -24,8 +24,13 @@ export interface AdminBookingPackage {
   description: string | null;
   schedule: string | null;
   resort_id: string | null;
-  adult_price_usd: number;
+  adult_price_usd: number | null;
   child_price_usd: number | null;
+  couple_price_usd?: number | null;
+  group_price_usd?: number | null;
+  family_price_usd?: number | null;
+  meal_price_usd?: number | null;
+  primary_price_type?: "adult" | "couple" | "group" | "family" | string;
   child_age_range: string | null;
   is_chargeable: boolean;
   is_active: boolean;

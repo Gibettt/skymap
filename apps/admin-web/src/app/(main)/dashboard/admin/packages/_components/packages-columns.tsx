@@ -25,9 +25,74 @@ function PackageStatusBadge({ active }: { active: boolean }) {
   );
 }
 
-export function getPackagesColumns(
-  resorts: PackageResortOption[],
-): ColumnDef<DataTableFeatures, PackageRow>[] {
+function getPrimaryPriceType(pkg: PackageRow): string {
+  if (pkg.primary_price_type) return pkg.primary_price_type;
+  if (Number(pkg.adult_price_usd ?? 0) > 0) return "adult";
+  if (Number(pkg.couple_price_usd ?? 0) > 0) return "couple";
+  if (Number(pkg.group_price_usd ?? 0) > 0) return "group";
+  if (Number(pkg.family_price_usd ?? 0) > 0) return "family";
+  return "adult";
+}
+
+function renderPackagePricing(pkg: PackageRow) {
+  const primaryType = getPrimaryPriceType(pkg);
+
+  let primaryLabel = "adult";
+  let primaryAmount: string | number | null = null;
+
+  if (primaryType === "couple" && pkg.couple_price_usd != null && Number(pkg.couple_price_usd) > 0) {
+    primaryAmount = pkg.couple_price_usd;
+    primaryLabel = "couple";
+  } else if (primaryType === "group" && pkg.group_price_usd != null && Number(pkg.group_price_usd) > 0) {
+    primaryAmount = pkg.group_price_usd;
+    primaryLabel = "group";
+  } else if (primaryType === "family" && pkg.family_price_usd != null && Number(pkg.family_price_usd) > 0) {
+    primaryAmount = pkg.family_price_usd;
+    primaryLabel = "family";
+  } else if (pkg.adult_price_usd != null && Number(pkg.adult_price_usd) > 0) {
+    primaryAmount = pkg.adult_price_usd;
+    primaryLabel = "adult";
+  } else if (pkg.couple_price_usd != null && Number(pkg.couple_price_usd) > 0) {
+    primaryAmount = pkg.couple_price_usd;
+    primaryLabel = "couple";
+  } else if (pkg.group_price_usd != null && Number(pkg.group_price_usd) > 0) {
+    primaryAmount = pkg.group_price_usd;
+    primaryLabel = "group";
+  } else if (pkg.family_price_usd != null && Number(pkg.family_price_usd) > 0) {
+    primaryAmount = pkg.family_price_usd;
+    primaryLabel = "family";
+  } else {
+    primaryAmount = pkg.adult_price_usd ?? 0;
+    primaryLabel = "adult";
+  }
+
+  const secondaryParts: string[] = [];
+  if (primaryLabel !== "adult" && pkg.adult_price_usd != null && Number(pkg.adult_price_usd) > 0) {
+    secondaryParts.push(`${formatUsd(pkg.adult_price_usd)} adult`);
+  }
+  if (primaryLabel !== "couple" && pkg.couple_price_usd != null && Number(pkg.couple_price_usd) > 0) {
+    secondaryParts.push(`${formatUsd(pkg.couple_price_usd)} couple`);
+  }
+  if (pkg.child_price_usd != null && Number(pkg.child_price_usd) > 0) {
+    secondaryParts.push(`${formatUsd(pkg.child_price_usd)} child`);
+  }
+
+  const childNote = pkg.child_price_usd == null ? "No child rate" : `${formatUsd(pkg.child_price_usd)} child`;
+
+  return (
+    <div className="grid gap-0.5 whitespace-nowrap text-right text-sm tabular-nums">
+      <span className="font-semibold text-foreground">
+        {formatUsd(primaryAmount)} <span className="text-xs font-normal text-muted-foreground">/{primaryLabel}</span>
+      </span>
+      {secondaryParts.length > 0 ? (
+        <span className="text-muted-foreground text-xs">{secondaryParts.join(" · ")}</span>
+      ) : (
+        <span className="text-muted-foreground text-xs">{childNote}</span>
+      )}
+    </div>
+  );
+}
+export function getPackagesColumns(resorts: PackageResortOption[]): ColumnDef<DataTableFeatures, PackageRow>[] {
   return [
     {
       id: "search",
@@ -86,9 +151,7 @@ export function getPackagesColumns(
       accessorFn: (row) => row.resort_name ?? "Unassigned",
       header: "Resort",
       filterFn: "equalsString",
-      cell: ({ row }) => (
-        <div className="max-w-44 truncate">{row.original.resort_name ?? "Unassigned"}</div>
-      ),
+      cell: ({ row }) => <div className="max-w-44 truncate">{row.original.resort_name ?? "Unassigned"}</div>,
     },
     {
       accessorKey: "schedule",
@@ -107,16 +170,9 @@ export function getPackagesColumns(
     },
     {
       id: "pricing",
-      accessorFn: (row) => Number(row.adult_price_usd),
+      accessorFn: (row) => Number(row.adult_price_usd ?? row.couple_price_usd ?? row.group_price_usd ?? 0),
       header: "Pricing",
-      cell: ({ row }) => (
-        <div className="grid gap-0.5 whitespace-nowrap text-right text-sm tabular-nums">
-          <span>{formatUsd(row.original.adult_price_usd)} adult</span>
-          <span className="text-muted-foreground text-xs">
-            {row.original.child_price_usd == null ? "No child rate" : `${formatUsd(row.original.child_price_usd)} child`}
-          </span>
-        </div>
-      ),
+      cell: ({ row }) => renderPackagePricing(row.original),
     },
     {
       id: "status",

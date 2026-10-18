@@ -119,8 +119,13 @@ export interface PackageRow {
   resort_name: string | null;
   schedule: string;
   inclusions: string[];
-  adult_price_usd: string | number;
+  adult_price_usd: string | number | null;
   child_price_usd: string | number | null;
+  couple_price_usd?: string | number | null;
+  group_price_usd?: string | number | null;
+  family_price_usd?: string | number | null;
+  meal_price_usd?: string | number | null;
+  primary_price_type?: 'adult' | 'couple' | 'group' | 'family' | string;
   child_age_range: string | null;
   is_chargeable: boolean;
   is_active: boolean;

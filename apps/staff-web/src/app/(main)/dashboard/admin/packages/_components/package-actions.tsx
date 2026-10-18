@@ -469,8 +469,7 @@ export function PackageActions({ packageData, resorts }: PackageActionsProps) {
                   type="number"
                   min="0"
                   step="0.01"
-                  defaultValue={numberValue(packageData.adult_price_usd)}
-                  required
+                  defaultValue={packageData.adult_price_usd == null ? "" : numberValue(packageData.adult_price_usd)}
                 />
               </Field>
               <Field>

@@ -35,6 +35,7 @@ const adminPermissionByUrl: Record<string, string> = {
   "/dashboard/admin": "admin.overview",
   "/dashboard/admin/bookings": "admin.bookings",
   "/dashboard/admin/resorts": "admin.resorts",
+  "/dashboard/admin/inventory": "admin.resorts",
   "/dashboard/admin/finance": "admin.finance",
   "/dashboard/admin/invoices": "admin.finance",
   "/dashboard/admin/packages": "admin.packages",

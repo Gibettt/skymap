@@ -6,6 +6,7 @@ export type NavIconName =
   | "bookings"
   | "packages"
   | "calendar"
+  | "inventory"
   | "invoices"
   | "payouts"
   | "sky-guide"
@@ -69,6 +70,9 @@ export function getStaffSidebarItems({ role, permissions }: StaffNavigationOptio
       { id: "staff-packages", title: "Packages", url: `${basePath}/package`, icon: "packages" },
       { id: "staff-calendar", title: "Calendar", url: `${basePath}/jadwal`, icon: "calendar" },
     );
+    if (role === "internal") {
+      items.push({ id: "staff-inventory", title: "Inventory", url: `${basePath}/inventory`, icon: "inventory" });
+    }
   }
 
   if ((role === "internal" || role === "external") && can("staff.finance")) {

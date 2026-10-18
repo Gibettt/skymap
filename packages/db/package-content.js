@@ -22,6 +22,12 @@ export function formatPackageInclusions(value, fallback = '') {
   return inclusions.length ? inclusions.join(', ') : fallback;
 }
 
-export function packageIsChargeable(adultPriceUsd, childPriceUsd) {
-  return Number(adultPriceUsd || 0) > 0 || Number(childPriceUsd || 0) > 0;
+export function packageIsChargeable(adultPriceUsd, childPriceUsd, couplePriceUsd = 0, groupPriceUsd = 0, familyPriceUsd = 0) {
+  return (
+    Number(adultPriceUsd || 0) > 0 ||
+    Number(childPriceUsd || 0) > 0 ||
+    Number(couplePriceUsd || 0) > 0 ||
+    Number(groupPriceUsd || 0) > 0 ||
+    Number(familyPriceUsd || 0) > 0
+  );
 }
