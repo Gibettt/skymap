@@ -20,9 +20,11 @@ export async function ensurePackageSchema() {
       }
 
       await query(`ALTER TABLE packages MODIFY adult_price_usd DECIMAL(14,2) NULL DEFAULT NULL`).catch(() => {});
+      await query(`ALTER TABLE packages MODIFY COLUMN package_type VARCHAR(80) NOT NULL`).catch(() => {});
     } else {
       await query(`ALTER TABLE packages ADD COLUMN IF NOT EXISTS primary_price_type VARCHAR(30) NOT NULL DEFAULT 'adult'`).catch(() => {});
       await query(`ALTER TABLE packages ALTER COLUMN adult_price_usd DROP NOT NULL`).catch(() => {});
+      await query(`ALTER TABLE packages ALTER COLUMN package_type TYPE varchar(80)`).catch(() => {});
     }
     packageSchemaReady = true;
   } catch (err) {
