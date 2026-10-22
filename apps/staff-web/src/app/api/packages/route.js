@@ -1,5 +1,5 @@
 import { ApiError, assertSameOrigin, jsonError, parseJsonBody, requireUser, writeAudit } from "@ephemeris/auth";
-import { query, transaction } from "@ephemeris/db";
+import { ensurePackageSchema, query, transaction } from "@ephemeris/db";
 import { paginationFromRequest, paginationMeta } from "@ephemeris/db/helpers";
 import { packageIsChargeable } from "@ephemeris/db/package-content";
 import { createPackageSchema } from "@ephemeris/db/validators/package";
@@ -92,6 +92,7 @@ async function parseCreatePackageRequest(request) {
 export async function GET(request) {
   try {
     const user = await requireUser(["admin", "internal", "external"]);
+    await ensurePackageSchema();
 
     let whereClause = "";
     const params = [];
@@ -102,29 +103,52 @@ export async function GET(request) {
       params.push(user.resort_id);
     }
 
-    const { rows } = await query(
-      `
-      SELECT
-        p.id, p.name, p.package_type, p.experience_type, p.location, p.description, p.schedule,
-        p.resort_id, r.name AS resort_name,
-        p.adult_price_usd, p.child_price_usd, p.couple_price_usd, p.group_price_usd, p.family_price_usd, p.meal_price_usd, p.primary_price_type, p.child_age_range, p.is_chargeable, p.is_active,
-        p.image_mime_type, p.image_file_name, p.image_data IS NOT NULL AS has_image,
-        CASE WHEN p.image_data IS NULL THEN NULL ELSE CONCAT('/api/packages/', p.id, '/image') END AS image_url,
-        COALESCE((
-          SELECT json_agg(pi.label ORDER BY pi.sort_order)
-          FROM package_inclusions pi
-          WHERE pi.package_id = p.id AND pi.is_active = true
-        ), '[]'::json) AS inclusions,
-        p.created_at, p.updated_at
-      FROM packages p
-      LEFT JOIN resorts r ON r.id = p.resort_id
-      ${whereClause}
-      ORDER BY p.created_at DESC, p.updated_at DESC
-    `,
-      params,
-    );
-
-    return Response.json({ packages: rows });
+    try {
+      const { rows } = await query(
+        `SELECT
+          p.id, p.name, p.package_type, p.experience_type, p.location, p.description, p.schedule,
+          p.resort_id, r.name AS resort_name,
+          p.adult_price_usd, p.child_price_usd, p.couple_price_usd, p.group_price_usd, p.family_price_usd, p.meal_price_usd, p.primary_price_type, p.child_age_range, p.is_chargeable, p.is_active,
+          p.image_mime_type, p.image_file_name, p.image_data IS NOT NULL AS has_image,
+          CASE WHEN p.image_data IS NULL THEN NULL ELSE CONCAT('/api/packages/', p.id, '/image') END AS image_url,
+          COALESCE((
+            SELECT json_agg(pi.label ORDER BY pi.sort_order)
+            FROM package_inclusions pi
+            WHERE pi.package_id = p.id AND pi.is_active = true
+          ), '[]'::json) AS inclusions,
+          p.created_at, p.updated_at
+        FROM packages p
+        LEFT JOIN resorts r ON r.id = p.resort_id
+        ${whereClause}
+        ORDER BY p.created_at DESC, p.updated_at DESC`,
+        params,
+      );
+      return Response.json({ packages: rows });
+    } catch (dbErr) {
+      if (dbErr?.message?.includes("primary_price_type")) {
+        const { rows } = await query(
+          `SELECT
+            p.id, p.name, p.package_type, p.experience_type, p.location, p.description, p.schedule,
+            p.resort_id, r.name AS resort_name,
+            p.adult_price_usd, p.child_price_usd, p.child_age_range, p.is_chargeable, p.is_active,
+            p.image_mime_type, p.image_file_name, p.image_data IS NOT NULL AS has_image,
+            CASE WHEN p.image_data IS NULL THEN NULL ELSE CONCAT('/api/packages/', p.id, '/image') END AS image_url,
+            COALESCE((
+              SELECT json_agg(pi.label ORDER BY pi.sort_order)
+              FROM package_inclusions pi
+              WHERE pi.package_id = p.id AND pi.is_active = true
+            ), '[]'::json) AS inclusions,
+            p.created_at, p.updated_at
+          FROM packages p
+          LEFT JOIN resorts r ON r.id = p.resort_id
+          ${whereClause}
+          ORDER BY p.created_at DESC, p.updated_at DESC`,
+          params,
+        );
+        return Response.json({ packages: rows.map((r) => ({ ...r, primary_price_type: "adult" })) });
+      }
+      throw dbErr;
+    }
   } catch (error) {
     return jsonError(error);
   }

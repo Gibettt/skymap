@@ -127,3 +127,8 @@ export {
   refreshAfterPayoutChange,
   refreshAfterResortChange,
 } from './commands.js';
+
+export {
+  ensurePackageSchema,
+  ensureInventorySchema,
+} from './schema-ensures.js';

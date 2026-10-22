@@ -1,7 +1,7 @@
 import "server-only";
 
 import { requirePermission, requireUser } from "@ephemeris/auth";
-import { query, transaction } from "@ephemeris/db";
+import { ensurePackageSchema, query, transaction } from "@ephemeris/db";
 import { bookingSelectQuery } from "@ephemeris/db/helpers";
 import { presenceStatus } from "@ephemeris/db/presence";
 import { resortCoverageStatus } from "@ephemeris/db/resort-coverage";
@@ -100,22 +100,45 @@ export async function getResorts() {
 
 export async function getPackages() {
   await requireUser(["admin", "internal", "external"]);
-  const { rows } = await query(`
-    SELECT p.id, p.name, p.package_type, p.experience_type, p.location, p.description, p.schedule,
-      p.resort_id, p.adult_price_usd, p.child_price_usd, p.couple_price_usd, p.group_price_usd, p.family_price_usd, p.meal_price_usd,
-      p.primary_price_type, p.child_age_range, p.is_chargeable,
-      p.is_active, p.image_data IS NOT NULL AS has_image,
-      CASE WHEN p.image_data IS NULL THEN NULL ELSE CONCAT('/api/packages/', id, '/image') END AS image_url,
-      p.created_at, p.updated_at, r.name AS resort_name,
-      COALESCE((
-        SELECT json_agg(active_inclusion.label ORDER BY active_inclusion.sort_order)
-        FROM package_inclusions active_inclusion
-        WHERE active_inclusion.package_id = p.id AND active_inclusion.is_active
-      ), '[]') AS inclusions
-    FROM packages p
-    LEFT JOIN resorts r ON r.id = p.resort_id
-    ORDER BY p.created_at DESC, p.updated_at DESC`);
-  return rows;
+  await ensurePackageSchema();
+  try {
+    const { rows } = await query(`
+      SELECT p.id, p.name, p.package_type, p.experience_type, p.location, p.description, p.schedule,
+        p.resort_id, p.adult_price_usd, p.child_price_usd, p.couple_price_usd, p.group_price_usd, p.family_price_usd, p.meal_price_usd,
+        p.primary_price_type, p.child_age_range, p.is_chargeable,
+        p.is_active, p.image_data IS NOT NULL AS has_image,
+        CASE WHEN p.image_data IS NULL THEN NULL ELSE CONCAT('/api/packages/', p.id, '/image') END AS image_url,
+        p.created_at, p.updated_at, r.name AS resort_name,
+        COALESCE((
+          SELECT json_agg(active_inclusion.label ORDER BY active_inclusion.sort_order)
+          FROM package_inclusions active_inclusion
+          WHERE active_inclusion.package_id = p.id AND active_inclusion.is_active
+        ), '[]') AS inclusions
+      FROM packages p
+      LEFT JOIN resorts r ON r.id = p.resort_id
+      ORDER BY p.created_at DESC, p.updated_at DESC`);
+    return rows;
+  } catch (err) {
+    if (err?.message?.includes("primary_price_type")) {
+      const { rows } = await query(`
+        SELECT p.id, p.name, p.package_type, p.experience_type, p.location, p.description, p.schedule,
+          p.resort_id, p.adult_price_usd, p.child_price_usd, p.couple_price_usd, p.group_price_usd, p.family_price_usd, p.meal_price_usd,
+          p.child_age_range, p.is_chargeable,
+          p.is_active, p.image_data IS NOT NULL AS has_image,
+          CASE WHEN p.image_data IS NULL THEN NULL ELSE CONCAT('/api/packages/', p.id, '/image') END AS image_url,
+          p.created_at, p.updated_at, r.name AS resort_name,
+          COALESCE((
+            SELECT json_agg(active_inclusion.label ORDER BY active_inclusion.sort_order)
+            FROM package_inclusions active_inclusion
+            WHERE active_inclusion.package_id = p.id AND active_inclusion.is_active
+          ), '[]') AS inclusions
+        FROM packages p
+        LEFT JOIN resorts r ON r.id = p.resort_id
+        ORDER BY p.created_at DESC, p.updated_at DESC`);
+      return rows.map((r) => ({ ...r, primary_price_type: "adult" }));
+    }
+    throw err;
+  }
 }
 
 export async function getPackageResortOptions() {

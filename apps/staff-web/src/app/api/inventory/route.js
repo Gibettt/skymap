@@ -1,9 +1,10 @@
 import { ApiError, assertSameOrigin, jsonError, parseJsonBody, requireUser } from "@ephemeris/auth";
-import { query } from "@ephemeris/db";
+import { ensureInventorySchema, query } from "@ephemeris/db";
 
 export async function GET(request) {
   try {
     const user = await requireUser(["admin", "internal", "external"]);
+    await ensureInventorySchema();
     const url = new URL(request.url);
     const requestedResortId = url.searchParams.get("resortId");
 
@@ -45,6 +46,7 @@ export async function GET(request) {
 export async function POST(request) {
   try {
     await assertSameOrigin(request);
+    await ensureInventorySchema();
     const user = await requireUser(["admin", "internal"]);
     const body = await parseJsonBody(request);
 
