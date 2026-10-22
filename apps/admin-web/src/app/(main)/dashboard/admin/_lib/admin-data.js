@@ -120,7 +120,7 @@ export async function getPackages() {
       ORDER BY p.created_at DESC, p.updated_at DESC`);
     return rows;
   } catch (err) {
-    if (err?.message?.includes("primary_price_type")) {
+    if (err.message && err.message.includes("primary_price_type")) {
       const { rows } = await query(`
         SELECT p.id, p.name, p.package_type, p.experience_type, p.location, p.description, p.schedule,
           p.resort_id, p.adult_price_usd, p.child_price_usd, p.couple_price_usd, p.group_price_usd, p.family_price_usd, p.meal_price_usd,
@@ -373,7 +373,7 @@ export async function getInventoryData() {
       resorts: resortsRes.rows,
     };
   } catch (err) {
-    console.error("[inventory] Fallback while loading inventory data:", err?.message);
+    console.error("[inventory] Fallback while loading inventory data:", err.message);
     const resortsRes = await query("SELECT id, name, code FROM resorts WHERE status = 'active' ORDER BY name ASC").catch(() => ({ rows: [] }));
     return {
       items: [],

@@ -98,6 +98,7 @@ export async function GET(request) {
     await ensurePackageSchema();
     const pagination = paginationFromRequest(request);
     const { rows } = await query(`SELECT ${PACKAGE_SELECT} FROM packages ORDER BY created_at DESC, updated_at DESC LIMIT $1 OFFSET $2`, [pagination.limit, pagination.offset]);
+    const { rows: countRows } = await query('SELECT COUNT(*) FROM packages');
     return Response.json({
       packages: rows,
       pagination: paginationMeta({ ...pagination, total: Number(countRows[0].count) }),

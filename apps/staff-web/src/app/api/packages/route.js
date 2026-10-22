@@ -125,7 +125,7 @@ export async function GET(request) {
       );
       return Response.json({ packages: rows });
     } catch (dbErr) {
-      if (dbErr?.message?.includes("primary_price_type")) {
+      if (dbErr.message && dbErr.message.includes("primary_price_type")) {
         const { rows } = await query(
           `SELECT
             p.id, p.name, p.package_type, p.experience_type, p.location, p.description, p.schedule,
