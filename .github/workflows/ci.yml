@@ -55,7 +55,7 @@ jobs:
       # 1. Checkout the repository
       # -----------------------------------------------------------------------
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       # -----------------------------------------------------------------------
       # 2. Setup pnpm (must come before setup-node so caching works)
@@ -118,7 +118,7 @@ jobs:
       # 1. Checkout the repository
       # -----------------------------------------------------------------------
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       # -----------------------------------------------------------------------
       # 2. Setup pnpm
