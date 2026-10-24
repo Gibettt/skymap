@@ -165,7 +165,7 @@ export function Logs({ logs }: { logs: AuditLogRow[] }) {
               }}
             />
             <InputGroupAddon align="inline-end">
-              <Kbd className="h-4 text-[10px]">Ctrl K</Kbd>
+              <Kbd className="h-4 text-xs">Ctrl K</Kbd>
             </InputGroupAddon>
           </InputGroup>
 

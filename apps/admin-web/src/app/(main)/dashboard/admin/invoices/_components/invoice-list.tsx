@@ -184,7 +184,7 @@ export function InvoiceList({
                     <div className="flex flex-wrap items-center gap-1.5">
                       <p className="font-medium font-mono">{invoice.invoice_number}</p>
                       {isMonthly ? (
-                        <Badge variant="secondary" className="text-[10px]">
+                        <Badge variant="secondary" className="text-xs">
                           ✓ Signed by Admin
                         </Badge>
                       ) : null}

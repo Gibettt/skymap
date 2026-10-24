@@ -245,7 +245,7 @@ function rewriteSql(sql, params) {
     .replace(/\b([a-z_][a-z0-9_.]*)::date\b/gi, "DATE($1)")
     .replace(/\b([a-z_][a-z0-9_.]*)::text\b/gi, "CAST($1 AS CHAR)")
     .replace(
-      /::(?:uuid|jsonb?|inet|boolean|timestamptz|timestamp|numeric|int|integer|user_role|user_status|booking_status|payout_status|package_type|experience_type|feedback_status)(?:\[\])?/gi,
+      /::(?:uuid|jsonb?|inet|boolean|timestamptz|timestamp|numeric|int|integer|varchar|text|char|user_role|user_status|booking_status|payout_status|package_type|experience_type|feedback_status)(?:\[\])?/gi,
       "",
     )
     .replace(/\s+NULLS\s+(?:FIRST|LAST)\b/gi, "");

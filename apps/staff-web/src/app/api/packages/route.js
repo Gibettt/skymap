@@ -1,4 +1,4 @@
-import { ApiError, assertSameOrigin, jsonError, parseJsonBody, requireUser, writeAudit } from "@ephemeris/auth";
+import { ApiError, assertSameOrigin, jsonError, parseJsonBody, requirePermission, writeAudit } from "@ephemeris/auth";
 import { ensurePackageSchema, query, transaction } from "@ephemeris/db";
 import { paginationFromRequest, paginationMeta } from "@ephemeris/db/helpers";
 import { packageIsChargeable } from "@ephemeris/db/package-content";
@@ -91,7 +91,7 @@ async function parseCreatePackageRequest(request) {
 
 export async function GET(request) {
   try {
-    const user = await requireUser(["admin", "internal", "external"]);
+    const user = await requirePermission("staff.bookings", ["internal", "external"]);
     await ensurePackageSchema();
 
     let whereClause = "";
@@ -157,15 +157,12 @@ export async function GET(request) {
 export async function POST(request) {
   try {
     await assertSameOrigin(request);
-    const user = await requireUser(["admin", "internal"]);
-    if (user.access_role_level === "read_only") {
-      throw new ApiError(403, "This role has read-only access");
-    }
+    const user = await requirePermission("staff.bookings", ["internal"], { write: true });
+    if (!user.resort_id) throw new ApiError(403, "Staff resort profile is not configured");
 
     const requestData = await parseCreatePackageRequest(request);
-    if (user.role === "internal" && !requestData.fields.resortId) {
-      requestData.fields.resortId = user.resort_id;
-    }
+    // Internal staff manage only their own resort, whatever resortId the client sends.
+    requestData.fields.resortId = user.resort_id;
 
     const parsed = createPackageSchema.safeParse(requestData.fields);
     if (!parsed.success) {

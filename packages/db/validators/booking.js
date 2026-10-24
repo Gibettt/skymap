@@ -157,6 +157,7 @@ export const updateBookingSchema = z.object({
 	status: bookingStatusSchema.optional(),
 	signedByGuest: z.boolean().optional(),
 	payoutStatus: payoutStatusSchema.optional(),
+	experiences: bookingExperiencesSchema.optional(),
 });
 
 export const rescheduleBookingSchema = z

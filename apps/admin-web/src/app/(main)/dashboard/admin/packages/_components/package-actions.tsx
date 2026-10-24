@@ -83,7 +83,6 @@ export function PackageActions({ packageData, resorts }: PackageActionsProps) {
   const [couplePrice, setCouplePrice] = useState("");
   const [childPrice, setChildPrice] = useState("");
   const [groupPrice, setGroupPrice] = useState("");
-  const [mealPrice, setMealPrice] = useState("");
   const [familyPrice, setFamilyPrice] = useState("");
   const [primaryPriceType, setPrimaryPriceType] = useState<"adult" | "couple" | "group" | "family">((packageData.primary_price_type as "adult" | "couple" | "group" | "family") || "adult");
   const [inclusionItems, setInclusionItems] = useState<Array<{ id: string; name: string; price: string }>>([]);
@@ -175,7 +174,6 @@ export function PackageActions({ packageData, resorts }: PackageActionsProps) {
     setCouplePrice(packageData.couple_price_usd == null ? "" : String(numberValue(packageData.couple_price_usd)));
     setChildPrice(packageData.child_price_usd == null ? "" : String(numberValue(packageData.child_price_usd)));
     setGroupPrice(packageData.group_price_usd == null ? "" : String(numberValue(packageData.group_price_usd)));
-    setMealPrice(packageData.meal_price_usd == null ? "" : String(numberValue(packageData.meal_price_usd)));
     setFamilyPrice(packageData.family_price_usd == null ? "" : String(numberValue(packageData.family_price_usd)));
     setPrimaryPriceType((packageData.primary_price_type as "adult" | "couple" | "group" | "family") || "adult");
     const parsedItems: Array<{ id: string; name: string; price: string }> = [];
@@ -234,7 +232,6 @@ export function PackageActions({ packageData, resorts }: PackageActionsProps) {
     else payload.delete("groupPriceUsd");
     if (familyPrice) payload.set("familyPriceUsd", familyPrice);
     else payload.delete("familyPriceUsd");
-    payload.set("mealPriceUsd", mealPrice || "0");
     payload.set("primaryPriceType", primaryPriceType);
     payload.set("isChargeable", String(billing === "chargeable"));
     payload.set("inclusions", JSON.stringify(combinedInclusions));
@@ -542,23 +539,23 @@ export function PackageActions({ packageData, resorts }: PackageActionsProps) {
                   <Coins className="h-4 w-4 text-emerald-400" />
                   <span className="font-semibold text-sm text-foreground">Group Pricing & Rates</span>
                   {isAddon ? (
-                    <Badge variant="outline" className="border-cyan-500/50 bg-cyan-950/30 text-cyan-300 text-[11px]">
+                    <Badge variant="outline" className="border-cyan-500/50 bg-cyan-950/30 text-cyan-300 text-xs">
                       ✦ Add-on
                     </Badge>
                   ) : null}
                   {!isAddon && billing === "complimentary" ? (
-                    <Badge variant="outline" className="border-emerald-500/50 bg-emerald-950/30 text-emerald-300 text-[11px]">
+                    <Badge variant="outline" className="border-emerald-500/50 bg-emerald-950/30 text-emerald-300 text-xs">
                       FOC
                     </Badge>
                   ) : null}
                   {!isAddon && billing !== "complimentary" ? (
-                    <Badge variant="outline" className="border-slate-600 text-slate-300 text-[11px]">
+                    <Badge variant="outline" className="border-slate-600 text-slate-300 text-xs">
                       Chargeable
                     </Badge>
                   ) : null}
                 </div>
 
-                <div className="flex items-center gap-1.5">
+                <div className="flex flex-wrap items-center gap-1.5">
                   <Button
                     type="button"
                     size="xs"
@@ -727,36 +724,6 @@ export function PackageActions({ packageData, resorts }: PackageActionsProps) {
                     </div>
                   </Field>
 
-                  {/* 5. Inclusion / Meal Price (F&B) */}
-                  <Field className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-2 sm:col-span-1">
-                    <div className="flex items-center justify-between">
-                      <FieldLabel htmlFor={fieldId("edit-package-meal-price")} className="text-amber-700 dark:text-amber-400 font-semibold text-xs flex items-center gap-1">
-                        🍽️ Meal / F&B Inclusion (USD)
-                      </FieldLabel>
-                      <Badge variant="outline" className="border-amber-500/40 text-amber-700 dark:text-amber-400 text-[10px]">
-                        F&B Portion
-                      </Badge>
-                    </div>
-                    <div className="relative mt-1">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm font-semibold">
-                        $
-                      </span>
-                      <Input
-                        id={fieldId("edit-package-meal-price")}
-                        name="mealPriceUsd"
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        className="pl-7 font-medium border-amber-500/30 focus-visible:ring-amber-500"
-                        placeholder="0.00 (food component)"
-                        value={mealPrice}
-                        onChange={(e) => setMealPrice(e.target.value)}
-                      />
-                    </div>
-                    <p className="text-[10px] text-muted-foreground mt-1">
-                      Separated on resort invoices for F&B allocation.
-                    </p>
-                  </Field>
 
                   {/* 6. Family / Villa Price */}
                   <Field>
@@ -808,7 +775,7 @@ export function PackageActions({ packageData, resorts }: PackageActionsProps) {
                         </SelectItem>
                       </SelectContent>
                     </Select>
-                    <p className="text-muted-foreground text-[11px] mt-1.5">
+                    <p className="text-muted-foreground text-xs mt-1.5">
                       This price will be prominently displayed as the headline rate across internal & external staff portals.
                     </p>
                   </Field>
@@ -892,7 +859,7 @@ export function PackageActions({ packageData, resorts }: PackageActionsProps) {
                     {inclusionItems.map((item, idx) => (
                       <div
                         key={item.id}
-                        className="flex items-center gap-2 rounded-lg border border-border/70 bg-muted/30 p-2.5 shadow-2xs"
+                        className="flex flex-wrap items-center gap-2 rounded-lg border border-border/70 bg-muted/30 p-2.5 shadow-2xs sm:flex-nowrap"
                       >
                         <span className="text-xs font-semibold text-muted-foreground w-6 text-center">
                           #{idx + 1}
@@ -901,7 +868,7 @@ export function PackageActions({ packageData, resorts }: PackageActionsProps) {
                           value={item.name}
                           onChange={(e) => handleUpdateInclusionItem(item.id, "name", e.target.value)}
                           placeholder="Inclusion / Add-on name (e.g. Astro portrait, Champagne)"
-                          className="flex-1 text-sm font-medium"
+                          className="min-w-0 flex-1 basis-40 text-sm font-medium"
                         />
                         <div className="relative w-36">
                           <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-xs font-semibold">
@@ -936,7 +903,7 @@ export function PackageActions({ packageData, resorts }: PackageActionsProps) {
                   id={fieldId("edit-package-inclusions")}
                   name="inclusions"
                   placeholder="Or type standard free inclusions here (one per line)..."
-                  className="text-xs"
+                  className="text-base md:text-xs"
                   rows={2}
                   defaultValue={inclusions.filter((inc) => !String(inc).match(/^(.*?)\s*\(\+\$([0-9.]+)\)$/)).join("\n")}
                 />

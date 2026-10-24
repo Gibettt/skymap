@@ -30,3 +30,18 @@ export const externalRegistrationSchema = z.object({
   resortId: uuidSchema,
   password: z.string().min(8).max(128),
 }).strict();
+
+export const passwordSchema = z.string().min(8, 'Password must be at least 8 characters').max(128);
+
+export const resetPasswordSchema = z.object({ password: passwordSchema }).strict();
+
+export const changePasswordSchema = z
+  .object({
+    currentPassword: z.string().min(1, 'Enter your current password').max(128),
+    newPassword: passwordSchema,
+  })
+  .strict()
+  .refine((data) => data.newPassword !== data.currentPassword, {
+    message: 'The new password must be different from the current password',
+    path: ['newPassword'],
+  });

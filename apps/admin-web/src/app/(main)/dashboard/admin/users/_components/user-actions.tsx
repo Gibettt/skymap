@@ -4,7 +4,7 @@ import { type FormEvent, useState } from "react";
 
 import { useRouter } from "next/navigation";
 
-import { Eye, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
+import { Eye, KeyRound, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 import {
@@ -82,6 +82,8 @@ export function UserActions({ user, resorts }: UserActionsProps) {
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [editPending, setEditPending] = useState(false);
   const [deletePending, setDeletePending] = useState(false);
+  const [passwordOpen, setPasswordOpen] = useState(false);
+  const [passwordPending, setPasswordPending] = useState(false);
   const [role, setRole] = useState(user.role);
   const [status, setStatus] = useState(user.status);
   const [resortId, setResortId] = useState(user.resort_id ?? "");
@@ -124,6 +126,34 @@ export function UserActions({ user, resorts }: UserActionsProps) {
     }
   }
 
+  async function resetPassword(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    const password = String(form.get("password") ?? "");
+    if (password !== String(form.get("confirmPassword") ?? "")) {
+      toast.error("The two passwords do not match.");
+      return;
+    }
+
+    setPasswordPending(true);
+    try {
+      const response = await fetch(`/api/users/${user.id}/password`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password }),
+      });
+      const result = (await response.json().catch(() => ({}))) as { error?: string };
+      if (!response.ok) throw new Error(result.error ?? "The password could not be reset.");
+
+      toast.success(`The password for ${user.name} was changed.`);
+      setPasswordOpen(false);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "The password could not be reset.");
+    } finally {
+      setPasswordPending(false);
+    }
+  }
+
   async function deleteUser() {
     setDeletePending(true);
     try {
@@ -152,7 +182,7 @@ export function UserActions({ user, resorts }: UserActionsProps) {
             className="size-8 rounded-md text-muted-foreground hover:bg-muted/50"
             size="icon-sm"
             variant="ghost"
-            disabled={editPending || deletePending}
+            disabled={editPending || deletePending || passwordPending}
             aria-label={`Actions for ${user.name}`}
           >
             <MoreHorizontal className="size-4" />
@@ -168,6 +198,10 @@ export function UserActions({ user, resorts }: UserActionsProps) {
             <DropdownMenuItem onSelect={openEditDialog}>
               <Pencil />
               Edit
+            </DropdownMenuItem>
+            <DropdownMenuItem onSelect={() => setPasswordOpen(true)}>
+              <KeyRound />
+              Reset password
             </DropdownMenuItem>
           </DropdownMenuGroup>
           <DropdownMenuSeparator />
@@ -325,6 +359,57 @@ export function UserActions({ user, resorts }: UserActionsProps) {
               <Button type="submit" disabled={editPending || (role !== "admin" && !resortId)}>
                 {editPending && <Spinner data-icon="inline-start" />}
                 {editPending ? "Saving..." : "Save changes"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={passwordOpen} onOpenChange={setPasswordOpen}>
+        <DialogContent className="sm:max-w-md">
+          <form className="flex flex-col gap-4" onSubmit={resetPassword}>
+            <DialogHeader>
+              <DialogTitle>Reset password</DialogTitle>
+              <DialogDescription>
+                Set a new password for {user.name} ({user.email}). Share it with them privately; they can change it
+                later in their Settings.
+              </DialogDescription>
+            </DialogHeader>
+            <FieldGroup>
+              <Field>
+                <FieldLabel htmlFor={fieldId("new-password")}>New password</FieldLabel>
+                <Input
+                  id={fieldId("new-password")}
+                  name="password"
+                  type="password"
+                  autoComplete="new-password"
+                  minLength={8}
+                  maxLength={128}
+                  required
+                />
+              </Field>
+              <Field>
+                <FieldLabel htmlFor={fieldId("confirm-password")}>Confirm new password</FieldLabel>
+                <Input
+                  id={fieldId("confirm-password")}
+                  name="confirmPassword"
+                  type="password"
+                  autoComplete="new-password"
+                  minLength={8}
+                  maxLength={128}
+                  required
+                />
+              </Field>
+            </FieldGroup>
+            <DialogFooter>
+              <DialogClose asChild>
+                <Button type="button" variant="outline" disabled={passwordPending}>
+                  Cancel
+                </Button>
+              </DialogClose>
+              <Button type="submit" disabled={passwordPending}>
+                {passwordPending && <Spinner data-icon="inline-start" />}
+                {passwordPending ? "Saving..." : "Set new password"}
               </Button>
             </DialogFooter>
           </form>

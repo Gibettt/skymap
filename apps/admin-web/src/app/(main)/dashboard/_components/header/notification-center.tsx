@@ -153,7 +153,7 @@ export function NotificationCenter() {
           <Bell data-icon="inline-start" />
           {unreadCount > 0 ? (
             <Badge
-              className="pointer-events-none absolute -top-1.5 -right-1.5 h-4 min-w-4 px-1 bg-red-600 text-white font-bold text-[10px] rounded-full flex items-center justify-center shadow-xs border border-background"
+              className="pointer-events-none absolute -top-1.5 -right-1.5 h-4 min-w-4 px-1 bg-red-600 text-white font-bold text-xs rounded-full flex items-center justify-center shadow-xs border border-background"
               aria-hidden="true"
             >
               {unreadCount > 9 ? "9+" : unreadCount}

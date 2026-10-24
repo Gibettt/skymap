@@ -1,11 +1,11 @@
-import { assertSameOrigin, jsonError, parseJsonBody, requirePermission, writeAudit } from "@ephemeris/auth";
+import { ApiError, assertSameOrigin, jsonError, parseJsonBody, requirePermission, writeAudit } from "@ephemeris/auth";
 import { query, refreshAfterBookingChange, transaction } from "@ephemeris/db";
 import {
   bookingCreationInputForStaff,
   bookingCreationState,
   bookingParticipantSummary,
   bookingResponseForStaff,
-  combineBookingTotals,
+  priceBookingExperiences,
   replaceBookingExperiences,
   replaceBookingParticipants,
 } from "@ephemeris/db/bookings";
@@ -92,57 +92,18 @@ export async function POST(request) {
         resortName = resortRes.rows[0]?.name || null;
       }
 
-      const preparedExperiences = [];
-      for (const experience of requestedExperiences) {
-        const packageResult = await client.query("SELECT * FROM packages WHERE id = $1 AND is_active = true", [
-          experience.packageId,
-        ]);
-        const packageRecord = packageResult.rows[0];
-        if (!packageRecord || packageRecord.resort_id !== resortId) {
-          throw new Error("Package not found for this resort");
-        }
-
-        let skyEvent = null;
-        if (experience.skyEventId) {
-          const eventResult = await client.query(
-            `SELECT id, package_id, price_override_usd
-             FROM sky_events WHERE id = $1 AND resort_id = $2 AND status = 'published'`,
-            [experience.skyEventId, resortId],
-          );
-          skyEvent = eventResult.rows[0];
-          if (!skyEvent || (skyEvent.package_id && skyEvent.package_id !== experience.packageId)) {
-            throw new Error("Sky event not found for this resort and package");
-          }
-        }
-
-        const adultPriceUsd = Number(skyEvent?.price_override_usd ?? packageRecord.adult_price_usd);
-        const childPriceUsd =
-          skyEvent?.price_override_usd != null
-            ? Number(skyEvent.price_override_usd) * 0.5
-            : packageRecord.package_type === "kids" && Number(packageRecord.adult_price_usd) === 0
-              ? Number(packageRecord.child_price_usd ?? 0)
-              : Number(packageRecord.adult_price_usd) * 0.5;
-        const experienceTotals = calculateBookingTotals({
-          adultCount,
-          childCount,
-          adultPriceUsd,
-          childPriceUsd,
-          staffRole: staff.rows[0].role,
-          isChargeable: packageRecord.is_chargeable,
-        });
-
-        preparedExperiences.push({
-          ...experience,
-          package: packageRecord,
-          adultPriceUsd,
-          childPriceUsd,
-          baseTotalUsd: experienceTotals.baseTotalUsd,
-          totals: experienceTotals,
-        });
-      }
-
+      const priced = await priceBookingExperiences(client, {
+        experiences: requestedExperiences,
+        resortId,
+        adultCount,
+        childCount,
+        staffRole: staff.rows[0].role,
+        calculateTotals: calculateBookingTotals,
+      });
+      if (priced.error) throw new ApiError(priced.status, priced.error);
+      const preparedExperiences = priced.experiences;
       const primaryExperience = preparedExperiences[0];
-      const totals = combineBookingTotals(preparedExperiences.map((experience) => experience.totals));
+      const totals = priced.totals;
 
       const { status, assignedInternalId } = bookingCreationState(user);
 

@@ -181,6 +181,8 @@ function BookingFormLoading() {
 
 interface NewBookingFormProps {
   role: StaffRole;
+  /** When set, the form edits this booking (guests, packages, add-ons) instead of creating one. */
+  booking?: StaffBooking | null;
   onCreated: (booking: StaffBooking) => void | Promise<void>;
   onCancel: () => void;
 }
@@ -244,25 +246,80 @@ function createExperience(index: number, packageId = ""): BookingExperienceDraft
   };
 }
 
-export function NewBookingForm({ role, onCreated, onCancel }: NewBookingFormProps) {
+function experiencesFromBooking(booking: StaffBooking): BookingExperienceDraft[] {
+  const source = booking.experiences?.length
+    ? booking.experiences
+    : [
+        {
+          packageId: booking.package_id ?? "",
+          eventDate: booking.event_date,
+          timeStart: booking.time_start ?? "21:00",
+          timeEnd: booking.time_end ?? computeEndTime(booking.time_start ?? "21:00"),
+          observationSpot: booking.observation_spot,
+        },
+      ];
+  return source.map((experience, index) => ({
+    clientId: `experience-${index}`,
+    packageId: experience.packageId,
+    eventDate: String(experience.eventDate).slice(0, 10),
+    timeStart: String(experience.timeStart).slice(0, 5),
+    timeEnd: String(experience.timeEnd).slice(0, 5),
+    observationSpot: experience.observationSpot ?? "",
+  }));
+}
+
+function participantsFromBooking(booking: StaffBooking): BookingParticipantDraft[] {
+  if (booking.participants?.length) {
+    return booking.participants.map((participant, index) => ({
+      clientId: `participant-${participant.type}-${index}-saved`,
+      fullName: participant.fullName,
+      type: participant.type,
+      age: participant.age == null ? "" : String(participant.age),
+      nationality: participant.nationality ?? "",
+      notes: participant.notes ?? "",
+    }));
+  }
+  // Older bookings only stored counts, so rebuild placeholder rows around the primary guest.
+  const adults = Array.from({ length: Math.max(1, booking.adult_count) }, (_, index) => ({
+    ...createParticipant(index, "adult"),
+    fullName: index === 0 ? booking.guest_name : "",
+    nationality: booking.nationality ?? "",
+  }));
+  const children = Array.from({ length: booking.child_count }, (_, index) => ({
+    ...createParticipant(index, "child"),
+    nationality: booking.nationality ?? "",
+  }));
+  return [...adults, ...children];
+}
+
+export function NewBookingForm({ role, booking = null, onCreated, onCancel }: NewBookingFormProps) {
   const formRef = React.useRef<HTMLFormElement>(null);
   const [user, setUser] = React.useState<StaffUser | null>(null);
   const [packages, setPackages] = React.useState<StaffPackage[]>([]);
-  const [preferredLanguage, setPreferredLanguage] = React.useState("English");
-  const [bookingSource, setBookingSource] = React.useState("WhatsApp");
-  const [paymentMethod, setPaymentMethod] = React.useState("Bank transfer");
+  const [preferredLanguage, setPreferredLanguage] = React.useState(booking?.preferred_language || "English");
+  const [bookingSource, setBookingSource] = React.useState(booking?.booking_source || "WhatsApp");
+  const [paymentMethod, setPaymentMethod] = React.useState(booking?.payment_method || "Bank transfer");
+  // External staff never see billing fields of a saved booking, so they are not editable there.
+  const editingAsExternal = Boolean(booking) && role === "external";
+
+  const [participants, setParticipants] = React.useState<BookingParticipantDraft[]>(() =>
+    booking ? participantsFromBooking(booking) : [createParticipant(0, "adult")],
+  );
 
   // Guest counters (Adults & Kids)
-  const [numAdults, setNumAdults] = React.useState(1);
-  const [numChildren, setNumChildren] = React.useState(0);
+  const [numAdults, setNumAdults] = React.useState(() =>
+    Math.max(1, participants.filter((participant) => participant.type === "adult").length),
+  );
+  const [numChildren, setNumChildren] = React.useState(
+    () => participants.filter((participant) => participant.type === "child").length,
+  );
 
-  const [participants, setParticipants] = React.useState<BookingParticipantDraft[]>(() => [
-    createParticipant(0, "adult"),
-  ]);
-  const experienceSequence = React.useRef(1);
-  const [experiences, setExperiences] = React.useState<BookingExperienceDraft[]>(() => [createExperience(0)]);
+  const [experiences, setExperiences] = React.useState<BookingExperienceDraft[]>(() =>
+    booking ? experiencesFromBooking(booking) : [createExperience(0)],
+  );
+  const experienceSequence = React.useRef(experiences.length);
   const [currentStep, setCurrentStep] = React.useState<BookingStep>(1);
-  const [highestStep, setHighestStep] = React.useState<BookingStep>(1);
+  const [highestStep, setHighestStep] = React.useState<BookingStep>(booking ? 3 : 1);
   const [loading, setLoading] = React.useState(true);
   const [submitting, setSubmitting] = React.useState(false);
   const [error, setError] = React.useState("");
@@ -330,7 +387,7 @@ export function NewBookingForm({ role, onCreated, onCancel }: NewBookingFormProp
         setUser(meRes.user);
         const normalizedPackages = (pkgsRes.packages || []).map(normalizePackage);
         setPackages(normalizedPackages);
-        if (normalizedPackages[0]) {
+        if (normalizedPackages[0] && !booking) {
           setExperiences([createExperience(0, normalizedPackages[0].id)]);
         }
       } catch (err) {
@@ -345,7 +402,7 @@ export function NewBookingForm({ role, onCreated, onCancel }: NewBookingFormProp
     return () => {
       active = false;
     };
-  }, []);
+  }, [booking]);
 
   const scheduledPackages = experiences.map(
     (experience) => packages.find((item) => item.id === experience.packageId) || null,
@@ -675,7 +732,35 @@ export function NewBookingForm({ role, onCreated, onCancel }: NewBookingFormProp
     };
 
     try {
-      const createdBooking = await staffApi<StaffBooking>("/api/bookings", {
+      if (booking) {
+        // Schedule comes from the experiences; slot and consent flags stay as operations set them.
+        const changes: Record<string, unknown> = {
+          participants: payload.participants,
+          experiences: payload.experiences,
+          roomNumber: payload.roomNumber,
+          guestPhone: payload.guestPhone,
+          guestEmail: payload.guestEmail,
+          preferredLanguage: payload.preferredLanguage,
+          specialOccasion: payload.specialOccasion,
+          dietaryRestrictions: payload.dietaryRestrictions,
+          bookingSource: payload.bookingSource,
+          packageNotes: payload.packageNotes,
+        };
+        if (!editingAsExternal) {
+          changes.paymentMethod = payload.paymentMethod;
+          changes.notes = payload.notes;
+        }
+        const saved = await staffApi<{ booking: StaffBooking }>(`/api/bookings/${booking.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(changes),
+        });
+        toast.success(`Booking ${booking.booking_code} updated. Totals were recalculated.`);
+        await onCreated(saved.booking);
+        return;
+      }
+
+      const created = await staffApi<{ booking: StaffBooking }>("/api/bookings", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
@@ -684,11 +769,11 @@ export function NewBookingForm({ role, onCreated, onCancel }: NewBookingFormProp
       toast.success(
         role === "external"
           ? "Booking submitted. An internal guide will review it shortly."
-          : `Booking ${createdBooking.booking_code} created successfully.`,
+          : `Booking ${created.booking.booking_code} created successfully.`,
       );
-      await onCreated(createdBooking);
+      await onCreated(created.booking);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to create booking.");
+      setError(err instanceof Error ? err.message : booking ? "Failed to update booking." : "Failed to create booking.");
     } finally {
       setSubmitting(false);
     }
@@ -1187,6 +1272,7 @@ export function NewBookingForm({ role, onCreated, onCancel }: NewBookingFormProp
                             <Input
                               id="booking-room"
                               name="roomNumber"
+                              defaultValue={booking?.room_number ?? ""}
                               maxLength={20}
                               placeholder="e.g. Villa 102"
                               required
@@ -1217,6 +1303,7 @@ export function NewBookingForm({ role, onCreated, onCancel }: NewBookingFormProp
                             <Input
                               id="booking-guest-phone"
                               name="guestPhone"
+                              defaultValue={booking?.guest_phone ?? ""}
                               maxLength={30}
                               autoComplete="tel"
                               placeholder="+960 ..."
@@ -1227,6 +1314,7 @@ export function NewBookingForm({ role, onCreated, onCancel }: NewBookingFormProp
                             <Input
                               id="booking-guest-email"
                               name="guestEmail"
+                              defaultValue={booking?.guest_email ?? ""}
                               type="email"
                               maxLength={254}
                               autoComplete="email"
@@ -1266,6 +1354,7 @@ export function NewBookingForm({ role, onCreated, onCancel }: NewBookingFormProp
                               </SelectContent>
                             </Select>
                           </Field>
+                          {editingAsExternal ? null : (
                           <Field>
                             <FieldLabel htmlFor="booking-payment">Payment method</FieldLabel>
                             <Select value={paymentMethod} onValueChange={(value) => value && setPaymentMethod(value)}>
@@ -1280,11 +1369,13 @@ export function NewBookingForm({ role, onCreated, onCancel }: NewBookingFormProp
                               </SelectContent>
                             </Select>
                           </Field>
+                          )}
                           <Field>
                             <FieldLabel htmlFor="booking-special-occasion">Special occasion</FieldLabel>
                             <Input
                               id="booking-special-occasion"
                               name="specialOccasion"
+                              defaultValue={booking?.special_occasion ?? ""}
                               maxLength={500}
                               placeholder="Birthday, anniversary..."
                             />
@@ -1294,6 +1385,7 @@ export function NewBookingForm({ role, onCreated, onCancel }: NewBookingFormProp
                             <Input
                               id="booking-dietary"
                               name="dietaryRestrictions"
+                              defaultValue={booking?.dietary_restrictions ?? ""}
                               maxLength={500}
                               placeholder="Vegetarian, allergies, halal..."
                             />
@@ -1303,19 +1395,23 @@ export function NewBookingForm({ role, onCreated, onCancel }: NewBookingFormProp
                             <Textarea
                               id="booking-package-notes"
                               name="packageNotes"
+                              defaultValue={booking?.package_notes ?? ""}
                               maxLength={4000}
                               placeholder="Guest-specific package preparation details."
                             />
                           </Field>
+                          {editingAsExternal ? null : (
                           <Field className="md:col-span-2">
                             <FieldLabel htmlFor="booking-notes">Internal notes</FieldLabel>
                             <Textarea
                               id="booking-notes"
                               name="notes"
+                              defaultValue={booking?.notes ?? ""}
                               maxLength={2000}
                               placeholder="Visible to authorized operations staff."
                             />
                           </Field>
+                          )}
                         </FieldGroup>
                       </FieldSet>
                     </CardContent>
@@ -1386,7 +1482,7 @@ export function NewBookingForm({ role, onCreated, onCancel }: NewBookingFormProp
                     ) : (
                       <Button type="submit" disabled={submitting || readOnly}>
                         {submitting ? <Spinner data-icon="inline-start" /> : <CalendarPlus data-icon="inline-start" />}
-                        {submitting ? "Creating booking..." : "Create booking"}
+                        {submitting ? (booking ? "Saving changes..." : "Creating booking...") : booking ? "Save changes" : "Create booking"}
                       </Button>
                     )}
                     <Button type="button" variant="outline" onClick={onCancel}>
@@ -1398,10 +1494,16 @@ export function NewBookingForm({ role, onCreated, onCancel }: NewBookingFormProp
                 <Alert>
                   <Check />
                   <AlertTitle>
-                    {role === "external" ? "Internal approval required" : "Immediately operational"}
+                    {booking
+                      ? "Totals are recalculated"
+                      : role === "external"
+                        ? "Internal approval required"
+                        : "Immediately operational"}
                   </AlertTitle>
                   <AlertDescription>
-                    {role === "external"
+                    {booking
+                      ? "Adding guests, packages, or add-ons updates the booking total, service charge, and tax when you save."
+                      : role === "external"
                       ? "External bookings start as Pending until internal resort staff approves them."
                       : "Internal bookings start as Active and are assigned to the creating staff member."}
                   </AlertDescription>

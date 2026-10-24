@@ -11,7 +11,7 @@ const landingUrl = process.env.NEXT_PUBLIC_LANDING_URL || null;
  * Form login bersama untuk semua portal.
  * @param {{ roles: {id,label,desc,icon}[], demoUsers: {[id]: {email,password}}, portalLabel: string }} props
  */
-export default function LoginClient({ roles, demoUsers, portalLabel = 'Portal' }) {
+export default function LoginClient({ roles, demoUsers = {}, portalLabel = 'Portal' }) {
   const router = useRouter();
   const [selectedRole, setSelectedRole] = useState(roles[0]?.id || '');
   const [email, setEmail] = useState(demoUsers[roles[0]?.id]?.email || '');
@@ -44,7 +44,7 @@ export default function LoginClient({ roles, demoUsers, portalLabel = 'Portal' }
       }
       const data = await response.json();
       if (!response.ok) {
-        setError(data.error || 'Email atau password salah. Gunakan kredensial demo di bawah.');
+        setError(data.error || 'Email atau password salah.');
         setLoading(false);
         return;
       }
@@ -144,6 +144,7 @@ export default function LoginClient({ roles, demoUsers, portalLabel = 'Portal' }
               </button>
             </form>
 
+            {demoUsers[selectedRole]?.password ? (
             <div className="login-demo">
               <div className="login-demo-title">Kredensial demo</div>
               <div className="login-demo-grid">
@@ -153,6 +154,7 @@ export default function LoginClient({ roles, demoUsers, portalLabel = 'Portal' }
                 <code>{demoUsers[selectedRole]?.password}</code>
               </div>
             </div>
+            ) : null}
           </div>
         </div>
       </section>

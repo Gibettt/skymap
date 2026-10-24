@@ -194,7 +194,7 @@ export function Packages({
               }}
             />
             <InputGroupAddon align="inline-end">
-              <Kbd className="h-4 text-[10px]">Ctrl K</Kbd>
+              <Kbd className="h-4 text-xs">Ctrl K</Kbd>
             </InputGroupAddon>
           </InputGroup>
 
@@ -305,7 +305,7 @@ export function Packages({
           </div>
 
           <Tabs value={view} onValueChange={changeView}>
-            <TabsList aria-label="Package view">
+            <TabsList aria-label="Package view" className="max-md:hidden">
               <TabsTrigger value="list" aria-label="List view" title="List view">
                 <Rows3 />
               </TabsTrigger>
@@ -316,7 +316,14 @@ export function Packages({
           </Tabs>
         </div>
 
-        {view === "list" ? <PackagesTable table={table} /> : <PackagesGrid table={table} resorts={resorts} />}
+        {view === "list" ? (
+          <>
+            <div className="md:hidden"><PackagesGrid table={table} resorts={resorts} /></div>
+            <div className="hidden md:block"><PackagesTable table={table} /></div>
+          </>
+        ) : (
+          <PackagesGrid table={table} resorts={resorts} />
+        )}
       </CardContent>
       {table.getFilteredRowModel().rows.length ? <PackagesPagination table={table} /> : null}
     </Card>

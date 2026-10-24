@@ -3,8 +3,11 @@ import { refreshAfterBookingChange, transaction } from "@ephemeris/db";
 import {
   assignedInternalAfterUpdate,
   bookingParticipantSummary,
+  bookingUpdateInputForStaff,
   canTransitionBookingStatus,
-  hasStoredBookingExperiences,
+  externalBookingEditError,
+  priceBookingExperiences,
+  replaceBookingExperiences,
   replaceBookingParticipants,
 } from "@ephemeris/db/bookings";
 import { bookingSelectQuery, cleanText } from "@ephemeris/db/helpers";
@@ -14,11 +17,21 @@ import { uuidSchema } from "@ephemeris/db/validators/common";
 import { EventTypes, emit } from "@ephemeris/events";
 import { calculateBookingTotals } from "@ephemeris/finance";
 
+function dateOnly(value) {
+  if (value instanceof Date) {
+    return `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, "0")}-${String(value.getDate()).padStart(2, "0")}`;
+  }
+  return String(value).slice(0, 10);
+}
+
+function timeOnly(value) {
+  return String(value).slice(0, 5);
+}
+
 export async function PATCH(request, { params }) {
   try {
     await assertSameOrigin(request);
     const user = await requirePermission("staff.bookings", ["internal", "external"], { write: true });
-    if (user.role === "external") throw new ApiError(403, "External staff cannot modify bookings");
     const { id: rawId } = await params;
     const parseId = uuidSchema.safeParse(rawId);
     if (!parseId.success) return Response.json({ error: "ID tidak valid" }, { status: 400 });
@@ -27,22 +40,32 @@ export async function PATCH(request, { params }) {
     if (!parsed.success) {
       return Response.json({ error: "Data booking tidak valid", details: parsed.error.flatten() }, { status: 400 });
     }
-    const body = parsed.data;
+    const body = bookingUpdateInputForStaff(user, parsed.data);
     if (body.eventDate !== undefined || body.timeStart !== undefined || body.timeEnd !== undefined) {
-      throw new ApiError(400, "Use the reschedule endpoint to change booking schedule");
+      throw new ApiError(400, "Use the reschedule endpoint or the experience schedule to change booking schedule");
     }
 
     const updated = await transaction(async (client) => {
       const beforeResult = await client.query("SELECT * FROM bookings WHERE id = $1 FOR UPDATE", [id]);
       const before = beforeResult.rows[0];
       if (!before) return null;
-      if (!canManageBooking(user, before)) throw new ApiError(403, "Forbidden");
+      if (user.role === "external") {
+        const editError = externalBookingEditError(user, before);
+        if (editError) throw new ApiError(editError.status, editError.error);
+      } else if (!canManageBooking(user, before)) {
+        throw new ApiError(403, "Forbidden");
+      }
 
-      if (body.packageId && body.packageId !== before.package_id && (await hasStoredBookingExperiences(client, id))) {
+      const { rows: storedExperiences } = await client.query(
+        `SELECT package_id, sky_event_id, event_date, time_start, time_end, observation_spot
+         FROM booking_experiences WHERE booking_id = $1 ORDER BY sort_order`,
+        [id],
+      );
+      if (body.packageId && body.packageId !== before.package_id && storedExperiences.length) {
         throw new ApiError(409, "The primary package is managed from the booking experience schedule");
       }
 
-      const packageId = body.packageId || before.package_id;
+      let packageId = body.packageId || before.package_id;
       const packageChanged = packageId !== before.package_id;
       let adultPriceUsd = Number(before.booked_adult_price_usd);
       let childPriceUsd = Number(before.booked_child_price_usd);
@@ -53,7 +76,7 @@ export async function PATCH(request, { params }) {
       if (packageChanged || (adultPriceUsd === 0 && before.base_total_usd === 0) || !adultPriceUsd) {
         const pkg = await client.query("SELECT * FROM packages WHERE id = $1", [packageId]);
         if (!pkg.rows[0] || pkg.rows[0].resort_id !== before.resort_id)
-          throw new Error("Package not found for this resort");
+          throw new ApiError(400, "Package not found for this resort");
         adultPriceUsd = Number(pkg.rows[0].adult_price_usd);
         childPriceUsd = Number(
           pkg.rows[0].child_price_usd ?? (pkg.rows[0].package_type === "kids" ? adultPriceUsd : adultPriceUsd * 0.5),
@@ -63,12 +86,12 @@ export async function PATCH(request, { params }) {
         isChargeable = pkg.rows[0].is_chargeable;
       } else {
         const pkg = await client.query("SELECT is_chargeable FROM packages WHERE id = $1", [packageId]);
-        if (!pkg.rows[0]) throw new Error("Package not found");
+        if (!pkg.rows[0]) throw new ApiError(400, "Package not found");
         isChargeable = pkg.rows[0].is_chargeable;
       }
 
-      const nextSkyEventId = body.skyEventId === undefined ? before.sky_event_id : body.skyEventId;
-      if (nextSkyEventId) {
+      let nextSkyEventId = body.skyEventId === undefined ? before.sky_event_id : body.skyEventId;
+      if (nextSkyEventId && body.experiences === undefined) {
         const eventResult = await client.query(
           `SELECT price_override_usd FROM sky_events
            WHERE id = $1 AND resort_id = $2 AND status = 'published'
@@ -106,7 +129,24 @@ export async function PATCH(request, { params }) {
         throw new ApiError(400, "Minimal harus ada 1 tamu (dewasa atau anak)");
       }
 
-      const totals = calculateBookingTotals({
+      const pricingChanged =
+        body.experiences !== undefined ||
+        packageChanged ||
+        body.skyEventId !== undefined ||
+        adultCount !== Number(before.adult_count) ||
+        childCount !== Number(before.child_count);
+      const paid = before.payment_status === "paid";
+      if (paid && pricingChanged) {
+        throw new ApiError(409, "Guests and packages of a paid booking cannot change because its invoice is issued");
+      }
+
+      let eventDate = before.event_date;
+      let timeStart = before.time_start;
+      let timeEnd = before.time_end;
+      let observationSpot =
+        body.observationSpot === undefined ? before.observation_spot : cleanText(body.observationSpot, 120);
+      let pricedExperiences = null;
+      let totals = calculateBookingTotals({
         adultCount,
         childCount,
         adultPriceUsd,
@@ -114,6 +154,59 @@ export async function PATCH(request, { params }) {
         staffRole,
         isChargeable,
       });
+
+      // Every scheduled experience counts towards the total, not only the primary package.
+      const experienceInput =
+        body.experiences ??
+        (storedExperiences.length
+          ? storedExperiences.map((row) => ({
+              packageId: row.package_id,
+              skyEventId: row.sky_event_id,
+              eventDate: dateOnly(row.event_date),
+              timeStart: timeOnly(row.time_start),
+              timeEnd: timeOnly(row.time_end),
+              observationSpot: row.observation_spot,
+            }))
+          : null);
+      if (experienceInput && !paid) {
+        const priced = await priceBookingExperiences(client, {
+          experiences: experienceInput,
+          resortId: before.resort_id,
+          adultCount,
+          childCount,
+          staffRole,
+          calculateTotals: calculateBookingTotals,
+          keepInactivePackageIds: storedExperiences.map((row) => row.package_id),
+        });
+        if (priced.error) throw new ApiError(priced.status, priced.error);
+        pricedExperiences = priced.experiences;
+        totals = priced.totals;
+        const primary = pricedExperiences[0];
+        packageId = primary.packageId;
+        newBookedAdultPriceUsd = primary.adultPriceUsd;
+        newBookedChildPriceUsd = primary.childPriceUsd;
+        if (body.experiences !== undefined) {
+          eventDate = primary.eventDate;
+          timeStart = primary.timeStart;
+          timeEnd = primary.timeEnd;
+          nextSkyEventId = primary.skyEventId || null;
+          observationSpot = primary.observationSpot || null;
+        }
+      }
+      if (paid) {
+        // Keep the invoiced amounts, including any custom tax set at payment confirmation.
+        totals = {
+          baseTotalUsd: before.base_total_usd,
+          serviceChargeUsd: before.service_charge_10_usd,
+          gstUsd: before.gst_17_usd,
+          invoiceTotalUsd: before.invoice_total_usd,
+          operationShareUsd: before.operation_share_50_usd,
+          companyShareUsd: before.company_share_50_usd,
+          staffCommissionUsd: before.staff_commission_5_usd,
+        };
+        newBookedAdultPriceUsd = before.booked_adult_price_usd;
+        newBookedChildPriceUsd = before.booked_child_price_usd;
+      }
 
       const nextStatus = body.status ?? before.status;
       const assignedInternalId = assignedInternalAfterUpdate({
@@ -197,9 +290,9 @@ export async function PATCH(request, { params }) {
          RETURNING *`,
         [
           id,
-          before.event_date,
-          before.time_start,
-          before.time_end,
+          eventDate,
+          timeStart,
+          timeEnd,
           participantSummary.primary?.fullName ?? body.guestName ?? before.guest_name,
           body.guestPhone === undefined ? before.guest_phone : cleanText(body.guestPhone),
           guestEmail,
@@ -247,11 +340,12 @@ export async function PATCH(request, { params }) {
           user.id,
           assignedInternalId,
           nextSkyEventId,
-          body.observationSpot === undefined ? before.observation_spot : cleanText(body.observationSpot, 120),
+          observationSpot,
         ],
       );
 
       await replaceBookingParticipants(client, id, body.participants);
+      if (pricedExperiences) await replaceBookingExperiences(client, id, pricedExperiences);
 
       await writeAudit(client, {
         actorId: user.id,

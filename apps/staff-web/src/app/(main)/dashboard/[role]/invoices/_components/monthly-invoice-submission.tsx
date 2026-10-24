@@ -405,7 +405,7 @@ export function MonthlyInvoiceSubmissionPanel({ invoices, pending, readOnly, sig
                   <td className="px-3 py-2.5">
                     <p className="font-medium text-slate-100">{workflow.recipient_name}</p>
                     {invoice?.recipient_phone || (invoice ? snapshotText(invoice, "guest_phone") : null) ? (
-                      <p className="font-mono text-[11px] text-slate-400">
+                      <p className="font-mono text-xs text-slate-400">
                         {invoice?.recipient_phone || (invoice ? snapshotText(invoice, "guest_phone") : "")}
                       </p>
                     ) : null}

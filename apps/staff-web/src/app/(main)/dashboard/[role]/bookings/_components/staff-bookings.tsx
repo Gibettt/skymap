@@ -259,31 +259,31 @@ function BookingDetails({
           {/* Top Info Grid */}
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 p-3.5 rounded-xl border border-cyan-400/20 bg-[#041633]/70">
             <div>
-              <span className="text-[11px] font-medium text-slate-400 block">Schedule</span>
+              <span className="text-xs font-medium text-slate-400 block">Schedule</span>
               <span className="text-xs font-semibold text-slate-100 mt-0.5 block">
                 {formatDate(booking.event_date)}, {shortTime(booking.time_start)}–{shortTime(booking.time_end)}
               </span>
             </div>
             <div>
-              <span className="text-[11px] font-medium text-slate-400 block">Room / Villa</span>
+              <span className="text-xs font-medium text-slate-400 block">Room / Villa</span>
               <span className="text-xs font-semibold text-slate-100 mt-0.5 block">{booking.room_number || "-"}</span>
             </div>
             <div>
-              <span className="text-[11px] font-medium text-slate-400 block">Guests</span>
+              <span className="text-xs font-medium text-slate-400 block">Guests</span>
               <span className="text-xs font-semibold text-slate-100 mt-0.5 block">
                 {booking.adult_count} adults, {booking.child_count} children
               </span>
             </div>
             <div>
-              <span className="text-[11px] font-medium text-slate-400 block">Phone</span>
+              <span className="text-xs font-medium text-slate-400 block">Phone</span>
               <span className="text-xs font-medium text-slate-200 mt-0.5 block">{booking.guest_phone || "-"}</span>
             </div>
             <div>
-              <span className="text-[11px] font-medium text-slate-400 block">Email</span>
+              <span className="text-xs font-medium text-slate-400 block">Email</span>
               <span className="text-xs font-medium text-slate-200 mt-0.5 block truncate" title={booking.guest_email ?? ""}>{booking.guest_email || "-"}</span>
             </div>
             <div>
-              <span className="text-[11px] font-medium text-slate-400 block">Nationality</span>
+              <span className="text-xs font-medium text-slate-400 block">Nationality</span>
               <span className="text-xs font-medium text-slate-200 mt-0.5 block">{booking.nationality || "-"}</span>
             </div>
           </div>
@@ -307,7 +307,7 @@ function BookingDetails({
                         <TableCell>
                           <div className="flex items-center gap-2">
                             <span className="font-medium text-white">{experience.packageName}</span>
-                            {index === 0 ? <Badge className="border-cyan-400/30 bg-cyan-500/20 text-cyan-200 text-[10px]">Primary</Badge> : null}
+                            {index === 0 ? <Badge className="border-cyan-400/30 bg-cyan-500/20 text-cyan-200 text-xs">Primary</Badge> : null}
                           </div>
                         </TableCell>
                         <TableCell className="text-slate-200">{formatDate(experience.eventDate)}</TableCell>
@@ -348,11 +348,11 @@ function BookingDetails({
                         <TableCell>
                           <div className="flex items-center gap-2">
                             <span className="font-medium text-white">{participant.fullName}</span>
-                            {index === 0 ? <Badge className="border-cyan-400/30 bg-cyan-500/20 text-cyan-200 text-[10px]">Primary</Badge> : null}
+                            {index === 0 ? <Badge className="border-cyan-400/30 bg-cyan-500/20 text-cyan-200 text-xs">Primary</Badge> : null}
                           </div>
                         </TableCell>
                         <TableCell>
-                          <Badge variant="outline" className={participant.type === "child" ? "border-amber-400/35 bg-amber-500/15 text-amber-200 text-[11px]" : "border-slate-500/30 bg-slate-500/15 text-slate-200 text-[11px]"}>
+                          <Badge variant="outline" className={participant.type === "child" ? "border-amber-400/35 bg-amber-500/15 text-amber-200 text-xs" : "border-slate-500/30 bg-slate-500/15 text-slate-200 text-xs"}>
                             {titleCase(participant.type)}
                           </Badge>
                         </TableCell>
@@ -370,22 +370,22 @@ function BookingDetails({
           {/* Summary Financial & Meta Card */}
           <div className="md:col-span-2 grid grid-cols-2 sm:grid-cols-4 gap-3 p-3.5 rounded-xl border border-cyan-400/25 bg-[#041a3a]/90 shadow-inner mt-1">
             <div className="flex flex-col">
-              <span className="text-[11px] font-medium text-slate-400">Invoice Total</span>
+              <span className="text-xs font-medium text-slate-400">Invoice Total</span>
               <span className="text-lg font-bold font-mono text-emerald-300 mt-0.5">{formatUsd(booking.invoice_total_usd)}</span>
             </div>
             <div className="flex flex-col">
-              <span className="text-[11px] font-medium text-slate-400">Commission</span>
+              <span className="text-xs font-medium text-slate-400">Commission</span>
               <span className="text-lg font-bold font-mono text-violet-300 mt-0.5">{formatUsd(booking.staff_commission_5_usd)}</span>
             </div>
             <div className="flex flex-col">
-              <span className="text-[11px] font-medium text-slate-400">Resort &amp; Staff</span>
+              <span className="text-xs font-medium text-slate-400">Resort &amp; Staff</span>
               <span className="text-xs font-semibold text-slate-200 mt-0.5 truncate" title={booking.resort_name ?? "-"}>{booking.resort_name ?? "-"}</span>
-              <span className="text-[10px] text-slate-400 truncate mt-0.5">{booking.staff_name}</span>
+              <span className="text-xs text-slate-400 truncate mt-0.5">{booking.staff_name}</span>
             </div>
             <div className="flex flex-col">
-              <span className="text-[11px] font-medium text-slate-400">Guest Signature</span>
+              <span className="text-xs font-medium text-slate-400">Guest Signature</span>
               <span className="mt-1">
-                <Badge variant="outline" className={booking.signed_by_guest ? "border-emerald-400/30 bg-emerald-500/15 text-emerald-300 text-[10px]" : "border-slate-500/30 bg-slate-500/15 text-slate-400 text-[10px]"}>
+                <Badge variant="outline" className={booking.signed_by_guest ? "border-emerald-400/30 bg-emerald-500/15 text-emerald-300 text-xs" : "border-slate-500/30 bg-slate-500/15 text-slate-400 text-xs"}>
                   {booking.signed_by_guest ? "✓ Signed" : "Not signed"}
                 </Badge>
               </span>
@@ -451,6 +451,7 @@ function BookingDetails({
 interface BookingActionsProps {
   booking: StaffBooking;
   canManage: boolean;
+  canEdit: boolean;
   pending: boolean;
   onView: (booking: StaffBooking) => void;
   onEdit: (booking: StaffBooking) => void;
@@ -463,6 +464,7 @@ interface BookingActionsProps {
 function BookingActions({
   booking,
   canManage,
+  canEdit,
   pending,
   onView,
   onEdit,
@@ -495,7 +497,7 @@ function BookingActions({
             <Eye />
             View
           </DropdownMenuItem>
-          {canManage ? (
+          {canEdit ? (
             <DropdownMenuItem onSelect={() => onEdit(booking)}>
               <Pencil />
               Edit
@@ -609,6 +611,7 @@ function BookingActions({
 
 interface BookingActionContext {
   canManage: boolean;
+  canEdit: (booking: StaffBooking) => boolean;
   pendingId: string | null;
   onView: (booking: StaffBooking) => void;
   onEdit: (booking: StaffBooking) => void;
@@ -729,8 +732,8 @@ function createStaffBookingsColumns(actions: BookingActionContext): ColumnDef<Da
                   variant={staffRole === "external" ? "outline" : "secondary"}
                   className={
                     staffRole === "external"
-                      ? "border-purple-500/40 bg-purple-500/10 text-[10px] font-medium text-purple-600 dark:text-purple-400"
-                      : "border-cyan-500/40 bg-cyan-500/10 text-[10px] font-medium text-cyan-700 dark:text-cyan-300"
+                      ? "border-purple-500/40 bg-purple-500/10 text-xs font-medium text-purple-600 dark:text-purple-400"
+                      : "border-cyan-500/40 bg-cyan-500/10 text-xs font-medium text-cyan-700 dark:text-cyan-300"
                   }
                 >
                   {titleCase(staffRole)}
@@ -782,6 +785,7 @@ function createStaffBookingsColumns(actions: BookingActionContext): ColumnDef<Da
           <BookingActions
             booking={row.original}
             canManage={actions.canManage}
+            canEdit={actions.canEdit(row.original)}
             pending={actions.pendingId === row.original.id}
             onView={actions.onView}
             onEdit={actions.onEdit}
@@ -887,6 +891,7 @@ function StaffBookingsGrid({
             <BookingActions
               booking={booking}
               canManage={actions.canManage}
+              canEdit={actions.canEdit(booking)}
               pending={actions.pendingId === booking.id}
               onView={actions.onView}
               onEdit={actions.onEdit}
@@ -918,8 +923,8 @@ function StaffBookingsGrid({
                     variant={booking.staff_role === "external" ? "outline" : "secondary"}
                     className={
                       booking.staff_role === "external"
-                        ? "border-purple-500/40 bg-purple-500/10 text-[10px] font-medium text-purple-600 dark:text-purple-400"
-                        : "border-cyan-500/40 bg-cyan-500/10 text-[10px] font-medium text-cyan-700 dark:text-cyan-300"
+                        ? "border-purple-500/40 bg-purple-500/10 text-xs font-medium text-purple-600 dark:text-purple-400"
+                        : "border-cyan-500/40 bg-cyan-500/10 text-xs font-medium text-cyan-700 dark:text-cyan-300"
                     }
                   >
                     {titleCase(booking.staff_role)}
@@ -1026,7 +1031,7 @@ function InternalBookingFilterTabs({
           className={triggerClassName}
         >
           All Bookings
-          <Badge variant="secondary" className="px-1.5 py-0 text-[11px] font-normal">
+          <Badge variant="secondary" className="px-1.5 py-0 text-xs font-normal">
             {totals.total}
           </Badge>
         </TabsTrigger>
@@ -1041,12 +1046,12 @@ function InternalBookingFilterTabs({
           {totals.pending > 0 ? (
             <Badge
               variant="default"
-              className="bg-amber-500 px-1.5 py-0 text-[11px] font-medium text-white hover:bg-amber-600"
+              className="bg-amber-500 px-1.5 py-0 text-xs font-medium text-white hover:bg-amber-600"
             >
               {totals.pending}
             </Badge>
           ) : (
-            <Badge variant="secondary" className="px-1.5 py-0 text-[11px] font-normal">
+            <Badge variant="secondary" className="px-1.5 py-0 text-xs font-normal">
               0
             </Badge>
           )}
@@ -1059,7 +1064,7 @@ function InternalBookingFilterTabs({
           className={triggerClassName}
         >
           Internal
-          <Badge variant="secondary" className="px-1.5 py-0 text-[11px] font-normal">
+          <Badge variant="secondary" className="px-1.5 py-0 text-xs font-normal">
             {totals.internal}
           </Badge>
         </TabsTrigger>
@@ -1071,7 +1076,7 @@ function InternalBookingFilterTabs({
           className={triggerClassName}
         >
           External
-          <Badge variant="secondary" className="px-1.5 py-0 text-[11px] font-normal">
+          <Badge variant="secondary" className="px-1.5 py-0 text-xs font-normal">
             {totals.external}
           </Badge>
         </TabsTrigger>
@@ -1096,7 +1101,6 @@ export function StaffBookings({ role, initialNewBooking = false }: { role: Staff
   const [newBookingOpen, setNewBookingOpen] = React.useState(initialNewBooking);
   const [viewBooking, setViewBooking] = React.useState<StaffBooking | null>(null);
   const [editBooking, setEditBooking] = React.useState<StaffBooking | null>(null);
-  const [editPackageId, setEditPackageId] = React.useState("");
   const [deleteBooking, setDeleteBooking] = React.useState<StaffBooking | null>(null);
   const [rescheduleBooking, setRescheduleBooking] = React.useState<StaffBooking | null>(null);
   const [statusAction, setStatusAction] = React.useState<StatusAction | null>(null);
@@ -1162,10 +1166,20 @@ export function StaffBookings({ role, initialNewBooking = false }: { role: Staff
 
   const readOnly = user?.access_role_level === "read_only";
   const canManage = role === "internal" && user?.role === "internal" && !readOnly;
-  const openEditDialog = React.useCallback((booking: StaffBooking) => {
-    setEditPackageId(booking.package_id ?? "");
-    setEditBooking(booking);
-  }, []);
+  const openEditDialog = React.useCallback((booking: StaffBooking) => setEditBooking(booking), []);
+  const canEditBooking = React.useCallback(
+    (booking: StaffBooking) => {
+      if (readOnly) return false;
+      if (canManage) return true;
+      // Mirrors externalBookingEditError in @ephemeris/db: own, open, and not yet paid.
+      return (
+        role === "external" &&
+        ["pending", "active", "rescheduled"].includes(booking.status) &&
+        booking.payment_status !== "paid"
+      );
+    },
+    [canManage, readOnly, role],
+  );
 
   const updateBooking = React.useCallback(
     async (booking: StaffBooking, payload: Record<string, unknown>, message: string) => {
@@ -1220,44 +1234,6 @@ export function StaffBookings({ role, initialNewBooking = false }: { role: Staff
     },
     [updateBooking],
   );
-
-  async function submitEdit(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (!editBooking) return;
-
-    const booking = editBooking;
-    const formData = new FormData(event.currentTarget);
-    const hasStoredParticipants = Boolean(booking.participants?.length);
-    const adultCount = hasStoredParticipants ? booking.adult_count : Number(formData.get("adultCount"));
-    const childCount = hasStoredParticipants ? booking.child_count : Number(formData.get("childCount"));
-    if (!hasStoredParticipants && adultCount + childCount <= 0) {
-      toast.error("At least one guest is required.");
-      return;
-    }
-
-    const payload: Record<string, unknown> = {
-      guestPhone: String(formData.get("guestPhone") ?? "").trim() || null,
-      guestEmail: String(formData.get("guestEmail") ?? "").trim() || null,
-      preferredLanguage: String(formData.get("preferredLanguage") ?? "").trim() || null,
-      roomNumber: formData.get("roomNumber"),
-      bookingSource: String(formData.get("bookingSource") ?? "").trim() || null,
-      paymentMethod: String(formData.get("paymentMethod") ?? "").trim() || null,
-      notes: String(formData.get("notes") ?? "").trim() || null,
-    };
-    if (!hasStoredParticipants) {
-      payload.guestName = formData.get("guestName");
-      payload.nationality = formData.get("nationality");
-      payload.adultCount = adultCount;
-      payload.childCount = childCount;
-    }
-    if (editPackageId && editPackageId !== booking.package_id) payload.packageId = editPackageId;
-    if (["active", "rescheduled", "completed"].includes(booking.status)) {
-      payload.signedByGuest = formData.get("signedByGuest") === "yes";
-    }
-
-    const updated = await updateBooking(booking, payload, `${booking.booking_code} was updated.`);
-    if (updated) setEditBooking(null);
-  }
 
   async function confirmDeleteBooking() {
     if (!deleteBooking) return;
@@ -1355,6 +1331,7 @@ export function StaffBookings({ role, initialNewBooking = false }: { role: Staff
   const actionContext = React.useMemo<BookingActionContext>(
     () => ({
       canManage,
+      canEdit: canEditBooking,
       pendingId,
       onView: setViewBooking,
       onEdit: openEditDialog,
@@ -1363,7 +1340,7 @@ export function StaffBookings({ role, initialNewBooking = false }: { role: Staff
       onReschedule: setRescheduleBooking,
       onSigned: (booking) => void toggleSigned(booking),
     }),
-    [canManage, openEditDialog, pendingId, toggleSigned],
+    [canManage, canEditBooking, openEditDialog, pendingId, toggleSigned],
   );
   const columns = React.useMemo(() => createStaffBookingsColumns(actionContext), [actionContext]);
   const table = useTable({
@@ -1444,7 +1421,8 @@ export function StaffBookings({ role, initialNewBooking = false }: { role: Staff
   let bookingResults = <StaffBookingsTable table={table} />;
   if (viewMode === "grid") {
     bookingResults = <StaffBookingsGrid table={table} actions={actionContext} />;
-  } else if (role === "external") {
+  } else {
+    // Phones always get cards; a wide table there means sideways scrolling through every row.
     bookingResults = (
       <>
         <div className="md:hidden">
@@ -1490,7 +1468,7 @@ export function StaffBookings({ role, initialNewBooking = false }: { role: Staff
                 {totals.pending > 0 ? (
                   <Badge
                     variant="outline"
-                    className="border-amber-500/40 bg-amber-500/10 text-[10px] font-semibold text-amber-600 dark:text-amber-400"
+                    className="border-amber-500/40 bg-amber-500/10 text-xs font-semibold text-amber-600 dark:text-amber-400"
                   >
                     Review Needed
                   </Badge>
@@ -1559,7 +1537,7 @@ export function StaffBookings({ role, initialNewBooking = false }: { role: Staff
                 }}
               />
               <InputGroupAddon align="inline-end">
-                <Kbd className="h-4 text-[10px]">Ctrl K</Kbd>
+                <Kbd className="h-4 text-xs">Ctrl K</Kbd>
               </InputGroupAddon>
             </InputGroup>
 
@@ -1695,7 +1673,7 @@ export function StaffBookings({ role, initialNewBooking = false }: { role: Staff
               {selectedCount} selected / {table.getFilteredRowModel().rows.length} bookings
             </div>
 
-            <div className={role === "external" ? "hidden md:block" : undefined}>
+            <div className="hidden md:block">
               <Tabs
                 value={viewMode}
                 onValueChange={(value) => {
@@ -1761,176 +1739,34 @@ export function StaffBookings({ role, initialNewBooking = false }: { role: Staff
         onStatus={setStatusAction}
       />
 
-      <Dialog open={Boolean(editBooking)} onOpenChange={(open) => !open && setEditBooking(null)}>
-        <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-2xl">
-          <form className="flex flex-col gap-4" onSubmit={submitEdit}>
-            <DialogHeader>
-              <DialogTitle>Edit booking</DialogTitle>
-              <DialogDescription>
-                Update guest details, package, and billing inputs for {editBooking?.booking_code}.
-              </DialogDescription>
-            </DialogHeader>
-            <FieldGroup className="grid gap-4 md:grid-cols-2">
-              <Field>
-                <FieldLabel htmlFor="edit-booking-guest-name">Primary guest name</FieldLabel>
-                <Input
-                  id="edit-booking-guest-name"
-                  name="guestName"
-                  defaultValue={editBooking?.guest_name}
-                  readOnly={Boolean(editBooking?.participants?.length)}
-                  required
-                />
-              </Field>
-              <Field>
-                <FieldLabel htmlFor="edit-booking-phone">Phone (optional)</FieldLabel>
-                <Input
-                  id="edit-booking-phone"
-                  name="guestPhone"
-                  defaultValue={editBooking?.guest_phone ?? ""}
-                />
-              </Field>
-              <Field>
-                <FieldLabel htmlFor="edit-booking-email">Email (optional)</FieldLabel>
-                <Input
-                  id="edit-booking-email"
-                  name="guestEmail"
-                  type="email"
-                  defaultValue={editBooking?.guest_email ?? ""}
-                />
-              </Field>
-              <Field>
-                <FieldLabel htmlFor="edit-booking-room">Room number</FieldLabel>
-                <Input id="edit-booking-room" name="roomNumber" defaultValue={editBooking?.room_number} required />
-              </Field>
-              <Field>
-                <FieldLabel htmlFor="edit-booking-nationality">Nationality</FieldLabel>
-                <Input
-                  id="edit-booking-nationality"
-                  name="nationality"
-                  defaultValue={editBooking?.nationality}
-                  readOnly={Boolean(editBooking?.participants?.length)}
-                  required
-                />
-              </Field>
-              <Field>
-                <FieldLabel htmlFor="edit-booking-language">Preferred language</FieldLabel>
-                <Input
-                  id="edit-booking-language"
-                  name="preferredLanguage"
-                  defaultValue={editBooking?.preferred_language ?? ""}
-                />
-              </Field>
-              <Field>
-                <FieldLabel htmlFor="edit-booking-resort">Resort</FieldLabel>
-                <Input id="edit-booking-resort" readOnly value={editBooking?.resort_name ?? "Unassigned"} />
-              </Field>
-              <Field>
-                <FieldLabel htmlFor="edit-booking-staff">Staff</FieldLabel>
-                <Input id="edit-booking-staff" readOnly value={editBooking?.staff_name ?? "Unassigned"} />
-              </Field>
-              <Field data-disabled={Boolean(editBooking?.experiences?.length)}>
-                <FieldLabel htmlFor="edit-booking-package">
-                  Package{editBooking?.experiences?.length ? " (from experience schedule)" : ""}
-                </FieldLabel>
-                <Select
-                  value={editPackageId}
-                  disabled={Boolean(editBooking?.experiences?.length)}
-                  onValueChange={(value) => value && setEditPackageId(value)}
-                >
-                  <SelectTrigger id="edit-booking-package" className="w-full">
-                    <SelectValue placeholder="Select package" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectGroup>
-                      {packages.map((item) => (
-                        <SelectItem key={item.id} value={item.id}>
-                          {item.name}
-                        </SelectItem>
-                      ))}
-                    </SelectGroup>
-                  </SelectContent>
-                </Select>
-              </Field>
-              <Field>
-                <FieldLabel htmlFor="edit-booking-adults">
-                  Adults{editBooking?.participants?.length ? " (from participants)" : ""}
-                </FieldLabel>
-                <Input
-                  id="edit-booking-adults"
-                  name="adultCount"
-                  type="number"
-                  min="0"
-                  defaultValue={editBooking?.adult_count}
-                  readOnly={Boolean(editBooking?.participants?.length)}
-                  required
-                />
-              </Field>
-              <Field>
-                <FieldLabel htmlFor="edit-booking-children">
-                  Children{editBooking?.participants?.length ? " (from participants)" : ""}
-                </FieldLabel>
-                <Input
-                  id="edit-booking-children"
-                  name="childCount"
-                  type="number"
-                  min="0"
-                  defaultValue={editBooking?.child_count}
-                  readOnly={Boolean(editBooking?.participants?.length)}
-                  required
-                />
-              </Field>
-              {editBooking && ["active", "rescheduled", "completed"].includes(editBooking.status) ? (
-                <Field>
-                  <FieldLabel htmlFor="edit-booking-signature">Guest signature</FieldLabel>
-                  <Select name="signedByGuest" defaultValue={editBooking.signed_by_guest ? "yes" : "no"}>
-                    <SelectTrigger id="edit-booking-signature" className="w-full">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectGroup>
-                        <SelectItem value="no">Not signed</SelectItem>
-                        <SelectItem value="yes">Signed</SelectItem>
-                      </SelectGroup>
-                    </SelectContent>
-                  </Select>
-                </Field>
-              ) : null}
-              <Field>
-                <FieldLabel htmlFor="edit-booking-source">Booking source</FieldLabel>
-                <Input id="edit-booking-source" name="bookingSource" defaultValue={editBooking?.booking_source ?? ""} />
-              </Field>
-              <Field>
-                <FieldLabel htmlFor="edit-booking-payment">Payment method</FieldLabel>
-                <Input
-                  id="edit-booking-payment"
-                  name="paymentMethod"
-                  defaultValue={editBooking?.payment_method ?? ""}
-                />
-              </Field>
-              <Field className="md:col-span-2">
-                <FieldLabel htmlFor="edit-booking-notes">Notes</FieldLabel>
-                <Textarea id="edit-booking-notes" name="notes" defaultValue={editBooking?.notes ?? ""} />
-              </Field>
-            </FieldGroup>
-            <DialogFooter>
-              <DialogClose asChild>
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="!border-cyan-300/30 !bg-[#071d3d] !text-slate-100 hover:!border-cyan-200/45 hover:!bg-[#0b2a54] hover:!text-white focus-visible:!border-fuchsia-300/70"
-                  disabled={pendingId === editBooking?.id}
-                >
-                  Cancel
-                </Button>
-              </DialogClose>
-              <Button type="submit" disabled={pendingId === editBooking?.id || !editPackageId}>
-                {pendingId === editBooking?.id ? <Spinner data-icon="inline-start" /> : null}
-                {pendingId === editBooking?.id ? "Saving..." : "Save changes"}
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
+      <Sheet open={Boolean(editBooking)} onOpenChange={(open) => !open && setEditBooking(null)}>
+        <SheetContent
+          data-staff-booking-sheet={role}
+          side="right"
+          className="data-[side=right]:w-full data-[side=right]:sm:max-w-6xl"
+        >
+          <SheetHeader className="border-b pr-12">
+            <SheetTitle>Edit booking {editBooking?.booking_code}</SheetTitle>
+            <SheetDescription>
+              Add or remove guests, packages, and add-ons. The total is recalculated when you save.
+            </SheetDescription>
+          </SheetHeader>
+          <div className="min-h-0 flex-1 overflow-y-auto p-4 md:p-6">
+            {editBooking ? (
+              <NewBookingForm
+                key={editBooking.id}
+                role={role}
+                booking={editBooking}
+                onCancel={() => setEditBooking(null)}
+                onCreated={async () => {
+                  setEditBooking(null);
+                  await loadData();
+                }}
+              />
+            ) : null}
+          </div>
+        </SheetContent>
+      </Sheet>
 
       <Dialog open={Boolean(rescheduleBooking)} onOpenChange={(open) => !open && setRescheduleBooking(null)}>
         <DialogContent>

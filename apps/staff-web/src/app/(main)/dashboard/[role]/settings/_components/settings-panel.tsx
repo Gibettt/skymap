@@ -14,6 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 
+import { ChangePasswordCard } from "./change-password-card";
 import { ResortProfileImageField, type ResortProfileImageValue } from "./resort-profile-image-field";
 
 type Account = {
@@ -460,6 +461,8 @@ export function SettingsPanel({
           </CardContent>
         </Card>
       </div>
+
+      <ChangePasswordCard />
 
       {canManagePublicProfile ? (
         <Card>

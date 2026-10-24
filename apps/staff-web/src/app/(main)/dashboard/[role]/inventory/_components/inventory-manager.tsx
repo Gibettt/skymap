@@ -261,7 +261,7 @@ export function InventoryManager({ role, user, initialItems }: InventoryManagerP
                 <Search className="size-3.5" />
               </InputGroupAddon>
               <InputGroupInput
-                className="h-8 text-xs"
+                className="h-8 text-base md:text-xs"
                 placeholder="Search equipment..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}

@@ -176,7 +176,7 @@ export function AdminUsers({ users, resorts }: { users: UserRow[]; resorts: User
               }}
             />
             <InputGroupAddon align="inline-end">
-              <Kbd className="h-4 text-[10px]">Ctrl K</Kbd>
+              <Kbd className="h-4 text-xs">Ctrl K</Kbd>
             </InputGroupAddon>
           </InputGroup>
 
@@ -287,7 +287,7 @@ export function AdminUsers({ users, resorts }: { users: UserRow[]; resorts: User
           </div>
 
           <Tabs value={view} onValueChange={changeView}>
-            <TabsList aria-label="User view">
+            <TabsList aria-label="User view" className="max-md:hidden">
               <TabsTrigger value="list" aria-label="List view" title="List view">
                 <Rows3 />
               </TabsTrigger>
@@ -298,7 +298,14 @@ export function AdminUsers({ users, resorts }: { users: UserRow[]; resorts: User
           </Tabs>
         </div>
 
-        {view === "list" ? <UsersTable table={table} /> : <UsersGrid table={table} resorts={resorts} />}
+        {view === "list" ? (
+          <>
+            <div className="md:hidden"><UsersGrid table={table} resorts={resorts} /></div>
+            <div className="hidden md:block"><UsersTable table={table} /></div>
+          </>
+        ) : (
+          <UsersGrid table={table} resorts={resorts} />
+        )}
       </CardContent>
       {table.getFilteredRowModel().rows.length ? <UsersPagination table={table} /> : null}
     </Card>

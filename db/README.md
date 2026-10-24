@@ -1,5 +1,7 @@
 # Ephemeris SQL Setup
 
+NOTE: This file documents the original PostgreSQL setup. The application now runs on MySQL: use `db/mysql/schema.sql`, `db/mysql/seed.sql` and the numbered files in `db/mysql/` (see `db/mysql/README.md`).
+
 Target database: PostgreSQL.
 
 ## DBeaver Steps

@@ -293,7 +293,7 @@ export function SkyEventDialog({
                       type="button"
                       size="xs"
                       variant={form.priceOverrideUsd === "0" ? "outline" : "default"}
-                      className="h-5 px-1.5 text-[11px]"
+                      className="h-5 px-1.5 text-xs"
                       onClick={() => {
                         if (form.priceOverrideUsd === "0") update("priceOverrideUsd", "");
                       }}
@@ -304,7 +304,7 @@ export function SkyEventDialog({
                       type="button"
                       size="xs"
                       variant={form.priceOverrideUsd === "0" ? "default" : "outline"}
-                      className={`h-5 px-1.5 text-[11px] ${
+                      className={`h-5 px-1.5 text-xs ${
                         form.priceOverrideUsd === "0"
                           ? "border-emerald-600 bg-emerald-600 text-white hover:bg-emerald-700"
                           : "border-emerald-500/40 text-emerald-500"
@@ -318,7 +318,7 @@ export function SkyEventDialog({
                 {form.priceOverrideUsd === "0" ? (
                   <div className="flex h-9 items-center justify-between rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-2.5 font-medium text-emerald-400 text-xs">
                     <span>✓ FOC</span>
-                    <span className="text-[10px] text-muted-foreground">$0.00 / Free</span>
+                    <span className="text-xs text-muted-foreground">$0.00 / Free</span>
                   </div>
                 ) : (
                   <Input

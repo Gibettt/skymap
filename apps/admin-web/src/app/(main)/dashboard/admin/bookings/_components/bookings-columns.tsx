@@ -144,8 +144,8 @@ export function createBookingsColumns(options: BookingOptions): ColumnDef<DataTa
                 variant={staffRole === "external" ? "outline" : "secondary"}
                 className={
                   staffRole === "external"
-                    ? "border-purple-500/40 bg-purple-500/10 text-[10px] font-medium text-purple-600 dark:text-purple-400"
-                    : "border-cyan-500/40 bg-cyan-500/10 text-[10px] font-medium text-cyan-700 dark:text-cyan-300"
+                    ? "border-purple-500/40 bg-purple-500/10 text-xs font-medium text-purple-600 dark:text-purple-400"
+                    : "border-cyan-500/40 bg-cyan-500/10 text-xs font-medium text-cyan-700 dark:text-cyan-300"
                 }
               >
                 {titleCase(staffRole)}

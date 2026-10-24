@@ -553,7 +553,7 @@ export function CreatePackageDialog({
             <Field className="md:col-span-2">
               <div className="flex flex-wrap items-center justify-between gap-1.5">
                 <FieldLabel>Pricing / Rate</FieldLabel>
-                <div className="flex items-center gap-1.5">
+                <div className="flex flex-wrap items-center gap-1.5">
                   <Button
                     type="button"
                     size="xs"

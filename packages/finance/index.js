@@ -45,7 +45,8 @@ export function calculateBookingTotals({ adultCount, childCount, adultPriceUsd, 
   const effectiveChildPrice = childPriceUsd != null ? childPriceUsd : toUsd(Math.round(toCents(adultPriceUsd) * 0.5));
   const baseCents = (adultCount * toCents(adultPriceUsd)) + (childCount * toCents(effectiveChildPrice));
   const serviceChargeCents = Math.round(baseCents * SERVICE_CHARGE_RATE);
-  const gstCents = Math.round(baseCents * GST_RATE);
+  // Tax applies to the subtotal after service charge: (base + 10%) x 17%.
+  const gstCents = Math.round((baseCents + serviceChargeCents) * GST_RATE);
   const invoiceCents = baseCents + serviceChargeCents + gstCents;
   const operationShareCents = Math.round(baseCents * OPERATION_SHARE_RATE);
   const companyShareCents = Math.round(baseCents * OPERATION_SHARE_RATE);

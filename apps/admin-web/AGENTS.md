@@ -50,7 +50,7 @@ npm run check:fix
 npm run generate:presets
 ```
 
-There is currently no automated test command. Run build, lint, check, or other validation commands only when the user explicitly requests that validation.
+Tests run with `npm test` (`node --test test/*.test.mjs`) and cover API access rules and regressions. Run build, lint, or check commands only when the user explicitly requests that validation.
 
 ## Co-location-based structure
 

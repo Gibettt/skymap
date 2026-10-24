@@ -9,6 +9,8 @@ import {
   Download,
   FilePlus2,
   Hash,
+  Maximize2,
+  Minimize2,
   PenLine,
   Printer,
   ReceiptText,
@@ -136,6 +138,45 @@ function InvoicePrintPortal({ active, invoice }: { active: boolean; invoice: Inv
   );
 }
 
+function PaperViewport({ empty, children }: { empty: React.ReactNode; children: React.ReactNode }) {
+  const containerRef = React.useRef<HTMLDivElement>(null);
+  const fitScale = usePaperScale(containerRef);
+  const [fullSize, setFullSize] = React.useState(false);
+  // Only narrow screens shrink the paper below its desktop scale, so only they need the toggle.
+  const canZoom = Boolean(children) && fitScale < MAX_PAPER_SCALE;
+  const scale = fullSize && canZoom ? 1 : fitScale;
+
+  return (
+    <>
+      {canZoom ? (
+        <div className="flex justify-end border-b px-4 py-2">
+          <Button type="button" variant="outline" onClick={() => setFullSize((value) => !value)}>
+            {fullSize ? <Minimize2 data-icon="inline-start" /> : <Maximize2 data-icon="inline-start" />}
+            {fullSize ? "Fit to screen" : "Full size"}
+          </Button>
+        </div>
+      ) : null}
+      <div
+        ref={containerRef}
+        className={`relative min-h-[42rem] bg-muted p-4 ${scale === 1 ? "overflow-auto" : "overflow-hidden"}`}
+      >
+        {children ? (
+          <div
+            style={{ height: INVOICE_PAPER_HEIGHT * scale, width: INVOICE_PAPER_WIDTH * scale }}
+            className={scale === 1 ? "relative mx-auto shadow-sm" : "absolute top-4 left-1/2 -translate-x-1/2 shadow-sm"}
+          >
+            <div style={{ transform: `scale(${scale})` }} className="origin-top-left">
+              {children}
+            </div>
+          </div>
+        ) : (
+          empty
+        )}
+      </div>
+    </>
+  );
+}
+
 function MonthlyInvoicePrintPortal({ active, data }: { active: boolean; data: MonthlyStaffInvoiceData | null }) {
   const [mounted, setMounted] = React.useState(false);
 
@@ -171,8 +212,6 @@ function InvoicePreview({
   staffRole?: string;
   staffName?: string;
 }) {
-  const containerRef = React.useRef<HTMLDivElement>(null);
-  const scale = usePaperScale(containerRef);
 
   return (
     <Card>
@@ -181,8 +220,8 @@ function InvoicePreview({
         <CardDescription>
           {invoice?.invoice_number ?? "Select a completed payment to preview its invoice."}
         </CardDescription>
-        <CardAction>
-          <ButtonGroup>
+        <CardAction className="col-span-full col-start-1 row-span-1 row-start-3 justify-self-stretch sm:col-span-1 sm:col-start-2 sm:row-span-2 sm:row-start-1 sm:justify-self-end">
+          <div className="flex flex-wrap gap-2 sm:justify-end">
             <Button
               type="button"
               size="sm"
@@ -229,13 +268,11 @@ function InvoicePreview({
               <Download data-icon="inline-start" />
               PDF
             </Button>
-          </ButtonGroup>
+          </div>
         </CardAction>
       </CardHeader>
       <CardContent className="p-0">
-        <div ref={containerRef} className="relative min-h-[42rem] overflow-hidden bg-muted p-4">
-          {!invoice ? (
-            <Empty className="absolute inset-0 border-0">
+        <PaperViewport empty={<Empty className="absolute inset-0 border-0">
               <EmptyHeader>
                 <EmptyMedia variant="icon">
                   <ReceiptText />
@@ -245,29 +282,13 @@ function InvoicePreview({
                   Confirm a customer payment or select one that already has an invoice.
                 </EmptyDescription>
               </EmptyHeader>
-            </Empty>
-          ) : (
-            <div
-              style={{
-                height: INVOICE_PAPER_HEIGHT * scale,
-                width: INVOICE_PAPER_WIDTH * scale,
-              }}
-              className="absolute top-4 left-1/2 -translate-x-1/2 shadow-sm"
-            >
-              <div style={{ transform: `scale(${scale})` }} className="origin-top-left">
-                <InvoiceDocument invoice={invoice} onSignGuest={onSignGuest} onSignStaff={onSignStaff} staffRole={staffRole} currentStaffName={staffName} />
-              </div>
-            </div>
-          )}
-        </div>
+            </Empty>}>{invoice ? <InvoiceDocument invoice={invoice} onSignGuest={onSignGuest} onSignStaff={onSignStaff} staffRole={staffRole} currentStaffName={staffName} /> : null}</PaperViewport>
       </CardContent>
     </Card>
   );
 }
 
 function MonthlyInvoicePreview({ data }: { data: MonthlyStaffInvoiceData | null }) {
-  const containerRef = React.useRef<HTMLDivElement>(null);
-  const scale = usePaperScale(containerRef);
 
   return (
     <Card>
@@ -278,26 +299,13 @@ function MonthlyInvoicePreview({ data }: { data: MonthlyStaffInvoiceData | null 
         </CardDescription>
       </CardHeader>
       <CardContent className="p-0">
-        <div ref={containerRef} className="relative min-h-[42rem] overflow-hidden bg-muted p-4">
-          {!data ? (
-            <Empty className="absolute inset-0 border-0">
+        <PaperViewport empty={<Empty className="absolute inset-0 border-0">
               <EmptyHeader>
                 <EmptyMedia variant="icon"><ReceiptText /></EmptyMedia>
                 <EmptyTitle>No monthly invoice selected</EmptyTitle>
                 <EmptyDescription>Choose the monthly invoice view and select a billing month.</EmptyDescription>
               </EmptyHeader>
-            </Empty>
-          ) : (
-            <div
-              style={{ height: INVOICE_PAPER_HEIGHT * scale, width: INVOICE_PAPER_WIDTH * scale }}
-              className="absolute top-4 left-1/2 -translate-x-1/2 shadow-sm"
-            >
-              <div style={{ transform: `scale(${scale})` }} className="origin-top-left">
-                <MonthlyStaffInvoiceDocument data={data} />
-              </div>
-            </div>
-          )}
-        </div>
+            </Empty>}>{data ? <MonthlyStaffInvoiceDocument data={data} /> : null}</PaperViewport>
       </CardContent>
     </Card>
   );

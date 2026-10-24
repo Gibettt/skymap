@@ -175,7 +175,7 @@ export function Resorts({ resorts }: { resorts: ResortRow[] }) {
               }}
             />
             <InputGroupAddon align="inline-end">
-              <Kbd className="h-4 text-[10px]">Ctrl K</Kbd>
+              <Kbd className="h-4 text-xs">Ctrl K</Kbd>
             </InputGroupAddon>
           </InputGroup>
 
@@ -270,7 +270,7 @@ export function Resorts({ resorts }: { resorts: ResortRow[] }) {
           </div>
 
           <Tabs value={view} onValueChange={changeView}>
-            <TabsList>
+            <TabsList className="max-md:hidden">
               <TabsTrigger value="list" aria-label="List view">
                 <Rows3 />
               </TabsTrigger>
@@ -281,7 +281,14 @@ export function Resorts({ resorts }: { resorts: ResortRow[] }) {
           </Tabs>
         </div>
 
-        {view === "list" ? <ResortsTable table={table} /> : <ResortsGrid table={table} />}
+        {view === "list" ? (
+          <>
+            <div className="md:hidden"><ResortsGrid table={table} /></div>
+            <div className="hidden md:block"><ResortsTable table={table} /></div>
+          </>
+        ) : (
+          <ResortsGrid table={table} />
+        )}
       </CardContent>
       {table.getFilteredRowModel().rows.length ? <ResortsPagination table={table} /> : null}
     </Card>

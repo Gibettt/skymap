@@ -40,7 +40,7 @@ export function StaffPackages({ role, user, packages, resorts, packageTypes }: S
       <div className="grid grid-cols-3 gap-2 sm:gap-4">
         <Card size="sm" className="min-w-0 border-border/60 bg-card/60 backdrop-blur-sm">
           <CardHeader className="gap-1 px-2.5 sm:px-3">
-            <CardDescription className="text-[11px] leading-tight sm:text-sm">
+            <CardDescription className="text-xs leading-tight sm:text-sm">
               <span className="sm:hidden">Active</span>
               <span className="hidden sm:inline">Active packages</span>
             </CardDescription>
@@ -50,7 +50,7 @@ export function StaffPackages({ role, user, packages, resorts, packageTypes }: S
 
         <Card size="sm" className="min-w-0 border-border/60 bg-card/60 backdrop-blur-sm">
           <CardHeader className="gap-1 px-2.5 sm:px-3">
-            <CardDescription className="text-[11px] leading-tight sm:text-sm">
+            <CardDescription className="text-xs leading-tight sm:text-sm">
               <span className="sm:hidden">Private</span>
               <span className="hidden sm:inline">Private experiences</span>
             </CardDescription>
@@ -60,7 +60,7 @@ export function StaffPackages({ role, user, packages, resorts, packageTypes }: S
 
         <Card size="sm" className="min-w-0 border-border/60 bg-card/60 backdrop-blur-sm">
           <CardHeader className="gap-1 px-2.5 sm:px-3">
-            <CardDescription className="text-[11px] leading-tight sm:text-sm">
+            <CardDescription className="text-xs leading-tight sm:text-sm">
               <span className="sm:hidden">Free</span>
               <span className="hidden sm:inline">Complimentary</span>
             </CardDescription>

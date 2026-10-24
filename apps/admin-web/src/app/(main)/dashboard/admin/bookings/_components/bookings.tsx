@@ -188,7 +188,7 @@ export function Bookings({ bookings, options }: { bookings: BookingRow[]; option
                 }}
               />
               <InputGroupAddon align="inline-end">
-                <Kbd className="h-4 text-[10px]">Ctrl K</Kbd>
+                <Kbd className="h-4 text-xs">Ctrl K</Kbd>
               </InputGroupAddon>
             </InputGroup>
 
@@ -303,7 +303,7 @@ export function Bookings({ bookings, options }: { bookings: BookingRow[]; option
             </div>
 
             <Tabs value={view} onValueChange={changeView}>
-              <TabsList>
+              <TabsList className="max-md:hidden">
                 <TabsTrigger value="list" aria-label="List view">
                   <Rows3 />
                 </TabsTrigger>
@@ -314,7 +314,14 @@ export function Bookings({ bookings, options }: { bookings: BookingRow[]; option
             </Tabs>
           </div>
 
-          {view === "list" ? <BookingsTable table={table} /> : <BookingsGrid table={table} options={options} />}
+          {view === "list" ? (
+            <>
+              <div className="md:hidden"><BookingsGrid table={table} options={options} /></div>
+              <div className="hidden md:block"><BookingsTable table={table} /></div>
+            </>
+          ) : (
+            <BookingsGrid table={table} options={options} />
+          )}
         </CardContent>
         {table.getFilteredRowModel().rows.length ? <BookingsPagination table={table} /> : null}
       </Card>

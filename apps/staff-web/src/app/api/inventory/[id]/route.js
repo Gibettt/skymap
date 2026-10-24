@@ -1,10 +1,10 @@
-import { ApiError, assertSameOrigin, jsonError, parseJsonBody, requireUser } from "@ephemeris/auth";
+import { ApiError, assertSameOrigin, jsonError, parseJsonBody, requirePermission } from "@ephemeris/auth";
 import { query } from "@ephemeris/db";
 
 export async function PATCH(request, { params }) {
   try {
     await assertSameOrigin(request);
-    const user = await requireUser(["admin", "internal"]);
+    const user = await requirePermission("staff.bookings", ["internal"], { write: true });
     const { id } = await params;
     const body = await parseJsonBody(request);
 
@@ -66,7 +66,7 @@ export async function PATCH(request, { params }) {
 export async function DELETE(request, { params }) {
   try {
     await assertSameOrigin(request);
-    const user = await requireUser(["admin", "internal"]);
+    const user = await requirePermission("staff.bookings", ["internal"], { write: true });
     const { id } = await params;
 
     const existing = await query(`SELECT id, resort_id FROM resort_inventory WHERE id = $1`, [id]);

@@ -60,6 +60,12 @@ const EXTERNAL_STAFF_BOOKING_RESPONSE_FIELDS = Object.freeze([
 	"adult_count",
 	"child_count",
 	"booking_source",
+	"preferred_language",
+	"special_occasion",
+	"dietary_restrictions",
+	"package_notes",
+	"payment_status",
+	"package_id",
 	"status",
 	"signed_by_guest",
 	"invoice_total_usd",
@@ -288,4 +294,131 @@ export async function rescheduleBooking(
 	}
 
 	return rows[0];
+}
+
+const EXTERNAL_EDITABLE_STATUSES = new Set(["pending", "active", "rescheduled"]);
+
+// Operational and finance controls stay with internal staff when an external edits.
+const EXTERNAL_LOCKED_UPDATE_FIELDS = Object.freeze([
+	"status",
+	"signedByGuest",
+	"payoutStatus",
+	"staffId",
+	"resortId",
+	"invoiceNumber",
+	"billingNotes",
+	"weatherCondition",
+	"equipmentNeeded",
+	"assignedAstronomer",
+	"assignedButler",
+	"setupStatus",
+	"fieldTipIncentiveUsd",
+	"tipRecipient",
+	"tipNotes",
+]);
+
+/**
+ * External staff may edit their own bookings until the customer has paid,
+ * because payment confirmation issues an invoice whose totals must not change.
+ */
+export function externalBookingEditError(user, booking) {
+	if (!user?.id || booking?.staff_id !== user.id) {
+		return { status: 403, error: "You can only edit bookings you created." };
+	}
+	if (!EXTERNAL_EDITABLE_STATUSES.has(booking.status)) {
+		return {
+			status: 409,
+			error: "Completed, cancelled, or rejected bookings can no longer be edited.",
+		};
+	}
+	if (booking.payment_status !== "pending") {
+		return { status: 409, error: "This booking has been paid and can no longer be edited." };
+	}
+	return null;
+}
+
+export function bookingUpdateInputForStaff(user, input) {
+	if (user?.role !== "external") return input;
+	const allowed = { ...input };
+	for (const field of EXTERNAL_LOCKED_UPDATE_FIELDS) delete allowed[field];
+	return allowed;
+}
+
+/**
+ * Price every experience of a booking against the packages of its resort.
+ * Returns `{ error, status }` for invalid selections, like the invoice commands.
+ * `keepInactivePackageIds` lets an existing booking keep a package that was
+ * deactivated after it was booked.
+ */
+export async function priceBookingExperiences(
+	client,
+	{
+		experiences,
+		resortId,
+		adultCount,
+		childCount,
+		staffRole,
+		calculateTotals,
+		keepInactivePackageIds = [],
+	},
+) {
+	const keepInactive = new Set(keepInactivePackageIds.map(String));
+	const prepared = [];
+
+	for (const experience of experiences) {
+		const packageResult = await client.query("SELECT * FROM packages WHERE id = $1", [
+			experience.packageId,
+		]);
+		const packageRecord = packageResult.rows[0];
+		if (
+			!packageRecord ||
+			packageRecord.resort_id !== resortId ||
+			(!packageRecord.is_active && !keepInactive.has(String(packageRecord.id)))
+		) {
+			return { status: 400, error: "Package not found for this resort" };
+		}
+
+		let skyEvent = null;
+		if (experience.skyEventId) {
+			const eventResult = await client.query(
+				`SELECT id, package_id, price_override_usd
+         FROM sky_events WHERE id = $1 AND resort_id = $2 AND status = 'published'`,
+				[experience.skyEventId, resortId],
+			);
+			skyEvent = eventResult.rows[0];
+			if (!skyEvent || (skyEvent.package_id && skyEvent.package_id !== experience.packageId)) {
+				return { status: 400, error: "Sky event not found for this resort and package" };
+			}
+		}
+
+		const adultPriceUsd = Number(skyEvent?.price_override_usd ?? packageRecord.adult_price_usd);
+		const childPriceUsd =
+			skyEvent?.price_override_usd != null
+				? Number(skyEvent.price_override_usd) * 0.5
+				: packageRecord.package_type === "kids" && Number(packageRecord.adult_price_usd) === 0
+					? Number(packageRecord.child_price_usd ?? 0)
+					: Number(packageRecord.adult_price_usd) * 0.5;
+		const totals = calculateTotals({
+			adultCount,
+			childCount,
+			adultPriceUsd,
+			childPriceUsd,
+			staffRole,
+			isChargeable: packageRecord.is_chargeable,
+		});
+
+		prepared.push({
+			...experience,
+			package: packageRecord,
+			adultPriceUsd,
+			childPriceUsd,
+			baseTotalUsd: totals.baseTotalUsd,
+			totals,
+		});
+	}
+
+	return {
+		experiences: prepared,
+		totals: combineBookingTotals(prepared.map((experience) => experience.totals)),
+	};
 }

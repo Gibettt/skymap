@@ -312,19 +312,19 @@ export function StaffCalendar({ role, readOnly }: { role: StaffRole; readOnly: b
 
               <div className="mt-4 grid grid-cols-3 gap-2">
                 <div className="rounded-xl border border-fuchsia-300/16 bg-fuchsia-400/7 p-2.5 sm:p-3">
-                  <p className="truncate text-[10px] text-slate-400 uppercase tracking-wide sm:text-xs">Month</p>
+                  <p className="truncate text-xs text-slate-400 uppercase tracking-wide sm:text-xs">Month</p>
                   <p className="mt-1 font-semibold text-white text-xl tabular-nums sm:text-2xl">
                     {monthBookings.length}
                   </p>
                 </div>
                 <div className="rounded-xl border border-cyan-300/16 bg-cyan-400/7 p-2.5 sm:p-3">
-                  <p className="truncate text-[10px] text-slate-400 uppercase tracking-wide sm:text-xs">Selected day</p>
+                  <p className="truncate text-xs text-slate-400 uppercase tracking-wide sm:text-xs">Selected day</p>
                   <p className="mt-1 font-semibold text-white text-xl tabular-nums sm:text-2xl">
                     {selectedBookings.length}
                   </p>
                 </div>
                 <div className="rounded-xl border border-violet-300/16 bg-violet-400/7 p-2.5 sm:p-3">
-                  <p className="truncate text-[10px] text-slate-400 uppercase tracking-wide sm:text-xs">Upcoming</p>
+                  <p className="truncate text-xs text-slate-400 uppercase tracking-wide sm:text-xs">Upcoming</p>
                   <p className="mt-1 font-semibold text-white text-xl tabular-nums sm:text-2xl">
                     {upcomingBookings.length}
                   </p>
@@ -467,7 +467,7 @@ export function StaffCalendar({ role, readOnly }: { role: StaffRole; readOnly: b
       <div className="grid grid-cols-3 gap-2 sm:gap-4">
         <Card size="sm" className="min-w-0">
           <CardHeader className="gap-1 px-2.5 sm:px-3">
-            <CardDescription className="text-[11px] leading-tight sm:text-sm">
+            <CardDescription className="text-xs leading-tight sm:text-sm">
               <span className="sm:hidden">Month</span>
               <span className="hidden sm:inline">{monthLabel(visibleMonth)}</span>
             </CardDescription>
@@ -482,7 +482,7 @@ export function StaffCalendar({ role, readOnly }: { role: StaffRole; readOnly: b
         </Card>
         <Card size="sm" className="min-w-0">
           <CardHeader className="gap-1 px-2.5 sm:px-3">
-            <CardDescription className="text-[11px] leading-tight sm:text-sm">
+            <CardDescription className="text-xs leading-tight sm:text-sm">
               <span className="sm:hidden">Day</span>
               <span className="hidden sm:inline">Selected day</span>
             </CardDescription>
@@ -495,7 +495,7 @@ export function StaffCalendar({ role, readOnly }: { role: StaffRole; readOnly: b
         </Card>
         <Card size="sm" className="min-w-0">
           <CardHeader className="gap-1 px-2.5 sm:px-3">
-            <CardDescription className="text-[11px] leading-tight sm:text-sm">Upcoming</CardDescription>
+            <CardDescription className="text-xs leading-tight sm:text-sm">Upcoming</CardDescription>
             <CardTitle className="text-xl tabular-nums sm:text-2xl">{upcomingBookings.length}</CardTitle>
             <CardAction className="hidden rounded-lg bg-muted p-2 text-muted-foreground sm:block">
               <Users className="size-4" />

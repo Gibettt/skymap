@@ -111,7 +111,7 @@ function MetricCard({
       </div>
       <p className="mt-3 truncate text-slate-300 text-xs sm:text-sm">{label}</p>
       <p className="mt-1 truncate font-semibold text-2xl text-white tracking-tight sm:text-3xl">{value}</p>
-      <p className="mt-1 line-clamp-2 min-h-8 text-[11px] text-slate-400 leading-4 sm:text-xs">{note}</p>
+      <p className="mt-1 line-clamp-2 min-h-8 text-xs text-slate-400 leading-4 sm:text-xs">{note}</p>
     </article>
   );
 }
@@ -187,7 +187,7 @@ function HowItWorks({ reward }: { reward: ExternalRewardOverview }) {
             </span>
             <div className="min-w-0">
               <p className="font-semibold text-sm text-white">{step.title}</p>
-              <p className="mt-1 text-[11px] text-slate-400 leading-[1.55] sm:text-xs">{step.copy}</p>
+              <p className="mt-1 text-xs text-slate-400 leading-[1.55] sm:text-xs">{step.copy}</p>
             </div>
           </div>
         ))}
@@ -213,7 +213,7 @@ function HowItWorks({ reward }: { reward: ExternalRewardOverview }) {
             />
           ))}
         </div>
-        <div className="mt-3 space-y-1 text-[11px] text-slate-300 leading-4 sm:text-xs">
+        <div className="mt-3 space-y-1 text-xs text-slate-300 leading-4 sm:text-xs">
           <p>
             {exampleStars} stars colored = {numberFormatter.format(exampleUnits)} units
           </p>
@@ -410,7 +410,7 @@ export function ExternalStaffOverview({ data, userName, resortName }: Props) {
                         </span>
                         <div className="min-w-0">
                           <p className="truncate font-medium text-sm text-white">{booking.plan}</p>
-                          <p className="truncate text-[11px] text-slate-400">
+                          <p className="truncate text-xs text-slate-400">
                             {booking.guests} {booking.guests === 1 ? "guest" : "guests"} · {compactDate(booking.joined)}
                           </p>
                         </div>

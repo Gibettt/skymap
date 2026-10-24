@@ -62,74 +62,31 @@ export function buildCustomerLineItems(booking, experiences = []) {
         },
       ];
 
-  const items = [];
-  sourceItems.forEach((experience, index) => {
-    const mealPrice = roundMoney(experience.meal_price_usd ?? booking.booked_meal_price_usd ?? booking.package_meal_price_usd ?? 0);
-    const totalExpAmount = roundMoney(experience.base_total_usd);
-
-    if (mealPrice > 0 && totalExpAmount > mealPrice) {
-      const activityAmount = roundMoney(totalExpAmount - mealPrice);
-      items.push({
-        id: String(experience.id ?? `experience-${index + 1}-activity`),
-        description: `${experience.package_name ?? booking.package_name ?? "Experience"} (Activity Component)`,
-        detail: [
-          participantSummary || null,
-          isoDate(experience.event_date),
-          experience.time_start && experience.time_end
-            ? `${String(experience.time_start).slice(0, 5)}–${String(experience.time_end).slice(0, 5)}`
-            : null,
-          experience.observation_spot || null,
-        ]
-          .filter(Boolean)
-          .join(" · "),
-        quantity: 1,
-        unit_price_usd: activityAmount,
-        amount_usd: activityAmount,
-        adult_count: adultCount,
-        child_count: childCount,
-        adult_unit_price_usd: roundMoney(experience.booked_adult_price_usd ?? booking.booked_adult_price_usd),
-        child_unit_price_usd: roundMoney(experience.booked_child_price_usd ?? booking.booked_child_price_usd),
-        item_type: "activity",
-      });
-
-      items.push({
-        id: `${experience.id ?? `experience-${index + 1}`}-meal`,
-        description: "Food & Beverage (F&B / Meal Inclusion)",
-        detail: `F&B allocation for ${experience.package_name ?? booking.package_name ?? "dining experience"}`,
-        quantity: 1,
-        unit_price_usd: mealPrice,
-        amount_usd: mealPrice,
-        adult_count: adultCount,
-        child_count: childCount,
-        item_type: "meal",
-      });
-    } else {
-      items.push({
-        id: String(experience.id ?? `experience-${index + 1}`),
-        description: String(experience.package_name ?? booking.package_name ?? "Ephemeris experience"),
-        detail: [
-          participantSummary || null,
-          isoDate(experience.event_date),
-          experience.time_start && experience.time_end
-            ? `${String(experience.time_start).slice(0, 5)}–${String(experience.time_end).slice(0, 5)}`
-            : null,
-          experience.observation_spot || null,
-        ]
-          .filter(Boolean)
-          .join(" · "),
-        quantity: 1,
-        unit_price_usd: totalExpAmount,
-        amount_usd: totalExpAmount,
-        adult_count: adultCount,
-        child_count: childCount,
-        adult_unit_price_usd: roundMoney(experience.booked_adult_price_usd ?? booking.booked_adult_price_usd),
-        child_unit_price_usd: roundMoney(experience.booked_child_price_usd ?? booking.booked_child_price_usd),
-        item_type: "activity",
-      });
-    }
+  return sourceItems.map((experience, index) => {
+    const amount = roundMoney(experience.base_total_usd);
+    return {
+      id: String(experience.id ?? `experience-${index + 1}`),
+      description: String(experience.package_name ?? booking.package_name ?? "Ephemeris experience"),
+      detail: [
+        participantSummary || null,
+        isoDate(experience.event_date),
+        experience.time_start && experience.time_end
+          ? `${String(experience.time_start).slice(0, 5)}–${String(experience.time_end).slice(0, 5)}`
+          : null,
+        experience.observation_spot || null,
+      ]
+        .filter(Boolean)
+        .join(" · "),
+      quantity: 1,
+      unit_price_usd: amount,
+      amount_usd: amount,
+      adult_count: adultCount,
+      child_count: childCount,
+      adult_unit_price_usd: roundMoney(experience.booked_adult_price_usd ?? booking.booked_adult_price_usd),
+      child_unit_price_usd: roundMoney(experience.booked_child_price_usd ?? booking.booked_child_price_usd),
+      item_type: "activity",
+    };
   });
-
-  return items;
 }
 
 export function buildPayoutLineItems(payout) {

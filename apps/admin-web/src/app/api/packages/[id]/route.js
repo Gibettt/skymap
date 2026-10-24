@@ -139,6 +139,8 @@ export async function PATCH(request, { params }) {
         group_price_usd: body.groupPriceUsd === undefined ? before.rows[0].group_price_usd : (body.groupPriceUsd === null || body.groupPriceUsd === '' ? null : Number(body.groupPriceUsd)),
         family_price_usd: body.familyPriceUsd === undefined ? before.rows[0].family_price_usd : (body.familyPriceUsd === null || body.familyPriceUsd === '' ? null : Number(body.familyPriceUsd)),
         meal_price_usd: body.mealPriceUsd === undefined ? Number(before.rows[0].meal_price_usd || 0) : Number(body.mealPriceUsd || 0),
+        child_age_range: body.childAgeRange === undefined ? before.rows[0].child_age_range : body.childAgeRange,
+
         primary_price_type: body.primaryPriceType === undefined ? (before.rows[0].primary_price_type || 'adult') : String(body.primaryPriceType || 'adult').trim(),
         is_chargeable: body.isChargeable ?? before.rows[0].is_chargeable,
         is_active: body.isActive ?? before.rows[0].is_active,

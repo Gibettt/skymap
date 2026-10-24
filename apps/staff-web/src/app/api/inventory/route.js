@@ -1,9 +1,9 @@
-import { ApiError, assertSameOrigin, jsonError, parseJsonBody, requireUser } from "@ephemeris/auth";
+import { ApiError, assertSameOrigin, jsonError, parseJsonBody, requirePermission } from "@ephemeris/auth";
 import { ensureInventorySchema, query } from "@ephemeris/db";
 
 export async function GET(request) {
   try {
-    const user = await requireUser(["admin", "internal", "external"]);
+    const user = await requirePermission("staff.bookings", ["internal", "external"]);
     await ensureInventorySchema();
     const url = new URL(request.url);
     const requestedResortId = url.searchParams.get("resortId");
@@ -47,7 +47,7 @@ export async function POST(request) {
   try {
     await assertSameOrigin(request);
     await ensureInventorySchema();
-    const user = await requireUser(["admin", "internal"]);
+    const user = await requirePermission("staff.bookings", ["internal"], { write: true });
     const body = await parseJsonBody(request);
 
     const resortId = user.role === "internal" ? user.resort_id : body.resortId;

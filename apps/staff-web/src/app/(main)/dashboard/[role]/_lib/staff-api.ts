@@ -68,6 +68,10 @@ export interface StaffBooking {
   staff_commission_5_usd?: number;
   booking_source?: string | null;
   payment_method?: string | null;
+  payment_status?: "pending" | "paid";
+  special_occasion?: string | null;
+  dietary_restrictions?: string | null;
+  package_notes?: string | null;
   observation_spot: string | null;
   notes?: string | null;
   created_at: string;

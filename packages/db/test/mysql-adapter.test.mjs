@@ -102,3 +102,26 @@ test('UPDATE RETURNING supports predicates without a direct id comparison', asyn
   assert.equal(result.rowCount, 2);
   assert.deepEqual(result.rows, returned);
 });
+
+test('Postgres casts on placeholders are removed so MySQL can parse them', async () => {
+  const seen = [];
+  const executor = {
+    async query(sql) {
+      seen.push(sql);
+      return [[], []];
+    },
+  };
+
+  await mysqlQuery(
+    executor,
+    `UPDATE access_roles
+     SET access_level = $2::varchar,
+       permissions_updated_at = CASE WHEN access_level <> $2::varchar THEN now() ELSE permissions_updated_at END
+     WHERE id = $1 AND slug = $3::text`,
+    ['role-one', 'full', 'admin'],
+  );
+
+  assert.doesNotMatch(seen[0], /::/);
+  assert.match(seen[0], /access_level = \?,/);
+  assert.match(seen[0], /access_level <> \? THEN/);
+});

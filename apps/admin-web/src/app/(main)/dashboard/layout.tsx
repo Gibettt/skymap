@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 
 import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
 
 import { currentUser, getUserPermissions } from "@ephemeris/auth";
 
@@ -20,6 +21,8 @@ import { ThemeSwitcher } from "./_components/header/theme-switcher";
 export default async function Layout({ children }: Readonly<{ children: ReactNode }>) {
   const cookieStore = await cookies();
   const sessionUser = await currentUser();
+  // Covers every /dashboard/* page, including the leftover template screens.
+  if (sessionUser?.role !== "admin") redirect("/login");
   const permissions = sessionUser ? await getUserPermissions(sessionUser) : undefined;
   const defaultOpen = cookieStore.get("sidebar_state")?.value !== "false";
   const [variant, collapsible] = await Promise.all([

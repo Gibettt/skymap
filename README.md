@@ -1,21 +1,25 @@
 # Ephemeris — Monorepo
 
-Sistem manajemen Observatorium Nasional / resort stargazing, disusun sebagai **monorepo** dengan 3 aplikasi Next.js independen + shared packages.
+Sistem manajemen Observatorium Nasional / resort stargazing, disusun sebagai **monorepo** dengan 5 aplikasi Next.js independen + shared packages.
 
 ## Struktur
 
 ```
 ├── apps/
 │   ├── landing/   → Domain publik (ephemeris.id): landing page, Sky Guide PWA (/sky), halaman feedback
-│   ├── admin/     → admin.ephemeris.id: dashboard admin (booking, keuangan, pengguna, audit)
-│   └── staff/     → staff.ephemeris.id: dashboard staff internal & external; Sky Guide dikelola staff internal
+│   ├── admin-web/ → dashboard admin AKTIF (shadcn, port 3003): booking, keuangan, invoice, pengguna, role, audit
+│   ├── staff-web/ → dashboard staff AKTIF (shadcn, port 3004): internal & external
+│   ├── admin/     → dashboard admin versi lama (legacy, port 3001)
+│   └── staff/     → dashboard staff versi lama (legacy, port 3002)
 ├── packages/
 │   ├── auth/      → @ephemeris/auth: sesi, login/logout handler per role, audit log
-│   ├── db/        → @ephemeris/db: koneksi PostgreSQL (pool, query, transaction)
+│   ├── db/        → @ephemeris/db: koneksi MySQL/PostgreSQL (pool, adapter, query, transaction, validator Zod)
+│   ├── events/    → @ephemeris/events: event bus, domain events, notifikasi
+│   ├── export/    → @ephemeris/export: laporan Excel
 │   ├── finance/   → @ephemeris/finance: kalkulasi harga booking (SC, GST, komisi)
 │   ├── sky/       → @ephemeris/sky: kalender astronomi & normalisasi sky event (+ unit test)
 │   └── ui/        → @ephemeris/ui: komponen bersama (LoginClient)
-├── db/            → schema.sql, seed.sql, migrations/ (dipakai semua app)
+├── db/            → schema.sql, seed.sql, migrations/ (Postgres lama) dan mysql/ (MySQL, target utama)
 ├── pnpm-workspace.yaml
 └── turbo.json
 ```
@@ -24,7 +28,7 @@ Sistem manajemen Observatorium Nasional / resort stargazing, disusun sebagai **m
 
 - Node.js 20+
 - pnpm 10+ (`npm install -g pnpm`)
-- PostgreSQL yang sudah diisi `db/schema.sql` dan `db/seed.sql`
+- MySQL 8 yang sudah diisi `db/mysql/schema.sql` dan `db/mysql/seed.sql` (target utama; `db/schema.sql` Postgres adalah versi lama dan tabel inventory hanya ada di MySQL)
 
 ## Setup
 
@@ -63,7 +67,7 @@ pnpm dev:staff
 
 ```bash
 pnpm build          # build semua app (turbo)
-pnpm test           # test packages/sky
+pnpm test           # semua test (packages/*, landing, admin, staff, admin-web, staff-web)
 pnpm lint
 ```
 
@@ -74,6 +78,8 @@ pnpm lint
 | Landing | http://localhost:3000 | — | — |
 | Admin | http://localhost:3001/login | admin@ephemeris.id | admin123 |
 | Staff | http://localhost:3002/login | internal@ephemeris.id / external@ephemeris.id | internal123 / external123 |
+| Admin (aktif) | http://localhost:3003/login | admin@ephemeris.id | admin123 |
+| Staff (aktif) | http://localhost:3004/login | internal@ephemeris.id / external@ephemeris.id | internal123 / external123 |
 
 ## Deploy (subdomain terpisah)
 
@@ -83,4 +89,4 @@ Setiap app di-deploy sebagai project terpisah (mis. Vercel):
 2. **admin** → `admin.ephemeris.id`, root directory `apps/admin`
 3. **staff** → `staff.ephemeris.id`, root directory `apps/staff`
 
-Sesi dibagikan antar subdomain dengan menyetel `SESSION_COOKIE_DOMAIN=.ephemeris.id` dan `SESSION_SECRET` yang identik di ketiga app. Database PostgreSQL tetap satu.
+Sesi dibagikan antar subdomain dengan menyetel `SESSION_COOKIE_DOMAIN=.ephemeris.id` dan `SESSION_SECRET` yang identik di ketiga app. Database tetap satu (MySQL).

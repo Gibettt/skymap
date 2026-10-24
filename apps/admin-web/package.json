@@ -6,6 +6,7 @@
     "dev": "next dev --webpack -p 3003",
     "build": "next build --webpack",
     "start": "next start -p 3003",
+    "test": "node --test test/*.test.mjs",
     "lint": "biome lint",
     "format": "biome format --write",
     "check": "biome check",

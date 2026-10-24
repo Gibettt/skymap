@@ -1642,6 +1642,52 @@ html[data-staff-portal-role="external"] [data-staff-booking-form="external"] [da
     @apply border-border outline-ring/50;
   }
 
+  /* Native fieldsets default to min-inline-size: min-content, so a long nowrap select value
+     (e.g. a package name with its price) pushed whole forms past the phone screen width. */
+  fieldset {
+    min-width: 0;
+  }
+
+  [data-slot="field"],
+  [data-slot="select-trigger"] {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  [data-slot="select-value"] {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  /* Centered dialogs grow with their form. On short or keyboard-shrunk screens they must
+     scroll inside themselves instead of pushing their title or Save button off-screen. */
+  [data-slot="dialog-content"],
+  [data-slot="alert-dialog-content"] {
+    max-height: calc(100dvh - 2rem);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+
+  /* Touch screens: the compact desktop controls (24-36px) become 44px thumb targets.
+     min-* sizes win over the h-* utilities without touching the shared ui components. */
+  @media (pointer: coarse) {
+    [data-slot="button"]:not([data-size^="icon"]):not([data-slot="calendar"] *),
+    [data-slot="select-trigger"],
+    [data-slot="input-group"],
+    [data-slot="input"]:not([data-slot="input-group"] *),
+    [data-slot="dropdown-menu-item"],
+    [data-slot="select-item"] {
+      min-height: 2.75rem;
+    }
+
+    /* Round step markers stay 28px: the connecting line is positioned for that size. */
+    [data-slot="button"][data-size^="icon"]:not(.rounded-full):not([data-slot="calendar"] *) {
+      min-width: 2.5rem;
+      min-height: 2.5rem;
+    }
+  }
+
   body {
     @apply bg-background text-foreground;
     font-family: var(--font-sans), system-ui, sans-serif;

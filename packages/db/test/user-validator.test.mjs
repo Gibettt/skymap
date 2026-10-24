@@ -55,3 +55,13 @@ test('external self-registration cannot submit privileged account fields', () =>
   assert.equal(externalRegistrationSchema.safeParse({ ...registration, accessRoleId: validStaff.resortId }).success, false);
   assert.equal(externalRegistrationSchema.safeParse({ ...registration, password: 'short' }).success, false);
 });
+
+test('password reset and change require 8+ characters and a different new password', async () => {
+  const { changePasswordSchema, resetPasswordSchema } = await import('../validators/user.js');
+
+  assert.equal(resetPasswordSchema.safeParse({ password: 'short' }).success, false);
+  assert.equal(resetPasswordSchema.safeParse({ password: 'long-enough-1' }).success, true);
+  assert.equal(resetPasswordSchema.safeParse({ password: 'long-enough-1', role: 'admin' }).success, false);
+  assert.equal(changePasswordSchema.safeParse({ currentPassword: 'same-password', newPassword: 'same-password' }).success, false);
+  assert.equal(changePasswordSchema.safeParse({ currentPassword: 'old-password', newPassword: 'new-password-1' }).success, true);
+});

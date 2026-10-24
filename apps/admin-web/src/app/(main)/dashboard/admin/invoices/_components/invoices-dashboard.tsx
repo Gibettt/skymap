@@ -715,7 +715,15 @@ export function InvoicesDashboard({
   const busy = pendingKey !== null;
   const parsedTaxRate = taxType === "none" ? 0 : Number(taxRate);
   const effectiveTaxRate = Number.isFinite(parsedTaxRate) ? Math.min(100, Math.max(0, parsedTaxRate)) : 0;
-  const taxAmount = roundMoney((selectedPaymentWorkflow?.base_total_usd ?? 0) * (effectiveTaxRate / 100));
+  // Mirrors packages/db/payments.js: TGST is charged on the subtotal after service charge.
+  const isTgst =
+    taxType === "tgst" ||
+    taxCustomLabel.toUpperCase().includes("TGST") ||
+    taxCustomLabel.toUpperCase().includes("TOURIS");
+  const taxableBase = isTgst
+    ? roundMoney((selectedPaymentWorkflow?.base_total_usd ?? 0) + (selectedPaymentWorkflow?.service_charge_usd ?? 0))
+    : (selectedPaymentWorkflow?.base_total_usd ?? 0);
+  const taxAmount = roundMoney(taxableBase * (effectiveTaxRate / 100));
   const totalAmount = roundMoney(
     (selectedPaymentWorkflow?.base_total_usd ?? 0) + (selectedPaymentWorkflow?.service_charge_usd ?? 0) + taxAmount,
   );

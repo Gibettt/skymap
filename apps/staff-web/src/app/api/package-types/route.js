@@ -1,4 +1,4 @@
-import { assertSameOrigin, jsonError, parseJsonBody, requireUser, writeAudit } from '@ephemeris/auth';
+import { assertSameOrigin, jsonError, parseJsonBody, requirePermission, writeAudit } from '@ephemeris/auth';
 import { query, transaction } from '@ephemeris/db';
 
 function slugify(value) {
@@ -11,7 +11,7 @@ function slugify(value) {
 
 export async function GET() {
   try {
-    await requireUser(['admin', 'internal', 'external']);
+    await requirePermission('staff.bookings', ['internal', 'external']);
     const { rows } = await query(
       `SELECT id, name, slug, is_active FROM package_types WHERE is_active = true ORDER BY name ASC`
     );
@@ -30,7 +30,7 @@ export async function GET() {
 export async function POST(request) {
   try {
     await assertSameOrigin(request);
-    const user = await requireUser(['admin', 'internal']);
+    const user = await requirePermission('staff.bookings', ['internal'], { write: true });
     if (user.access_role_level === 'read_only') {
       return Response.json({ error: 'This role has read-only access' }, { status: 403 });
     }

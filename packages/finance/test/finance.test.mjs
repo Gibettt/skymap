@@ -287,3 +287,19 @@ test('a reduced same-month reward spills an existing payout deduction into commi
   assert.equal(result.availableCommissionUsd, 10);
   assert.equal(result.availableUsd, 10);
 });
+
+test('tax is charged on the package price plus service charge', () => {
+  // Client example: 65 + 10% = 71.50, then 71.50 x 17% = 12.16, total 83.66.
+  const totals = calculateBookingTotals({
+    adultCount: 1,
+    childCount: 0,
+    adultPriceUsd: 65,
+    childPriceUsd: 32.5,
+    staffRole: 'external',
+  });
+
+  assert.equal(totals.baseTotalUsd, 65);
+  assert.equal(totals.serviceChargeUsd, 6.5);
+  assert.equal(totals.gstUsd, 12.16);
+  assert.equal(totals.invoiceTotalUsd, 83.66);
+});

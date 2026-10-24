@@ -158,9 +158,9 @@ export function NotificationCenter({ role, readOnly }: { role: StaffRole; readOn
                 <p className="text-xs text-slate-300 mt-1 leading-snug line-clamp-2">
                   {notification.message}
                 </p>
-                <div className="flex items-center justify-between text-[11px] text-slate-400 mt-2.5 pt-0.5">
+                <div className="flex items-center justify-between text-xs text-slate-400 mt-2.5 pt-0.5">
                   <span className="truncate pr-2">{notification.meta || "Notification"}</span>
-                  <span className="shrink-0 font-mono text-[10px]">
+                  <span className="shrink-0 font-mono text-xs">
                     {formatDistanceToNow(new Date(notification.created_at), { addSuffix: true })}
                   </span>
                 </div>

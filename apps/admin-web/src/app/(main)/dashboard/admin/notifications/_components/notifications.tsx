@@ -178,7 +178,7 @@ export function Notifications({ initialNotifications }: { initialNotifications: 
         {summary.map(({ label, mobileLabel, value, icon: Icon }) => (
           <Card key={label} size="sm" className="min-w-0">
             <CardHeader className="gap-1 px-2 sm:px-3">
-              <CardDescription className="text-[11px] leading-tight sm:text-sm">
+              <CardDescription className="text-xs leading-tight sm:text-sm">
                 <span className="sm:hidden">{mobileLabel}</span>
                 <span className="hidden sm:inline">{label}</span>
               </CardDescription>

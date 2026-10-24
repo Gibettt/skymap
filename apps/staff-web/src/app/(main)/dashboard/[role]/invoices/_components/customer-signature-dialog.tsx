@@ -81,6 +81,14 @@ export function CustomerSignatureDialog({
   }
 
   function beginDrawing(event: React.PointerEvent<HTMLCanvasElement>) {
+    // Match the bitmap to the on-screen box so strokes are not stretched on narrow screens.
+    // Resizing clears the canvas, so this only runs before the first stroke.
+    if (!hasDrawing) {
+      const canvas = event.currentTarget;
+      const bounds = canvas.getBoundingClientRect();
+      const height = Math.round((canvas.width * bounds.height) / bounds.width);
+      if (bounds.width > 0 && Math.abs(height - canvas.height) > 1) canvas.height = height;
+    }
     const context = event.currentTarget.getContext("2d");
     if (!context) return;
     const point = canvasPoint(event);
@@ -257,7 +265,7 @@ export function CustomerSignatureDialog({
                     onChange={uploadSignature}
                   />
                 </label>
-                <FieldDescription className="text-right text-[11px]">
+                <FieldDescription className="text-right text-xs">
                   Transparent PNG recommended. Max 750 KB.
                 </FieldDescription>
               </div>

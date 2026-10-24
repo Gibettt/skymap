@@ -101,7 +101,7 @@ function SkyMetric({
       </div>
       <p className="mt-3 text-slate-300 text-xs sm:text-sm">{label}</p>
       <p className="mt-1 truncate font-semibold text-2xl text-white tracking-tight sm:text-3xl">{value}</p>
-      <p className="mt-1 line-clamp-2 min-h-8 text-[11px] text-slate-400 leading-4 sm:text-xs">{note}</p>
+      <p className="mt-1 line-clamp-2 min-h-8 text-xs text-slate-400 leading-4 sm:text-xs">{note}</p>
     </article>
   );
 }
@@ -271,7 +271,7 @@ export function InternalStaffOverview({ data, permissions, userName, resortName 
                         className="grid min-w-0 grid-cols-[2.75rem_2.25rem_minmax(0,1fr)_auto] items-center gap-2 rounded-xl border border-cyan-300/12 bg-[#06152f]/75 px-2.5 py-2 transition-colors hover:border-fuchsia-300/25 hover:bg-[#0a2448]/80"
                       >
                         <span className="text-center">
-                          <span className="block text-[10px] text-slate-400 uppercase">{date.weekday}</span>
+                          <span className="block text-xs text-slate-400 uppercase">{date.weekday}</span>
                           <span className="block font-semibold text-cyan-100 text-sm">{date.day}</span>
                         </span>
                         <span
@@ -281,9 +281,9 @@ export function InternalStaffOverview({ data, permissions, userName, resortName 
                         </span>
                         <span className="min-w-0">
                           <span className="block truncate font-medium text-white text-xs">{booking.plan}</span>
-                          <span className="block truncate text-[10px] text-slate-400">{date.full}</span>
+                          <span className="block truncate text-xs text-slate-400">{date.full}</span>
                         </span>
-                        <Badge className="max-w-20 truncate border-violet-300/15 bg-violet-400/10 px-1.5 text-[9px] text-violet-200 hover:bg-violet-400/10">
+                        <Badge className="max-w-20 truncate border-violet-300/15 bg-violet-400/10 px-1.5 text-xs text-violet-200 hover:bg-violet-400/10">
                           {booking.status}
                         </Badge>
                       </div>
