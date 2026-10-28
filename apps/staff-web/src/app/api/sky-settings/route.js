@@ -15,7 +15,7 @@ function mapSetting(row) {
 
 export async function GET() {
   try {
-    const user = await requirePermission('staff.sky_guide', ['internal']);
+    const user = await requirePermission('staff.sky_guide', ['internal', 'external']);
     if (!user.resort_id) throw new ApiError(403, 'Staff resort profile is not configured');
     const { rows } = await query(
       'SELECT name, latitude, longitude, timezone, observation_spots FROM resorts WHERE id = $1',

@@ -19,7 +19,7 @@ async function parseEventId(params) {
 
 export async function GET(_request, { params }) {
   try {
-    const user = await requirePermission('staff.sky_guide', ['internal']);
+    const user = await requirePermission('staff.sky_guide', ['internal', 'external']);
     if (!user.resort_id) throw new ApiError(403, 'Staff resort profile is not configured');
     const id = await parseEventId(params);
     const { rows } = await query(

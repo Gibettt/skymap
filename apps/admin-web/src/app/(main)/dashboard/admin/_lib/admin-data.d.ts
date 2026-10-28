@@ -16,6 +16,8 @@ export interface BookingExperienceRow {
 
 export interface BookingRow {
   id: string;
+  /** Rating left by the external staff member who made the booking, once it was completed. */
+  staff_review?: { rating: number; comment: string | null; reviewerName: string | null; updatedAt: string | null } | null;
   booking_code: string;
   booking_date: string;
   event_date: string;

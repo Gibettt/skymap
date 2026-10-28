@@ -12,6 +12,12 @@ import {
   handlePayoutReviewed,
 } from './handlers/payout.js';
 import { insertNotification } from './handlers/notification.js';
+import {
+  dueReminder,
+  handleSkyEventChanged,
+  REMINDER_OFFSETS_MINUTES,
+  sendDueEventReminders,
+} from './handlers/sky-event.js';
 
 let initialized = false;
 
@@ -35,6 +41,10 @@ export function setupDefaultHandlers() {
   bus.on(EventTypes.PAYOUT_PROCESSED, handlePayoutReviewed);
   bus.on(EventTypes.PAYOUT_COMPLETED, handlePayoutReviewed);
   bus.on(EventTypes.PAYOUT_REJECTED, handlePayoutReviewed);
+
+  // Resort events: staff hear about new, changed and cancelled sessions.
+  bus.on(EventTypes.SKY_EVENT_CREATED, handleSkyEventChanged);
+  bus.on(EventTypes.SKY_EVENT_UPDATED, handleSkyEventChanged);
 }
 
 // Auto-initialize default handlers
@@ -48,6 +58,9 @@ export {
   EventTypes,
   events,
   insertNotification,
+  dueReminder,
+  REMINDER_OFFSETS_MINUTES,
+  sendDueEventReminders,
 };
 
 export default {

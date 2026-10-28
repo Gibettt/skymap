@@ -1,5 +1,5 @@
 import { ApiError, jsonError, requirePermission } from '@ephemeris/auth';
-import { isMySql, query } from '@ephemeris/db';
+import { ensureSkyEventSeriesSchema, isMySql, query } from '@ephemeris/db';
 import { uuidSchema } from '@ephemeris/db/validators/common';
 
 const MAX_RANGE_MS = 400 * 24 * 60 * 60 * 1000;
@@ -30,6 +30,7 @@ export async function GET(request) {
   try {
     await requirePermission('admin.calendar', ['admin']);
     const { startsAt, endsAt, resortId } = parseRange(request);
+    await ensureSkyEventSeriesSchema();
     const parameters = [startsAt, endsAt, resortId];
     const bookingQuery = isMySql()
       ? `SELECT b.id, b.booking_code, b.event_date, b.time_start, b.time_end,
@@ -81,7 +82,7 @@ export async function GET(request) {
           se.source_name, se.source_url, se.visibility, se.resort_id, se.package_id,
           se.observation_spot, se.capacity, se.price_override_usd, se.image_url,
           se.image_data IS NOT NULL AS has_image,
-          se.status, se.is_published, se.created_at, se.updated_at,
+          se.status, se.is_published, se.created_at, se.updated_at, se.series_id,
           r.name AS resort_name, p.name AS package_name
         FROM sky_events se
         JOIN resorts r ON r.id = se.resort_id
@@ -140,6 +141,7 @@ export async function GET(request) {
           imageUrl: event.has_image ? `/api/sky-events/${event.id}/image` : event.image_url,
           status: event.status,
           isPublished: event.is_published,
+          seriesId: event.series_id ?? null,
           createdAt: iso(event.created_at),
           updatedAt: iso(event.updated_at),
         })),

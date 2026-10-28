@@ -6,7 +6,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 import { formatDistanceToNow } from "date-fns";
-import { Bell, Calendar, CalendarCheck, CheckCheck, CircleDollarSign, ReceiptText } from "lucide-react";
+import { Bell, Calendar, CalendarCheck, CalendarClock, CheckCheck, CircleDollarSign, ReceiptText } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty";
@@ -31,6 +31,7 @@ const NOTIFICATIONS_CHANGED_EVENT = "ephemeris:notifications-changed";
 function NotificationIcon({ type }: { type: AdminNotification["type"] }) {
   if (type === "payout") return <CircleDollarSign className="size-4.5 text-emerald-300" />;
   if (type === "invoice") return <ReceiptText className="size-4.5 text-violet-300" />;
+  if (type === "event") return <CalendarClock className="size-4.5 text-amber-300" />;
   return <Calendar className="size-4.5 text-cyan-300" />;
 }
 

@@ -381,6 +381,16 @@ CREATE TABLE IF NOT EXISTS feedback_submissions (
   submitted_at timestamptz NOT NULL DEFAULT now()
 );
 
+CREATE TABLE IF NOT EXISTS booking_staff_reviews (
+  id uuid PRIMARY KEY,
+  booking_id uuid NOT NULL UNIQUE REFERENCES bookings(id) ON DELETE CASCADE,
+  reviewer_id uuid NOT NULL REFERENCES users(id),
+  rating integer NOT NULL CHECK (rating BETWEEN 1 AND 5),
+  comment text,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
+
 CREATE TABLE IF NOT EXISTS audit_logs (
   id bigserial PRIMARY KEY,
   actor_id uuid REFERENCES users(id),
@@ -523,8 +533,8 @@ CREATE TABLE IF NOT EXISTS monthly_invoice_staff_signatures (
 CREATE TABLE IF NOT EXISTS notifications (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   recipient_user_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  type text NOT NULL CHECK (type IN ('booking', 'payout', 'invoice')),
-  source_table text NOT NULL CHECK (source_table IN ('bookings', 'payout_requests', 'monthly_invoice_submissions', 'invoices')),
+  type text NOT NULL CHECK (type IN ('booking', 'payout', 'invoice', 'event')),
+  source_table text NOT NULL CHECK (source_table IN ('bookings', 'payout_requests', 'monthly_invoice_submissions', 'invoices', 'sky_events')),
   source_id uuid NOT NULL,
   title text NOT NULL,
   message text NOT NULL,
@@ -707,11 +717,19 @@ CREATE TABLE IF NOT EXISTS sky_events (
   image_file_name varchar(255),
   status text NOT NULL DEFAULT 'published' CHECK (status IN ('draft', 'published', 'cancelled', 'sold_out')),
   is_published boolean NOT NULL DEFAULT true,
+  series_id uuid,
   created_by uuid REFERENCES users(id),
   updated_by uuid REFERENCES users(id),
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz NOT NULL DEFAULT now(),
   CHECK (ends_at IS NULL OR ends_at > starts_at)
+);
+
+CREATE TABLE IF NOT EXISTS sky_event_reminders (
+  sky_event_id uuid NOT NULL REFERENCES sky_events(id) ON DELETE CASCADE,
+  offset_minutes integer NOT NULL,
+  sent_at timestamptz NOT NULL DEFAULT now(),
+  PRIMARY KEY (sky_event_id, offset_minutes)
 );
 
 CREATE OR REPLACE FUNCTION enforce_internal_sky_manager()

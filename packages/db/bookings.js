@@ -78,6 +78,7 @@ const EXTERNAL_STAFF_BOOKING_RESPONSE_FIELDS = Object.freeze([
 	"resort_name",
 	"participants",
 	"experiences",
+	"staff_review",
 	"created_at",
 ]);
 
@@ -421,4 +422,45 @@ export async function priceBookingExperiences(
 		experiences: prepared,
 		totals: combineBookingTotals(prepared.map((experience) => experience.totals)),
 	};
+}
+
+/**
+ * External staff rate the experiences they booked, once each booking is completed.
+ * These reviews are kept apart from guest feedback so guest ratings stay comparable.
+ */
+export function staffReviewError(user, booking) {
+	if (user?.role !== "external") {
+		return { status: 403, error: "Only external staff can rate their completed bookings." };
+	}
+	if (!booking || booking.staff_id !== user.id) {
+		return { status: 403, error: "You can only rate bookings you created." };
+	}
+	if (booking.status !== "completed") {
+		return { status: 409, error: "An experience can be rated once the booking is completed." };
+	}
+	return null;
+}
+
+/** Adds `staff_review` ({ rating, comment, reviewerName, updatedAt } or null) to each booking. */
+export async function attachStaffReviews(client, bookings) {
+	if (!bookings.length) return bookings;
+	const { rows } = await client.query(
+		`SELECT r.booking_id, r.rating, r.comment, r.updated_at, u.name AS reviewer_name
+     FROM booking_staff_reviews r
+     LEFT JOIN users u ON u.id = r.reviewer_id
+     WHERE r.booking_id = ANY($1::uuid[])`,
+		[bookings.map((booking) => booking.id)],
+	);
+	const reviews = new Map(
+		rows.map((row) => [
+			String(row.booking_id),
+			{
+				rating: Number(row.rating),
+				comment: row.comment ?? null,
+				reviewerName: row.reviewer_name ?? null,
+				updatedAt: row.updated_at ? new Date(row.updated_at).toISOString() : null,
+			},
+		]),
+	);
+	return bookings.map((booking) => ({ ...booking, staff_review: reviews.get(String(booking.id)) ?? null }));
 }

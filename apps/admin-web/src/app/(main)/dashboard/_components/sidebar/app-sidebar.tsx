@@ -43,6 +43,7 @@ const adminPermissionByUrl: Record<string, string> = {
   "/dashboard/admin/roles": "admin.roles",
   "/dashboard/admin/logs": "admin.logs",
   "/dashboard/admin/calendar": "admin.calendar",
+  "/dashboard/admin/sky-guide": "admin.calendar",
   "/dashboard/admin/notifications": "admin.notifications",
   "/dashboard/admin/pengaturan": "admin.settings",
 };

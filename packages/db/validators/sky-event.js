@@ -36,7 +36,14 @@ const skyEventShape = {
   isPublished: z.boolean().default(true),
 };
 
-export const createSkyEventSchema = z.object(skyEventShape).refine((data) => {
+export const createSkyEventSchema = z.object({
+  ...skyEventShape,
+  // Creating with this date makes one event per week, same weekday and time, until that date.
+  repeatWeeklyUntil: z.preprocess(
+    (value) => value || null,
+    z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Tanggal akhir pengulangan tidak valid').nullable(),
+  ).default(null),
+}).refine((data) => {
   if (!data.endsAt) return true;
   return new Date(data.endsAt) > new Date(data.startsAt);
 }, {

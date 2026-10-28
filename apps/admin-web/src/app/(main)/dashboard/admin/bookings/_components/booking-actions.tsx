@@ -464,6 +464,25 @@ export function BookingActions({ booking, options }: BookingActionsProps) {
               <Input readOnly value={booking.signed_by_guest ? "Signed" : "Not signed"} />
             </Field>
             <Field>
+              <FieldLabel>External staff rating</FieldLabel>
+              <Input
+                readOnly
+                value={
+                  booking.staff_review
+                    ? `${"★".repeat(booking.staff_review.rating)}${"☆".repeat(5 - booking.staff_review.rating)} ${booking.staff_review.rating}/5${booking.staff_review.reviewerName ? ` · ${booking.staff_review.reviewerName}` : ""}`
+                    : booking.status === "completed"
+                      ? "Not rated yet"
+                      : "Available after completion"
+                }
+              />
+            </Field>
+            {booking.staff_review?.comment ? (
+              <Field className="md:col-span-2">
+                <FieldLabel>External staff feedback</FieldLabel>
+                <Textarea readOnly value={booking.staff_review.comment} />
+              </Field>
+            ) : null}
+            <Field>
               <FieldLabel>Booking date</FieldLabel>
               <Input readOnly value={formatDate(booking.booking_date)} />
             </Field>

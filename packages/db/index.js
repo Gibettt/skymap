@@ -131,4 +131,7 @@ export {
 export {
   ensurePackageSchema,
   ensureInventorySchema,
+  ensureSkyEventSeriesSchema,
+  ensureStaffReviewSchema,
+  ensureEventNotificationSchema,
 } from './schema-ensures.js';

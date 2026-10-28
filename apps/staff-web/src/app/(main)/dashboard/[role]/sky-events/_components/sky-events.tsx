@@ -54,6 +54,7 @@ export type SkyEvent = {
   imageUrl: string | null;
   status: "draft" | "published" | "cancelled" | "sold_out";
   isPublished: boolean;
+  seriesId: string | null;
 };
 
 export type SkyPackage = { id: string; name: string };
@@ -184,7 +185,8 @@ export function SkyEvents({ readOnly }: { readOnly: boolean }) {
           toast.error(`Event saved, but image failed: ${imageError instanceof Error ? imageError.message : "Unknown error"}`);
         }
       }
-      toast.success(editing ? "Sky event updated" : "Sky event created");
+      const createdCount = Number(result.createdCount ?? 1);
+      toast.success(editing ? "Sky event updated" : createdCount > 1 ? `${createdCount} weekly events created` : "Sky event created");
       setFormOpen(false);
       setEditing(null);
       await load();
@@ -217,14 +219,16 @@ export function SkyEvents({ readOnly }: { readOnly: boolean }) {
     }
   };
 
-  const remove = async () => {
+  const remove = async (scope: "single" | "following" = "single") => {
     if (!deleting) return;
     setSaving(true);
     try {
-      const response = await fetch(`/api/sky-events/${deleting.id}`, { method: "DELETE" });
+      const query = scope === "following" ? "?scope=following" : "";
+      const response = await fetch(`/api/sky-events/${deleting.id}${query}`, { method: "DELETE" });
       const result = await response.json();
       if (!response.ok) throw new Error(result.error ?? "Unable to delete sky event");
-      toast.success("Sky event deleted");
+      const deletedCount = Number(result.deletedCount ?? 1);
+      toast.success(deletedCount > 1 ? `${deletedCount} weekly events deleted` : "Sky event deleted");
       setDeleting(null);
       await load();
     } catch (deleteError) {
@@ -352,7 +356,11 @@ export function SkyEvents({ readOnly }: { readOnly: boolean }) {
             <Sparkles />
           </EmptyMedia>
           <EmptyTitle>No upcoming sky events</EmptyTitle>
-          <EmptyDescription>Create an event or synchronize the official astronomy calendar.</EmptyDescription>
+          <EmptyDescription>
+            {readOnly
+              ? "Published events will appear here as soon as the resort team schedules them."
+              : "Create an event or synchronize the official astronomy calendar."}
+          </EmptyDescription>
         </EmptyHeader>
         {!readOnly ? (
           <Button onClick={openCreate}>
@@ -367,9 +375,11 @@ export function SkyEvents({ readOnly }: { readOnly: boolean }) {
     <div className="flex flex-col gap-4">
       <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
         <div className="space-y-1">
-          <h1 className="font-semibold text-2xl tracking-tight">Sky Guide</h1>
+          <h1 className="font-semibold text-2xl tracking-tight">Upcoming Events</h1>
           <p className="text-muted-foreground text-sm">
-            Manage astronomy events and observing sessions for {location?.name ?? "your resort"}.
+            {readOnly
+              ? `Astronomy events and observing sessions scheduled at ${location?.name ?? "your resort"}.`
+              : `Manage astronomy events and observing sessions for ${location?.name ?? "your resort"}.`}
           </p>
         </div>
         {!readOnly ? (
@@ -478,11 +488,25 @@ export function SkyEvents({ readOnly }: { readOnly: boolean }) {
             </AlertDialogMedia>
             <AlertDialogTitle>Delete sky event?</AlertDialogTitle>
             <AlertDialogDescription>
-              “{deleting?.title}” will be permanently removed from the resort calendar.
+              {deleting?.seriesId
+                ? `“${deleting.title}” repeats every week. Delete only this date, or this date and every later one in the series.`
+                : `“${deleting?.title}” will be permanently removed from the resort calendar.`}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={saving}>Cancel</AlertDialogCancel>
+            {deleting?.seriesId ? (
+              <AlertDialogAction
+                variant="destructive"
+                disabled={saving}
+                onClick={(event) => {
+                  event.preventDefault();
+                  void remove("following");
+                }}
+              >
+                This and following
+              </AlertDialogAction>
+            ) : null}
             <AlertDialogAction
               variant="destructive"
               disabled={saving}
@@ -491,7 +515,7 @@ export function SkyEvents({ readOnly }: { readOnly: boolean }) {
                 void remove();
               }}
             >
-              {saving ? "Deleting…" : "Delete"}
+              {saving ? "Deleting…" : deleting?.seriesId ? "Only this date" : "Delete"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

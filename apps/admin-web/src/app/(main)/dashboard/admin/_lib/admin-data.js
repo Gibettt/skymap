@@ -1,7 +1,8 @@
 import "server-only";
 
 import { requirePermission } from "@ephemeris/auth";
-import { ensureInventorySchema, ensurePackageSchema, query, transaction } from "@ephemeris/db";
+import { ensureInventorySchema, ensurePackageSchema, ensureStaffReviewSchema, query, transaction } from "@ephemeris/db";
+import { attachStaffReviews } from "@ephemeris/db/bookings";
 import { bookingSelectQuery } from "@ephemeris/db/helpers";
 import { listInvoices, listInvoiceWorkflows, listMonthlyInvoiceSubmissions } from "@ephemeris/db/invoices";
 import { presenceStatus } from "@ephemeris/db/presence";
@@ -37,7 +38,8 @@ export async function getOverview() {
 export async function getBookings() {
   await requirePermission("admin.bookings", ["admin"]);
   const { rows } = await query(`${bookingSelectQuery} ORDER BY b.created_at DESC, b.event_date DESC LIMIT 200`);
-  return rows;
+  await ensureStaffReviewSchema();
+  return attachStaffReviews({ query }, rows);
 }
 
 export async function getBookingOptions() {

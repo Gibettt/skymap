@@ -121,3 +121,47 @@ export function filterPublicEvents(events, from, to) {
     return event.isPublished && eventStart >= start && eventStart <= finish;
   });
 }
+
+export const MAX_WEEKLY_OCCURRENCES = 53;
+const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
+
+function localDate(date, timeZone) {
+  return new Intl.DateTimeFormat('en-CA', { timeZone, year: 'numeric', month: '2-digit', day: '2-digit' }).format(date);
+}
+
+/**
+ * Every weekly occurrence from the first event up to and including `until`
+ * (a YYYY-MM-DD date in the resort time zone).
+ * shortcut: steps by 7 x 24h, which keeps the local time only in zones without
+ * daylight saving (current resorts use Indian/Maldives); revisit for DST resorts.
+ */
+export function weeklyOccurrences({ startsAt, endsAt = null, until, timeZone = 'UTC' }) {
+  const start = new Date(startsAt);
+  if (Number.isNaN(start.getTime())) throw new Error('Start date is invalid');
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(String(until ?? ''))) throw new Error('Repeat end date is invalid');
+  if (until < localDate(start, timeZone)) throw new Error('Repeat end date must be on or after the first event');
+  const duration = endsAt ? new Date(endsAt).getTime() - start.getTime() : null;
+
+  const occurrences = [];
+  for (let time = start.getTime(); localDate(new Date(time), timeZone) <= until; time += WEEK_MS) {
+    if (occurrences.length === MAX_WEEKLY_OCCURRENCES) {
+      throw new Error(`Weekly repeats are limited to ${MAX_WEEKLY_OCCURRENCES} events (about one year)`);
+    }
+    occurrences.push({
+      startsAt: new Date(time).toISOString(),
+      endsAt: duration == null ? null : new Date(time + duration).toISOString(),
+    });
+  }
+  return occurrences;
+}
+
+export const SKY_GUIDE_MONTHS = Object.freeze([1, 3, 6, 12]);
+
+/** Today (in the resort time zone) through the same day `months` later, for the Sky Guide. */
+export function monthsAheadWindow(timeZone, months, now = new Date()) {
+  const span = SKY_GUIDE_MONTHS.includes(Number(months)) ? Number(months) : 3;
+  const { from } = rollingDateWindow(timeZone, now);
+  const end = new Date(`${from}T00:00:00.000Z`);
+  end.setUTCMonth(end.getUTCMonth() + span);
+  return { from, to: end.toISOString().slice(0, 10), months: span };
+}

@@ -464,3 +464,44 @@ export function getOfficialPresets(year = 2026) {
   return presets;
 }
 
+const MOON_PHASE_NAMES = [
+  'New Moon',
+  'Waxing Crescent',
+  'First Quarter',
+  'Waxing Gibbous',
+  'Full Moon',
+  'Waning Gibbous',
+  'Last Quarter',
+  'Waning Crescent',
+];
+
+/** The moon right now: phase name, lit percentage, and the next new and full moon. */
+export function moonSnapshot(date = new Date()) {
+  const angle = Astronomy.MoonPhase(date);
+  const nextPhase = (target) => Astronomy.SearchMoonPhase(target, date, 40)?.date.toISOString() ?? null;
+  return {
+    phaseName: MOON_PHASE_NAMES[Math.round(angle / 45) % 8],
+    illuminationPercent: Math.round(Astronomy.Illumination(Astronomy.Body.Moon, date).phase_fraction * 100),
+    nextNewMoon: nextPhase(0),
+    nextFullMoon: nextPhase(180),
+  };
+}
+
+function guideGroup(event) {
+  if (event.id.startsWith('moon-')) return 'moonPhases';
+  if (event.eventType === 'meteor') return 'meteorShowers';
+  return 'astronomicalEvents';
+}
+
+/**
+ * Staff Sky Guide: moon phases, meteor showers and other astronomical events for a
+ * location, computed (nothing to enter by hand). Events that already ended are left out.
+ */
+export function skyGuide({ latitude, longitude, from, to, now = new Date() }) {
+  const guide = { moon: moonSnapshot(now), moonPhases: [], meteorShowers: [], astronomicalEvents: [] };
+  for (const event of calculatedSkyEvents({ from, to, latitude, longitude })) {
+    if (new Date(event.endsAt ?? event.startsAt) < now) continue;
+    guide[guideGroup(event)].push(event);
+  }
+  return guide;
+}

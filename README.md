@@ -90,3 +90,18 @@ Setiap app di-deploy sebagai project terpisah (mis. Vercel):
 3. **staff** → `staff.ephemeris.id`, root directory `apps/staff`
 
 Sesi dibagikan antar subdomain dengan menyetel `SESSION_COOKIE_DOMAIN=.ephemeris.id` dan `SESSION_SECRET` yang identik di ketiga app. Database tetap satu (MySQL).
+
+### Migrasi database
+
+Jalankan berurutan file baru di `db/mysql/` yang belum pernah dijalankan (mis. `042` s/d `045`). App juga menambah kolom/tabel itu sendiri saat pertama dipakai (`ensure*Schema` di `packages/db/schema-ensures.js`), tetapi migrasi tetap cara yang disarankan.
+
+### Pengingat event (staff-web)
+
+Staff external mendapat notifikasi lonceng 48 jam, 24 jam, 3 jam, 2 jam, dan 1 jam sebelum event yang dipublikasikan. Pengingat dikirim oleh endpoint `GET /api/cron/event-reminders` di **staff-web**, yang harus dipanggil terjadwal **setiap 10 menit**:
+
+1. Setel `CRON_SECRET=<string acak panjang>` di env staff-web. Tanpa ini endpoint menjawab 503 dan pengingat mati.
+2. Panggil dengan header `Authorization: Bearer <CRON_SECRET>`:
+   - Vercel Pro: tambahkan cron `*/10 * * * *` ke path itu di `vercel.json` (Vercel mengirim header tersebut otomatis).
+   - Vercel Hobby (cron hanya sekali sehari): pakai penjadwal luar seperti cron-job.org dengan header di atas.
+
+Pengingat yang terlewat (penjadwal sempat mati) tidak dikirim beruntun: hanya pengingat terdekat yang dikirim. Notifikasi hanya di aplikasi (belum ada email/WhatsApp).

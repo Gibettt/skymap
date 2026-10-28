@@ -199,6 +199,7 @@ CREATE TABLE IF NOT EXISTS sky_events (
   image_mime_type VARCHAR(120) NULL,
   image_file_name VARCHAR(255) NULL,
   status ENUM('draft', 'published', 'cancelled', 'sold_out') NOT NULL DEFAULT 'published',
+  series_id CHAR(36) NULL,
   CONSTRAINT fk_sky_events_creator FOREIGN KEY (created_by) REFERENCES users(id),
   CONSTRAINT fk_sky_events_updater FOREIGN KEY (updated_by) REFERENCES users(id),
   CONSTRAINT fk_sky_events_resort FOREIGN KEY (resort_id) REFERENCES resorts(id),
@@ -207,7 +208,16 @@ CREATE TABLE IF NOT EXISTS sky_events (
   CHECK (capacity IS NULL OR capacity > 0),
   CHECK (price_override_usd IS NULL OR price_override_usd >= 0),
   INDEX idx_sky_events_public_starts (is_published, starts_at),
-  INDEX idx_sky_events_resort_status_starts (resort_id, status, starts_at)
+  INDEX idx_sky_events_resort_status_starts (resort_id, status, starts_at),
+  INDEX idx_sky_events_series (series_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+CREATE TABLE IF NOT EXISTS sky_event_reminders (
+  sky_event_id CHAR(36) NOT NULL,
+  offset_minutes INT NOT NULL,
+  sent_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  PRIMARY KEY (sky_event_id, offset_minutes),
+  CONSTRAINT fk_sky_event_reminders_event FOREIGN KEY (sky_event_id) REFERENCES sky_events(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 CREATE TABLE IF NOT EXISTS bookings (
@@ -398,6 +408,19 @@ CREATE TABLE IF NOT EXISTS feedback_submissions (
   CHECK (rating BETWEEN 1 AND 5)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
+CREATE TABLE IF NOT EXISTS booking_staff_reviews (
+  id CHAR(36) PRIMARY KEY,
+  booking_id CHAR(36) NOT NULL UNIQUE,
+  reviewer_id CHAR(36) NOT NULL,
+  rating INT NOT NULL,
+  comment TEXT NULL,
+  created_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  updated_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3),
+  CONSTRAINT fk_staff_review_booking FOREIGN KEY (booking_id) REFERENCES bookings(id) ON DELETE CASCADE,
+  CONSTRAINT fk_staff_review_reviewer FOREIGN KEY (reviewer_id) REFERENCES users(id),
+  CHECK (rating BETWEEN 1 AND 5)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
 CREATE TABLE IF NOT EXISTS payout_requests (
   id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
   requester_id CHAR(36) NOT NULL,
@@ -551,8 +574,8 @@ CREATE TABLE IF NOT EXISTS monthly_invoice_staff_signatures (
 CREATE TABLE IF NOT EXISTS notifications (
   id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
   recipient_user_id CHAR(36) NOT NULL,
-  type ENUM('booking', 'payout', 'invoice') NOT NULL,
-  source_table ENUM('bookings', 'payout_requests', 'monthly_invoice_submissions', 'invoices') NOT NULL,
+  type ENUM('booking', 'payout', 'invoice', 'event') NOT NULL,
+  source_table ENUM('bookings', 'payout_requests', 'monthly_invoice_submissions', 'invoices', 'sky_events') NOT NULL,
   source_id CHAR(36) NOT NULL,
   title VARCHAR(255) NOT NULL,
   message TEXT NOT NULL,

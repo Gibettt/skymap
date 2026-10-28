@@ -1,5 +1,5 @@
 import { ApiError, assertSameOrigin, jsonError, parseJsonBody, requirePermission, writeAudit } from '@ephemeris/auth';
-import { transaction } from '@ephemeris/db';
+import { ensureEventNotificationSchema, transaction } from '@ephemeris/db';
 import { uuidSchema } from '@ephemeris/db/validators/common';
 import { updateSkyEventSchema } from '@ephemeris/db/validators/sky-event';
 import { emit, EventTypes } from '@ephemeris/events';
@@ -48,6 +48,7 @@ export async function PATCH(request, { params }) {
       requestedResortId = resortId.data;
     }
 
+    await ensureEventNotificationSchema();
     const updated = await transaction(async (client) => {
       const current = await client.query('SELECT * FROM sky_events WHERE id = $1 FOR UPDATE', [id.data]);
       const before = current.rows[0];
@@ -109,17 +110,22 @@ export async function DELETE(request, { params }) {
     const id = uuidSchema.safeParse(rawId);
     if (!id.success) return Response.json({ error: 'Invalid sky event ID' }, { status: 400 });
 
+    const following = new URL(request.url).searchParams.get('scope') === 'following';
+
     const removed = await transaction(async (client) => {
       const current = await client.query('SELECT * FROM sky_events WHERE id = $1 FOR UPDATE', [id.data]);
       const before = current.rows[0];
       if (!before) return null;
-      await client.query('DELETE FROM sky_events WHERE id = $1', [id.data]);
+      // "This and following" removes the rest of a weekly series from this occurrence on.
+      const deleted = following && before.series_id
+        ? await client.query('DELETE FROM sky_events WHERE series_id = $1 AND starts_at >= $2 RETURNING id', [before.series_id, before.starts_at])
+        : await client.query('DELETE FROM sky_events WHERE id = $1 RETURNING id', [id.data]);
       await writeAudit(client, {
         actorId: user.id,
-        action: 'sky_event.delete',
+        action: deleted.rows.length > 1 ? 'sky_event.delete_series' : 'sky_event.delete',
         entityType: 'sky_event',
         entityId: id.data,
-        beforeData: before,
+        beforeData: { ...before, deletedCount: deleted.rows.length },
         request,
       });
       await emit(EventTypes.SKY_EVENT_DELETED, {
@@ -127,11 +133,11 @@ export async function DELETE(request, { params }) {
         title: before.title,
         resortId: before.resort_id,
       }, { client, actorId: user.id });
-      return { id: before.id, title: before.title };
+      return { id: before.id, title: before.title, deletedCount: deleted.rows.length };
     });
 
     if (!removed) return Response.json({ error: 'Sky event not found' }, { status: 404 });
-    return Response.json({ event: removed });
+    return Response.json({ event: removed, deletedCount: removed.deletedCount });
   } catch (error) {
     return jsonError(error);
   }

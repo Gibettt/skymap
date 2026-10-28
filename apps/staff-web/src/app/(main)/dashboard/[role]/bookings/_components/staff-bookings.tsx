@@ -29,6 +29,7 @@ import {
   ShieldCheck,
   Signature,
   SlidersHorizontal,
+  Star,
   Trash2,
   UserX,
   Workflow,
@@ -113,6 +114,7 @@ import {
 } from "../../_lib/staff-api";
 import { NewBookingForm } from "../../form-booking/_components/new-booking-form";
 import { exportBookingsToExcel } from "./booking-export";
+import { StaffReviewDialog, StaffReviewStars } from "./staff-review-dialog";
 
 interface MeResponse {
   user: StaffUser;
@@ -391,6 +393,17 @@ function BookingDetails({
               </span>
             </div>
           </div>
+          {booking.staff_review ? (
+            <div className="flex flex-col gap-1.5 p-3 rounded-xl border border-amber-400/25 bg-amber-500/5">
+              <span className="text-xs font-medium text-slate-400">
+                External staff rating{booking.staff_review.reviewerName ? ` · ${booking.staff_review.reviewerName}` : ""}
+              </span>
+              <StaffReviewStars rating={booking.staff_review.rating} />
+              {booking.staff_review.comment ? (
+                <p className="text-sm text-slate-200 whitespace-pre-wrap">{booking.staff_review.comment}</p>
+              ) : null}
+            </div>
+          ) : null}
           {showInternalDetails && booking.notes ? (
             <div className="flex flex-col gap-1 p-3 rounded-xl border border-cyan-400/20 bg-[#041633]/70">
               <span className="text-xs font-medium text-slate-400">Operational notes</span>
@@ -452,6 +465,7 @@ interface BookingActionsProps {
   booking: StaffBooking;
   canManage: boolean;
   canEdit: boolean;
+  canRate: boolean;
   pending: boolean;
   onView: (booking: StaffBooking) => void;
   onEdit: (booking: StaffBooking) => void;
@@ -459,12 +473,14 @@ interface BookingActionsProps {
   onStatus: (action: StatusAction) => void;
   onReschedule: (booking: StaffBooking) => void;
   onSigned: (booking: StaffBooking) => void;
+  onRate: (booking: StaffBooking) => void;
 }
 
 function BookingActions({
   booking,
   canManage,
   canEdit,
+  canRate,
   pending,
   onView,
   onEdit,
@@ -472,6 +488,7 @@ function BookingActions({
   onStatus,
   onReschedule,
   onSigned,
+  onRate,
 }: BookingActionsProps) {
   const operational = booking.status === "active" || booking.status === "rescheduled";
   const canSign = operational || booking.status === "completed";
@@ -501,6 +518,12 @@ function BookingActions({
             <DropdownMenuItem onSelect={() => onEdit(booking)}>
               <Pencil />
               Edit
+            </DropdownMenuItem>
+          ) : null}
+          {canRate ? (
+            <DropdownMenuItem onSelect={() => onRate(booking)}>
+              <Star />
+              {booking.staff_review ? "Update rating" : "Rate experience"}
             </DropdownMenuItem>
           ) : null}
         </DropdownMenuGroup>
@@ -612,6 +635,8 @@ function BookingActions({
 interface BookingActionContext {
   canManage: boolean;
   canEdit: (booking: StaffBooking) => boolean;
+  canRate: (booking: StaffBooking) => boolean;
+  onRate: (booking: StaffBooking) => void;
   pendingId: string | null;
   onView: (booking: StaffBooking) => void;
   onEdit: (booking: StaffBooking) => void;
@@ -786,6 +811,8 @@ function createStaffBookingsColumns(actions: BookingActionContext): ColumnDef<Da
             booking={row.original}
             canManage={actions.canManage}
             canEdit={actions.canEdit(row.original)}
+            canRate={actions.canRate(row.original)}
+            onRate={actions.onRate}
             pending={actions.pendingId === row.original.id}
             onView={actions.onView}
             onEdit={actions.onEdit}
@@ -892,6 +919,8 @@ function StaffBookingsGrid({
               booking={booking}
               canManage={actions.canManage}
               canEdit={actions.canEdit(booking)}
+              canRate={actions.canRate(booking)}
+              onRate={actions.onRate}
               pending={actions.pendingId === booking.id}
               onView={actions.onView}
               onEdit={actions.onEdit}
@@ -1101,6 +1130,7 @@ export function StaffBookings({ role, initialNewBooking = false }: { role: Staff
   const [newBookingOpen, setNewBookingOpen] = React.useState(initialNewBooking);
   const [viewBooking, setViewBooking] = React.useState<StaffBooking | null>(null);
   const [editBooking, setEditBooking] = React.useState<StaffBooking | null>(null);
+  const [ratingBooking, setRatingBooking] = React.useState<StaffBooking | null>(null);
   const [deleteBooking, setDeleteBooking] = React.useState<StaffBooking | null>(null);
   const [rescheduleBooking, setRescheduleBooking] = React.useState<StaffBooking | null>(null);
   const [statusAction, setStatusAction] = React.useState<StatusAction | null>(null);
@@ -1179,6 +1209,11 @@ export function StaffBookings({ role, initialNewBooking = false }: { role: Staff
       );
     },
     [canManage, readOnly, role],
+  );
+  // Mirrors staffReviewError in @ephemeris/db: external staff rate their own completed bookings.
+  const canRateBooking = React.useCallback(
+    (booking: StaffBooking) => role === "external" && !readOnly && booking.status === "completed",
+    [readOnly, role],
   );
 
   const updateBooking = React.useCallback(
@@ -1332,6 +1367,8 @@ export function StaffBookings({ role, initialNewBooking = false }: { role: Staff
     () => ({
       canManage,
       canEdit: canEditBooking,
+      canRate: canRateBooking,
+      onRate: setRatingBooking,
       pendingId,
       onView: setViewBooking,
       onEdit: openEditDialog,
@@ -1340,7 +1377,7 @@ export function StaffBookings({ role, initialNewBooking = false }: { role: Staff
       onReschedule: setRescheduleBooking,
       onSigned: (booking) => void toggleSigned(booking),
     }),
-    [canManage, canEditBooking, openEditDialog, pendingId, toggleSigned],
+    [canManage, canEditBooking, canRateBooking, openEditDialog, pendingId, toggleSigned],
   );
   const columns = React.useMemo(() => createStaffBookingsColumns(actionContext), [actionContext]);
   const table = useTable({
@@ -1730,6 +1767,12 @@ export function StaffBookings({ role, initialNewBooking = false }: { role: Staff
           </div>
         </SheetContent>
       </Sheet>
+
+      <StaffReviewDialog
+        booking={ratingBooking}
+        onOpenChange={(open) => !open && setRatingBooking(null)}
+        onSaved={loadData}
+      />
 
       <BookingDetails
         booking={viewBooking}

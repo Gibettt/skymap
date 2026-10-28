@@ -34,6 +34,7 @@ type EventForm = {
   priceOverrideUsd: string;
   status: "draft" | "published" | "cancelled" | "sold_out";
   visibility: "north" | "south" | "both";
+  repeatWeeklyUntil: string;
 };
 
 function toLocalDateTime(value?: string | null) {
@@ -60,6 +61,7 @@ function initialForm(event?: SkyEvent | null): EventForm {
     priceOverrideUsd: event?.priceOverrideUsd == null ? "" : String(event.priceOverrideUsd),
     status: event?.status ?? "published",
     visibility: event?.visibility ?? "both",
+    repeatWeeklyUntil: "",
   };
 }
 
@@ -121,6 +123,7 @@ export function SkyEventDialog({
       status: form.status,
       visibility: form.visibility,
       isPublished: form.status === "published",
+      ...(event ? {} : { repeatWeeklyUntil: form.repeatWeeklyUntil || null }),
     }, image);
   };
 
@@ -229,6 +232,21 @@ export function SkyEventDialog({
                 />
               </Field>
             </div>
+            {event ? null : (
+              <Field>
+                <FieldLabel htmlFor="sky-repeat-until">Repeat every week until (optional)</FieldLabel>
+                <Input
+                  id="sky-repeat-until"
+                  type="date"
+                  value={form.repeatWeeklyUntil}
+                  min={form.startsAt ? form.startsAt.slice(0, 10) : undefined}
+                  onChange={(e) => update("repeatWeeklyUntil", e.target.value)}
+                />
+                <FieldDescription>
+                  Creates this event every week on the same day and time, up to one year. Leave empty for a single event.
+                </FieldDescription>
+              </Field>
+            )}
             <Field>
               <FieldLabel htmlFor="sky-description">Description</FieldLabel>
               <Textarea

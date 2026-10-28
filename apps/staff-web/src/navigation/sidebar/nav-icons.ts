@@ -3,15 +3,16 @@
 import {
   Bell,
   Boxes,
+  CalendarClock,
   CalendarDays,
   CircleDollarSign,
   ClipboardList,
   LayoutDashboard,
   type LucideIcon,
+  MoonStar,
   Package,
   ReceiptText,
   Settings,
-  Sparkles,
 } from "lucide-react";
 
 import type { NavIconName } from "./sidebar-items";
@@ -24,7 +25,8 @@ export const NAV_ICONS: Record<NavIconName, LucideIcon> = {
   inventory: Boxes,
   invoices: ReceiptText,
   payouts: CircleDollarSign,
-  "sky-guide": Sparkles,
+  "sky-guide": MoonStar,
+  events: CalendarClock,
   notifications: Bell,
   settings: Settings,
 };

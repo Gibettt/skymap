@@ -25,8 +25,8 @@ export function staffNotificationHref(link: string | null, role: StaffRole, type
   const target = new URL(link, "http://staff.local");
   const route = target.pathname.match(/^\/dashboard\/(?:admin|internal|external)\/([^/]+)/)?.[1];
 
-  if (route === "sky-events" && role === "internal") {
-    return `${basePath}/sky-events${target.search}`;
+  if (route === "sky-events" || route === "sky-guide") {
+    return `${basePath}/${route}${target.search}`;
   }
 
   if (route === "invoices" || route === "invoice") {

@@ -9,6 +9,8 @@ export async function insertNotification(clientOrPool, {
   message,
   meta,
   link,
+  // Refreshing a notice (e.g. a newer reminder) shows it again as unread at the top.
+  markUnread = false,
 }) {
   if (!recipientUserId) return null;
 
@@ -29,7 +31,7 @@ export async function insertNotification(clientOrPool, {
         title = EXCLUDED.title,
         message = EXCLUDED.message,
         meta = EXCLUDED.meta,
-        link = EXCLUDED.link
+        link = EXCLUDED.link${markUnread ? ', read_at = NULL, created_at = now()' : ''}
       RETURNING id`,
       [
         recipientUserId,

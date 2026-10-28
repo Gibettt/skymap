@@ -1,4 +1,5 @@
 import { ApiError } from '@ephemeris/auth';
+import { weeklyOccurrences } from '@ephemeris/sky';
 
 export const SKY_EVENT_SELECT = `
   SELECT se.*, r.name AS resort_name, p.name AS package_name
@@ -28,6 +29,7 @@ export function mapSkyEvent(row) {
     imageUrl: row.image_data ? `/api/sky-events/${row.id}/image` : row.image_url,
     status: row.status,
     isPublished: row.is_published,
+    seriesId: row.series_id ?? null,
     createdAt: new Date(row.created_at).toISOString(),
     updatedAt: new Date(row.updated_at).toISOString(),
   };
@@ -45,6 +47,18 @@ export async function validateRelations(client, { resortId, packageId, requireAc
   if (!pkg.rows[0]) throw new ApiError(400, 'Package is not available at the selected resort');
   if (requireActivePackage && !pkg.rows[0].is_active) {
     throw new ApiError(400, 'Inactive packages cannot be assigned to a sky event');
+  }
+}
+
+/** One occurrence, or one per week until `until` (YYYY-MM-DD in the resort time zone). */
+export async function eventOccurrences(client, resortId, input, until) {
+  const single = [{ startsAt: input.startsAt, endsAt: input.endsAt }];
+  if (!until) return single;
+  const { rows } = await client.query('SELECT timezone FROM resorts WHERE id = $1', [resortId]);
+  try {
+    return weeklyOccurrences({ startsAt: input.startsAt, endsAt: input.endsAt, until, timeZone: rows[0]?.timezone || 'UTC' });
+  } catch (repeatError) {
+    throw new ApiError(400, repeatError.message);
   }
 }
 

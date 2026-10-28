@@ -184,7 +184,7 @@ export function InternalStaffOverview({ data, permissions, userName, resortName 
                 variant="outline"
                 className="border-cyan-300/20 bg-cyan-400/5 text-cyan-100 hover:bg-cyan-400/10 hover:text-white"
               >
-                <Link href="/dashboard/internal/sky-events">
+                <Link href="/dashboard/internal/sky-guide">
                   Explore sky guide <Telescope data-icon="inline-end" />
                 </Link>
               </Button>

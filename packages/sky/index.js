@@ -5,6 +5,8 @@ export {
   INTERNATIONAL_SPACE_DAYS,
   MAJOR_ASTRONOMICAL_EVENTS,
   getOfficialPresets,
+  moonSnapshot,
+  skyGuide,
 } from './calendar.js';
 export {
   DEFAULT_SKY_EVENT_TYPES,
@@ -13,4 +15,8 @@ export {
   nearestResort,
   validateResortLocation,
   filterPublicEvents,
+  MAX_WEEKLY_OCCURRENCES,
+  weeklyOccurrences,
+  SKY_GUIDE_MONTHS,
+  monthsAheadWindow,
 } from './events.js';

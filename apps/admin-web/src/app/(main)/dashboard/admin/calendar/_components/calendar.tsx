@@ -122,6 +122,7 @@ type SkyEvent = {
   imageUrl: string | null;
   status: "draft" | "published" | "cancelled" | "sold_out";
   isPublished: boolean;
+  seriesId: string | null;
   createdAt: string;
   updatedAt: string;
 };
@@ -143,6 +144,7 @@ type EventFormState = {
   description: string;
   sourceName: string;
   sourceUrl: string;
+  repeatWeeklyUntil: string;
 };
 
 function dateTimeInput(value: string | null) {
@@ -172,6 +174,7 @@ function newEventForm(resortId: string, date = new Date()): EventFormState {
     description: "",
     sourceName: "",
     sourceUrl: "",
+    repeatWeeklyUntil: "",
   };
 }
 
@@ -191,6 +194,7 @@ function editEventForm(event: SkyEvent): EventFormState {
     description: event.description,
     sourceName: event.sourceName,
     sourceUrl: event.sourceUrl ?? "",
+    repeatWeeklyUntil: "",
   };
 }
 
@@ -393,6 +397,7 @@ export function Calendar({ options }: { options: CalendarOptions }) {
           description: form.description,
           sourceName: form.sourceName,
           sourceUrl: form.sourceUrl,
+          ...(editingEvent ? {} : { repeatWeeklyUntil: form.repeatWeeklyUntil || null }),
         }),
       });
       const result = await response.json().catch(() => ({}));
@@ -414,7 +419,8 @@ export function Calendar({ options }: { options: CalendarOptions }) {
           toast.error(`Event saved, but image failed: ${imageError instanceof Error ? imageError.message : "Unknown error"}`);
         }
       }
-      toast.success(editingEvent ? "Sky event updated" : "Sky event created");
+      const createdCount = Number(result.createdCount ?? 1);
+      toast.success(editingEvent ? "Sky event updated" : createdCount > 1 ? `${createdCount} weekly events created` : "Sky event created");
       setFormOpen(false);
       setEditingEvent(null);
       setRefreshKey((value) => value + 1);
@@ -425,13 +431,16 @@ export function Calendar({ options }: { options: CalendarOptions }) {
     }
   }
 
-  async function deleteEvent() {
+  async function deleteEvent(scope: "single" | "following" = "single") {
     if (!selectedRecord || selectedRecord.kind !== "sky_event") return;
     setDeleting(true);
     try {
-      const response = await fetch(`/api/sky-events/${selectedRecord.id}`, { method: "DELETE" });
+      const query = scope === "following" ? "?scope=following" : "";
+      const response = await fetch(`/api/sky-events/${selectedRecord.id}${query}`, { method: "DELETE" });
       if (!response.ok) throw new Error(await responseError(response));
-      toast.success("Sky event deleted");
+      const result = await response.json().catch(() => ({}));
+      const deletedCount = Number(result.deletedCount ?? 1);
+      toast.success(deletedCount > 1 ? `${deletedCount} weekly events deleted` : "Sky event deleted");
       setDeleteOpen(false);
       setDetailsOpen(false);
       setSelectedRecord(null);
@@ -685,6 +694,19 @@ export function Calendar({ options }: { options: CalendarOptions }) {
                 <FieldLabel htmlFor="event-end">Ends at</FieldLabel>
                 <Input id="event-end" required type="datetime-local" value={form.endsAt} onChange={(event) => setForm({ ...form, endsAt: event.target.value })} />
               </Field>
+              {editingEvent ? null : (
+                <Field>
+                  <FieldLabel htmlFor="event-repeat-until">Repeat every week until (optional)</FieldLabel>
+                  <Input
+                    id="event-repeat-until"
+                    type="date"
+                    value={form.repeatWeeklyUntil}
+                    min={form.startsAt ? form.startsAt.slice(0, 10) : undefined}
+                    onChange={(event) => setForm({ ...form, repeatWeeklyUntil: event.target.value })}
+                  />
+                  <FieldDescription>Same weekday and time every week, up to one year. Leave empty for one event.</FieldDescription>
+                </Field>
+              )}
               <Field>
                 <FieldLabel htmlFor="event-status">Status</FieldLabel>
                 <Select value={form.status} onValueChange={(value) => setForm({ ...form, status: value as SkyEvent["status"] })}>
@@ -825,16 +847,27 @@ export function Calendar({ options }: { options: CalendarOptions }) {
             <AlertDialogTitle>Delete sky event?</AlertDialogTitle>
             <AlertDialogDescription>
               {selectedRecord?.title ?? "This event"} will be removed from the shared calendar. Existing bookings remain available but will no longer reference this event.
+              {selectedRecord?.kind === "sky_event" && selectedRecord.seriesId
+                ? " It repeats weekly: delete only this date, or this date and every later one."
+                : ""}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
+            {selectedRecord?.kind === "sky_event" && selectedRecord.seriesId ? (
+              <AlertDialogAction variant="destructive" disabled={deleting} onClick={(event) => {
+                event.preventDefault();
+                void deleteEvent("following");
+              }}>
+                This and following
+              </AlertDialogAction>
+            ) : null}
             <AlertDialogAction variant="destructive" disabled={deleting} onClick={(event) => {
               event.preventDefault();
               void deleteEvent();
             }}>
               {deleting ? <Spinner /> : <Trash2 />}
-              Delete
+              {selectedRecord?.kind === "sky_event" && selectedRecord.seriesId ? "Only this date" : "Delete"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

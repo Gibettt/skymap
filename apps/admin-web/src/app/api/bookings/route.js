@@ -1,6 +1,7 @@
 import { assertSameOrigin, jsonError, parseJsonBody, requirePermission, writeAudit } from "@ephemeris/auth";
-import { query, refreshAfterBookingChange, transaction } from "@ephemeris/db";
+import { ensureStaffReviewSchema, query, refreshAfterBookingChange, transaction } from "@ephemeris/db";
 import {
+  attachStaffReviews,
   bookingParticipantSummary,
   combineBookingTotals,
   replaceBookingExperiences,
@@ -26,8 +27,9 @@ export async function GET(request) {
       [pagination.limit, pagination.offset],
     );
     const { rows: countRows } = await query("SELECT COUNT(*) FROM bookings");
+    await ensureStaffReviewSchema();
     return Response.json({
-      bookings: rows,
+      bookings: await attachStaffReviews({ query }, rows),
       pagination: paginationMeta({ ...pagination, total: Number(countRows[0].count) }),
     });
   } catch (error) {

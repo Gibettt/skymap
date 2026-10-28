@@ -1,7 +1,10 @@
+import { randomUUID } from "node:crypto";
+
 import { ApiError, assertSameOrigin, jsonError, parseJsonBody, requirePermission, writeAudit } from "@ephemeris/auth";
-import { query, transaction } from "@ephemeris/db";
+import { ensureEventNotificationSchema, ensureSkyEventSeriesSchema, query, transaction } from "@ephemeris/db";
+import { EventTypes, emit } from "@ephemeris/events";
 import { createSkyEventSchema } from "@ephemeris/db/validators/sky-event";
-import { getOfficialPresets, normalizeSkyEventInput } from "@ephemeris/sky";
+import { getOfficialPresets, normalizeSkyEventInput, weeklyOccurrences } from "@ephemeris/sky";
 
 import { assertAvailableEventType } from "./_lib/event-type";
 
@@ -25,6 +28,7 @@ function mapEvent(row) {
     imageUrl: row.image_data ? `/api/sky-events/${row.id}/image` : row.image_url || null,
     status: row.status,
     isPublished: row.is_published,
+    seriesId: row.series_id ?? null,
     calculated: false,
   };
 }
@@ -48,15 +52,18 @@ function dates(request) {
 
 export async function GET(request) {
   try {
-    const user = await requirePermission("staff.sky_guide", ["internal"]);
+    const user = await requirePermission("staff.sky_guide", ["internal", "external"]);
     if (!user.resort_id) throw new ApiError(403, "Staff resort profile is not configured");
     const { from, to } = dates(request);
+    // External staff only read what guests may book: published events.
+    const publishedOnly = user.role === "external" ? "AND se.status = 'published' AND se.is_published = true" : "";
     const { rows } = await query(
       `SELECT se.*, p.name AS package_name FROM sky_events se
        LEFT JOIN packages p ON p.id = se.package_id
          WHERE se.resort_id = $1
            AND se.starts_at >= $2::timestamptz
            AND se.starts_at < ($3::date + INTERVAL '1 day')
+           ${publishedOnly}
          ORDER BY se.starts_at ASC`,
       [user.resort_id, from, to],
     );
@@ -140,45 +147,73 @@ export async function POST(request) {
       ]);
       if (!pkg.rows[0]) throw new ApiError(400, "Package is not available for this resort");
     }
+    await ensureSkyEventSeriesSchema();
+    await ensureEventNotificationSchema();
+    const resort = await query("SELECT timezone FROM resorts WHERE id = $1", [user.resort_id]);
+    let occurrences = [{ startsAt: event.startsAt, endsAt: event.endsAt }];
+    if (parsed.data.repeatWeeklyUntil) {
+      try {
+        occurrences = weeklyOccurrences({
+          startsAt: event.startsAt,
+          endsAt: event.endsAt,
+          until: parsed.data.repeatWeeklyUntil,
+          timeZone: resort.rows[0]?.timezone || "UTC",
+        });
+      } catch (repeatError) {
+        throw new ApiError(400, repeatError.message);
+      }
+    }
+    const seriesId = occurrences.length > 1 ? randomUUID() : null;
+
     const created = await transaction(async (client) => {
-      const { rows } = await client.query(
-        `INSERT INTO sky_events
-          (title, event_type, starts_at, ends_at, description, source_name, source_url, visibility,
-           resort_id, package_id, observation_spot, capacity, price_override_usd, image_url, status,
-           is_published, created_by, updated_by)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $17)
-         RETURNING *`,
-        [
-          event.title,
-          event.eventType,
-          event.startsAt,
-          event.endsAt,
-          event.description,
-          event.sourceName,
-          event.sourceUrl,
-          event.visibility,
-          user.resort_id,
-          event.packageId,
-          event.observationSpot,
-          event.capacity,
-          event.priceOverrideUsd,
-          event.imageUrl,
-          event.status,
-          event.isPublished,
-          user.id,
-        ],
-      );
+      const createdRows = [];
+      for (const occurrence of occurrences) {
+        const { rows } = await client.query(
+          `INSERT INTO sky_events
+            (title, event_type, starts_at, ends_at, description, source_name, source_url, visibility,
+             resort_id, package_id, observation_spot, capacity, price_override_usd, image_url, status,
+             is_published, created_by, updated_by, series_id)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $17, $18)
+           RETURNING *`,
+          [
+            event.title,
+            event.eventType,
+            occurrence.startsAt,
+            occurrence.endsAt,
+            event.description,
+            event.sourceName,
+            event.sourceUrl,
+            event.visibility,
+            user.resort_id,
+            event.packageId,
+            event.observationSpot,
+            event.capacity,
+            event.priceOverrideUsd,
+            event.imageUrl,
+            event.status,
+            event.isPublished,
+            user.id,
+            seriesId,
+          ],
+        );
+        createdRows.push(rows[0]);
+      }
       await writeAudit(client, {
         actorId: user.id,
-        action: "sky_event.create",
+        action: createdRows.length > 1 ? "sky_event.create_weekly" : "sky_event.create",
         entityType: "sky_event",
-        entityId: rows[0].id,
-        afterData: rows[0],
+        entityId: createdRows[0].id,
+        afterData: { ...createdRows[0], occurrences: createdRows.length, seriesId },
         request,
       });
-      return rows[0];
+      await emit(
+        EventTypes.SKY_EVENT_CREATED,
+        { skyEventId: createdRows[0].id, title: createdRows[0].title, resortId: user.resort_id, occurrences: createdRows.length },
+        { client, actorId: user.id },
+      );
+      return createdRows;
     });
-    return Response.json({ event: mapEvent(created) }, { status: 201 });
+    return Response.json({ event: mapEvent(created[0]), createdCount: created.length }, { status: 201 });
   } catch (error) {
     return jsonError(error);
   }

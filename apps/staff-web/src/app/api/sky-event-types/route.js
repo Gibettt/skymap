@@ -24,7 +24,7 @@ function eventTypeSlug(name) {
 
 export async function GET() {
   try {
-    const user = await requirePermission('staff.sky_guide', ['internal']);
+    const user = await requirePermission('staff.sky_guide', ['internal', 'external']);
     if (!user.resort_id) throw new ApiError(403, 'Staff resort profile is not configured');
     const { rows } = await query(
       `SELECT id, name, slug FROM sky_event_types

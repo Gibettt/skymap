@@ -35,14 +35,11 @@ export function proxy(request: NextRequest) {
     return NextResponse.redirect(new URL(`/dashboard/${session.role}`, request.url));
   }
 
-  if (session.role === "external" && pathname.startsWith("/dashboard/external/sky-events")) {
-    return NextResponse.redirect(new URL("/dashboard/external", request.url));
-  }
-
 
   return NextResponse.next();
 }
 
 export const config = {
-  matcher: ["/dashboard/:path*", "/chat/:path*", "/mail/:path*", "/api/((?!auth/).+)"],
+  // Cron routes are called by the scheduler with CRON_SECRET, not a staff session.
+  matcher: ["/dashboard/:path*", "/chat/:path*", "/mail/:path*", "/api/((?!auth/|cron/).+)"],
 };

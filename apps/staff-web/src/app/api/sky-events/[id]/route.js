@@ -1,5 +1,6 @@
 import { ApiError, assertSameOrigin, jsonError, parseJsonBody, requirePermission, writeAudit } from '@ephemeris/auth';
-import { transaction } from '@ephemeris/db';
+import { ensureEventNotificationSchema, transaction } from '@ephemeris/db';
+import { emit, EventTypes } from '@ephemeris/events';
 import { uuidSchema } from '@ephemeris/db/validators/common';
 import { updateSkyEventSchema } from '@ephemeris/db/validators/sky-event';
 import { normalizeSkyEventInput } from '@ephemeris/sky';
@@ -20,6 +21,7 @@ export async function PATCH(request, { params }) {
       return Response.json({ error: 'Data sky event tidak valid', details: parsed.error.flatten() }, { status: 400 });
     }
     const body = parsed.data;
+    await ensureEventNotificationSchema();
     const updated = await transaction(async (client) => {
       const before = await client.query('SELECT * FROM sky_events WHERE id = $1 AND resort_id = $2', [id, user.resort_id]);
       if (!before.rows[0]) return null;
@@ -66,6 +68,13 @@ export async function PATCH(request, { params }) {
         afterData: rows[0],
         request,
       });
+      await emit(EventTypes.SKY_EVENT_UPDATED, {
+        skyEventId: id,
+        title: rows[0].title,
+        resortId: user.resort_id,
+        previousStatus: before.rows[0].status,
+        status: rows[0].status,
+      }, { client, actorId: user.id });
       return rows[0];
     });
     if (!updated) return Response.json({ error: 'Sky event not found' }, { status: 404 });
@@ -84,21 +93,30 @@ export async function DELETE(request, { params }) {
     const parseId = uuidSchema.safeParse(rawId);
     if (!parseId.success) return Response.json({ error: 'ID tidak valid' }, { status: 400 });
     const id = parseId.data;
+    const following = new URL(request.url).searchParams.get('scope') === 'following';
     const removed = await transaction(async (client) => {
-      const before = await client.query('DELETE FROM sky_events WHERE id = $1 AND resort_id = $2 RETURNING *', [id, user.resort_id]);
-      if (!before.rows[0]) return null;
+      const current = await client.query('SELECT * FROM sky_events WHERE id = $1 AND resort_id = $2', [id, user.resort_id]);
+      const before = current.rows[0];
+      if (!before) return null;
+      // "This and following" removes the rest of a weekly series from this occurrence on.
+      const deleted = following && before.series_id
+        ? await client.query(
+          'DELETE FROM sky_events WHERE series_id = $1 AND resort_id = $2 AND starts_at >= $3 RETURNING id',
+          [before.series_id, user.resort_id, before.starts_at],
+        )
+        : await client.query('DELETE FROM sky_events WHERE id = $1 AND resort_id = $2 RETURNING id', [id, user.resort_id]);
       await writeAudit(client, {
         actorId: user.id,
-        action: 'sky_event.delete',
+        action: deleted.rows.length > 1 ? 'sky_event.delete_series' : 'sky_event.delete',
         entityType: 'sky_event',
         entityId: id,
-        beforeData: before.rows[0],
+        beforeData: { ...before, deletedCount: deleted.rows.length },
         request,
       });
-      return before.rows[0];
+      return { deletedCount: deleted.rows.length };
     });
     if (!removed) return Response.json({ error: 'Sky event not found' }, { status: 404 });
-    return Response.json({ success: true });
+    return Response.json({ success: true, deletedCount: removed.deletedCount });
   } catch (error) {
     return jsonError(error);
   }

@@ -10,6 +10,7 @@ export type NavIconName =
   | "invoices"
   | "payouts"
   | "sky-guide"
+  | "events"
   | "notifications"
   | "settings";
 
@@ -83,8 +84,12 @@ export function getStaffSidebarItems({ role, permissions }: StaffNavigationOptio
     items.push({ id: "staff-payouts", title: "Payouts", url: `${basePath}/payout`, icon: "payouts" });
   }
 
-  if (role === "internal" && can("staff.sky_guide")) {
-    items.push({ id: "staff-sky-guide", title: "Sky Guide", url: `${basePath}/sky-events`, icon: "sky-guide" });
+  if (can("staff.sky_guide")) {
+    // Sky Guide is calculated astronomy; Upcoming Events are the sessions the resort schedules.
+    items.push(
+      { id: "staff-sky-guide", title: "Sky Guide", url: `${basePath}/sky-guide`, icon: "sky-guide" },
+      { id: "staff-upcoming-events", title: "Upcoming Events", url: `${basePath}/sky-events`, icon: "events" },
+    );
   }
 
   if (can("staff.notifications")) {

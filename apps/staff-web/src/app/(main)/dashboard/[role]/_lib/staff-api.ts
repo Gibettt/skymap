@@ -72,6 +72,7 @@ export interface StaffBooking {
   special_occasion?: string | null;
   dietary_restrictions?: string | null;
   package_notes?: string | null;
+  staff_review?: { rating: number; comment: string | null; reviewerName: string | null; updatedAt: string | null } | null;
   observation_spot: string | null;
   notes?: string | null;
   created_at: string;
